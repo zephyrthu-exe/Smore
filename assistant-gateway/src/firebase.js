@@ -44,12 +44,12 @@ function createFirebaseGateway({ app = null } = {}) {
 
   function auth() {
     const fb = loadFirebaseAdmin();
-    return fb.auth(ensureAdmin());
+    return fb.getAuth(ensureAdmin());
   }
 
   function store() {
     const fb = loadFirebaseAdmin();
-    return fb.firestore(ensureAdmin());
+    return fb.getFirestore(ensureAdmin());
   }
 
   /**
