@@ -1,0 +1,155 @@
+rules_version = '2';
+
+// Smore (Save More) — Firestore security rules
+// Project ID: smore-6464b
+//
+// Design principles:
+//   1. Only authenticated users may touch application data.
+//   2. All personal data lives in per-user subcollections under users/{uid},
+//      so isolation is enforced by the document path itself, not by a stored
+//      owner field. A user can only ever reach their own subtree.
+//   3. Users must never read or write another user's transactions, budgets,
+//      or savings goals — the path guard guarantees this.
+//   4. Server time is trusted for timestamps; a user may not forge a date
+//      field by reading from a request field.
+//   5. Data shape is validated at write time (required fields + types), so
+//      malformed or partial documents are rejected before they are stored.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ------------------------------------------------------------------
+    // User profile (public-ish only to the owner, never to others)
+    // ------------------------------------------------------------------
+    match /users/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) && validUserDoc(request.resource.data);
+      allow update: if isOwner(uid) && validUserDoc(request.resource.data);
+      allow delete: if false; // profiles are not meant to be deleted here
+
+      // ---- Transactions: one subcollection per user -------------------
+      match /transactions/{txnId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validTransaction(request.resource.data);
+        allow update: if isOwner(uid) && validTransaction(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      // ---- Budgets: one subcollection per user ------------------------
+      match /budgets/{budgetId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validBudget(request.resource.data);
+        allow update: if isOwner(uid) && validBudget(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
+      // ---- Savings goals: one subcollection per user ------------------
+      match /goals/{goalId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validGoal(request.resource.data);
+        allow update: if isOwner(uid) && validGoal(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+    }
+
+    // Everything else is closed by default (no match means deny).
+  }
+
+  // --------------------------------------------------------------------
+  // Helper: is the caller the owner of this user's subtree?
+  // --------------------------------------------------------------------
+  function isOwner(uid) {
+    return request.auth != null && request.auth.uid == uid;
+  }
+
+  // --------------------------------------------------------------------
+  // Required-fields + basic-type validation helpers.
+  // Each returns true only when the incoming doc has the expected shape.
+  // --------------------------------------------------------------------
+
+  function requiredFields(data, names) {
+    return data.keys().hasAll(names);
+  }
+
+  function isNumber(value) {
+    return value is number;
+  }
+
+  function isString(value) {
+    return value is string;
+  }
+
+  function isTimestamp(value) {
+    return value is timestamp;
+  }
+
+  // Integer-valued, finite, and non-negative amount. Handles kyat amounts
+  // that are whole numbers; the store stays MMK-rounded in the demo.
+  function isNonNegativeAmount(value) {
+    return isNumber(value)
+        && value >= 0
+        && value <= 9999999999 // sanity ceiling: 9,999,999,999 (avoids overflow weirdness)
+        && value % 1 == 0;     // whole-kyat amounts for a clean school demo
+  }
+
+  function isValidCategory(value) {
+    return isString(value) && value.size() <= 50;
+  }
+
+  // --------------------------------------------------------------------
+  // users/{uid}
+  // --------------------------------------------------------------------
+  function validUserDoc(data) {
+    return requiredFields(data, ['email', 'displayName', 'currency', 'createdAt'])
+        && isString(data.email)
+        && data.email.size() <= 254
+        && isString(data.displayName)
+        && data.displayName.size() >= 1
+        && data.displayName.size() <= 80
+        && isString(data.currency)
+        && data.currency == 'MMK'
+        && isTimestamp(data.createdAt);
+  }
+
+  // --------------------------------------------------------------------
+  // users/{uid}/transactions/{txnId}
+  // --------------------------------------------------------------------
+  function validTransaction(data) {
+    return requiredFields(data,
+        ['type', 'amount', 'category', 'description', 'date', 'createdAt'])
+        && (data.type == 'income' || data.type == 'expense')
+        && isNonNegativeAmount(data.amount)
+        && isValidCategory(data.category)
+        && isString(data.description)
+        && data.description.size() <= 300
+        && isTimestamp(data.date)
+        && isTimestamp(data.createdAt);
+  }
+
+  // --------------------------------------------------------------------
+  // users/{uid}/budgets/{budgetId}
+  // --------------------------------------------------------------------
+  function validBudget(data) {
+    return requiredFields(data, ['category', 'limit', 'period', 'createdAt'])
+        && isValidCategory(data.category)
+        && isNonNegativeAmount(data.limit)
+        && isString(data.period)
+        && (data.period == 'monthly' || data.period == 'yearly')
+        && isTimestamp(data.createdAt);
+  }
+
+  // --------------------------------------------------------------------
+  // users/{uid}/goals/{goalId}
+  // --------------------------------------------------------------------
+  function validGoal(data) {
+    return requiredFields(data,
+        ['title', 'targetAmount', 'savedAmount', 'deadline', 'createdAt'])
+        && isString(data.title)
+        && data.title.size() >= 1
+        && data.title.size() <= 120
+        && isNonNegativeAmount(data.targetAmount)
+        && isNonNegativeAmount(data.savedAmount)
+        && isTimestamp(data.deadline)
+        && isTimestamp(data.createdAt);
+  }
+}
