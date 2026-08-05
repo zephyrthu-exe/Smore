@@ -399,15 +399,16 @@ class SomboAssistantWidget {
     this.setThinkingState(true);
 
     try {
-      // 3) Get Firebase Auth ID token
-      const idToken = await this.currentUser.getIdToken();
+      // 3) Get Firebase Auth ID token (force refresh)
+      const user = auth.currentUser;
+      const token = await user.getIdToken(true);
 
       // 4) POST to VPS Gateway
       const res = await fetch(GATEWAY_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ question: questionText }),
       });
