@@ -7,7 +7,10 @@
 
 import { auth } from "./firebase-config.js";
 
-// Endpoint for the Smore Assistant VPS Gateway
+// Endpoint for the Smore Assistant VPS Gateway.
+// IMPORTANT: To connect to the VPS (e.g. 172.237.84.171) from the HTTPS Firebase web app,
+// the VPS must be configured with a domain and SSL (HTTPS). Browsers will block
+// HTTP requests from an HTTPS site (Mixed Content).
 const GATEWAY_URL = window.SMORE_GATEWAY_URL || "http://localhost:8080/api/assistant";
 
 /**
@@ -420,7 +423,7 @@ class SomboAssistantWidget {
         const errorCode = data && data.error && data.error.code;
         const errorMsg = data && data.error && data.error.message;
 
-        if (res.status === 403 && errorCode === "out_of_scope") {
+        if (res.status === 422 && errorCode === "out_of_scope") {
           this.renderBlockedTopicState(errorMsg || "I can only help with your personal finance data on Smore.");
         } else if (res.status === 401) {
           this.renderUnauthenticatedState();
