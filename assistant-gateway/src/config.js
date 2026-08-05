@@ -51,7 +51,7 @@ function loadConfig() {
 
     // Gemini
     geminiApiKey: env.GEMINI_API_KEY || "",
-    geminiModel: env.GEMINI_MODEL || "gemini-1.5-flash",
+    geminiModel: env.GEMINI_MODEL || "gemini-2.5-flash",
     geminiMaxOutputTokens: parseInt(env.GEMINI_MAX_OUTPUT_TOKENS || "800", 10),
 
     // Rate limiting

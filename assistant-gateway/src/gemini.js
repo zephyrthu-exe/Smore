@@ -17,12 +17,12 @@ const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
  *
  * @param {object} opts
  * @param {string} opts.apiKey  Gemini API key (ideally from env).
- * @param {string} [opts.model] Model name, e.g. "gemini-1.5-flash".
+ * @param {string} [opts.model] Model name, e.g. "gemini-2.5-flash".
  * @param {number} [opts.maxOutputTokens] Generation cap.
  * @param {Function} [opts.transport] Inject for tests (defaults to global fetch).
  * @returns {Promise<{ text: string }>}
  */
-function createGeminiClient({ apiKey, model = "gemini-1.5-flash", maxOutputTokens = 800, transport } = {}) {
+function createGeminiClient({ apiKey, model = "gemini-2.5-flash", maxOutputTokens = 800, transport } = {}) {
   const doFetch = transport || ((url, init) => fetch(url, init));
 
   async function generate(systemPrompt, userPrompt) {

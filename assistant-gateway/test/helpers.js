@@ -20,7 +20,7 @@ function testConfig(overrides = {}) {
     // A fake but non-placeholder key so the app routes through to the (stubbed)
     // Gemini client in tests. Never a real key.
     geminiApiKey: "test-gemini-key-not-real",
-    geminiModel: "gemini-1.5-flash",
+    geminiModel: "gemini-2.5-flash",
     rateLimitWindowMs: 60 * 1000, // 1 min window
     rateLimitMaxPerIp: 5, // small so rate-limit tests are fast
     ...overrides,

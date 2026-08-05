@@ -216,7 +216,7 @@ them):
 | `GOOGLE_APPLICATION_CREDENTIALS` | Absolute path to Firebase service-account JSON | yes on the VPS |
 | `FIREBASE_PROJECT_ID` | Firebase project id | no (default `smore-6464b`) |
 | `GEMINI_API_KEY` | Gemini API key (secret) | yes on the VPS |
-| `GEMINI_MODEL` | Gemini model name | no (default `gemini-1.5-flash`) |
+| `GEMINI_MODEL` | Gemini model name | no (default `gemini-2.5-flash`) |
 
 ---
 
