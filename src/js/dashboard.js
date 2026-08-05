@@ -5,6 +5,7 @@ import { initBudgets } from "./budgets.js";
 import { initGoals } from "./goals.js";
 import { initAnalytics } from "./analytics.js";
 import { initImport } from "./import.js";
+import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 
 const loadingScreen = document.getElementById("dash-loading");
 const dashContent   = document.getElementById("dash-content");
@@ -36,6 +37,7 @@ logoutBtn.addEventListener("click", async () => {
 
   try {
     await signOut(auth);
+    destroySomboAssistant();
     window.location.href = "./auth.html";
   } catch (error) {
     showStatus("error", "Could not log out. Please try again.");
@@ -66,4 +68,5 @@ onAuthStateChanged(auth, (user) => {
   initGoals(user.uid);
   initAnalytics(user.uid);
   initImport(user.uid);
+  initSomboAssistant(user);
 });
