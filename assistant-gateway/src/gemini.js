@@ -52,16 +52,28 @@ function createGeminiClient({ apiKey, model = "gemini-2.5-flash", maxOutputToken
       body: JSON.stringify(body),
     });
 
-    if (res.status === 401 || res.status === 403) {
-      const err = new Error("Gemini authentication failed. Check GEMINI_API_KEY.");
-      err.kind = "gemini";
-      err.status = 502;
-      err.upstreamStatus = res.status;
-      throw err;
-    }
-
     if (!res.ok) {
-      const err = new Error(`Gemini upstream error (HTTP ${res.status}).`);
+      // Gemini errors can explain model availability, quota, or key setup.
+      // Read only the provider's error metadata; never log the API key, prompt,
+      // or the financial context sent with the request.
+      let providerError = null;
+      try {
+        providerError = await res.clone().json();
+      } catch {
+        providerError = null;
+      }
+
+      const providerCode = providerError?.error?.status || providerError?.error?.code || "unknown";
+      const providerMessage = providerError?.error?.message || "No provider error message.";
+      console.warn(
+        `[gateway] Gemini request failed: HTTP ${res.status}; ${providerCode}; ${providerMessage}`
+      );
+
+      const err = new Error(
+        res.status === 401 || res.status === 403
+          ? "Gemini authentication failed. Check GEMINI_API_KEY."
+          : `Gemini upstream error (HTTP ${res.status}).`
+      );
       err.kind = "gemini";
       err.status = 502;
       err.upstreamStatus = res.status;
