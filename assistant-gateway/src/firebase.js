@@ -21,11 +21,18 @@
 
 const CONFIG_SENTINEL = Symbol("smore.gateway.firebase.app");
 
-// firebase-admin depends on jose, which ships ESM-only. We lazy-load the
-// package so that tests which inject a stub never pay the cost of loading the
-// real SDK (and never trip Jest's node_modules transform rules).
-function loadFirebaseAdmin() {
-  return require("firebase-admin");
+// Firebase Admin v14 exposes app, Auth, and Firestore APIs from separate
+// modules. Lazy loading keeps injected test doubles independent of the SDK.
+function loadFirebaseApp() {
+  return require("firebase-admin/app");
+}
+
+function loadFirebaseAuth() {
+  return require("firebase-admin/auth");
+}
+
+function loadFirebaseFirestore() {
+  return require("firebase-admin/firestore");
 }
 
 /**
@@ -38,18 +45,16 @@ function createFirebaseGateway({ app = null } = {}) {
 
   function ensureAdmin() {
     if (admin) return admin;
-    admin = loadFirebaseAdmin().initializeApp(_adminInitOptions(), CONFIG_SENTINEL.description);
+    admin = loadFirebaseApp().initializeApp(_adminInitOptions(), CONFIG_SENTINEL.description);
     return admin;
   }
 
   function auth() {
-    const fb = loadFirebaseAdmin();
-    return fb.getAuth(ensureAdmin());
+    return loadFirebaseAuth().getAuth(ensureAdmin());
   }
 
   function store() {
-    const fb = loadFirebaseAdmin();
-    return fb.getFirestore(ensureAdmin());
+    return loadFirebaseFirestore().getFirestore(ensureAdmin());
   }
 
   /**
@@ -196,7 +201,7 @@ function createFirebaseGateway({ app = null } = {}) {
 function _adminInitOptions() {
   const { loadConfig } = require("./config");
   const cfg = loadConfig();
-  const { cert, applicationDefault } = loadFirebaseAdmin();
+  const { cert, applicationDefault } = loadFirebaseApp();
 
   if (cfg.googleApplicationCredentials) {
     return {
