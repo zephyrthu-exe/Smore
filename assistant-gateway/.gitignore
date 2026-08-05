@@ -1,0 +1,21 @@
+# Smore Assistant Gateway — local ignores
+# Secrets must NEVER be committed. The repo-root .gitignore also protects these
+# paths; this file keeps the gateway folder self-contained if it is ever moved.
+
+.env
+.env.*
+!.env.example
+
+# Service account files (must live outside the repo on the VPS)
+*service-account*.json
+*firebase-adminsdk*.json
+firebase-adminsdk*.json
+service-account.json
+*.pem
+
+node_modules/
+coverage/
+*.log
+*.pid
+
+.DS_Store

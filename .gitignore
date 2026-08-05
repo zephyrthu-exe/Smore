@@ -1,0 +1,29 @@
+# ============================================================================
+# Smore repository ignore rules
+#
+# NEVER commit secrets. These paths are protected repo-wide:
+#  - .env files (API keys, config)
+#  - Firebase service-account JSON (server credentials)
+#  - node_modules and other build artifacts
+# ============================================================================
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*service-account*.json
+*firebase-adminsdk*.json
+firebase-adminsdk*.json
+service-account.json
+
+# Node
+node_modules/
+npm-debug.log*
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
