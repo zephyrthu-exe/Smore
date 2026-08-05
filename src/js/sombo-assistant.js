@@ -400,7 +400,7 @@ class SomboAssistantWidget {
 
     try {
       // 3) Get Firebase Auth ID token (force refresh)
-      const user = auth.currentUser;
+      const user = this.currentUser;
       const token = await user.getIdToken(true);
 
       // 4) POST to VPS Gateway
