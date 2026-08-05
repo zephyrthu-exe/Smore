@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smore — Save More</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <a class="visually-hidden-focusable" href="#main-content">Skip to content</a>
+
+    <nav class="navbar smore-nav" aria-label="Primary">
+      <div class="container py-2">
+        <a class="navbar-brand brand-mark fw-bold text-primary" href="./index.html">Smore</a>
+        <span class="text-secondary small">Save more, understand better.</span>
+      </div>
+    </nav>
+
+    <main id="main-content" class="container landing-main">
+      <div id="landing-loading" class="loading-screen" role="status" aria-live="polite">
+        <div class="spinner-border text-primary" aria-hidden="true"></div>
+        <p class="mb-0">Checking your session...</p>
+      </div>
+
+      <section id="landing-content" class="hero-card hidden" aria-labelledby="welcome-heading">
+        <p class="auth-kicker">Personal finance tracker</p>
+        <h1 id="welcome-heading" class="display-5 fw-bold mb-3">Smore</h1>
+        <p class="lead text-secondary mb-4">
+          Track spending, budgets, and savings goals in MMK. Sign in to open your
+          dashboard, or create an account to get started.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary px-4" href="./auth.html">Log in</a>
+          <a class="btn btn-outline-primary px-4" href="./auth.html?mode=register">
+            Create account
+          </a>
+        </div>
+      </section>
+    </main>
+
+    <script type="module">
+      import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+      import { auth } from "./js/firebase-config.js";
+
+      const loading = document.getElementById("landing-loading");
+      const content = document.getElementById("landing-content");
+
+      onAuthStateChanged(auth, (user) => {
+        if (user) {
+          window.location.replace("./dashboard.html");
+          return;
+        }
+
+        loading.classList.add("hidden");
+        content.classList.remove("hidden");
+      });
+    </script>
+  </body>
+</html>
