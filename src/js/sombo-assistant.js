@@ -11,7 +11,7 @@ import { auth } from "./firebase-config.js";
 // IMPORTANT: To connect to the VPS (e.g. 172.237.84.171) from the HTTPS Firebase web app,
 // the VPS must be configured with a domain and SSL (HTTPS). Browsers will block
 // HTTP requests from an HTTPS site (Mixed Content).
-const GATEWAY_URL = window.SMORE_GATEWAY_URL || "http://localhost:8080/api/assistant";
+const GATEWAY_URL = window.SMORE_GATEWAY_URL || "http://172.237.84.171:8080/api/assistant";
 
 /**
  * Returns inline SVG representation of Sombo.
