@@ -1,12 +1,13 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import { auth } from "./firebase-config.js";
+import { initTransactions } from "./transactions.js";
 
 const loadingScreen = document.getElementById("dash-loading");
-const dashContent = document.getElementById("dash-content");
-const userEmailEl = document.getElementById("user-email");
-const userGreeting = document.getElementById("user-greeting");
-const logoutBtn = document.getElementById("logout-btn");
-const statusAlert = document.getElementById("dash-status");
+const dashContent   = document.getElementById("dash-content");
+const userEmailEl   = document.getElementById("user-email");
+const userGreeting  = document.getElementById("user-greeting");
+const logoutBtn     = document.getElementById("logout-btn");
+const statusAlert   = document.getElementById("dash-status");
 
 /**
  * @param {"error" | "success" | "info"} type
@@ -41,16 +42,20 @@ logoutBtn.addEventListener("click", async () => {
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
+    // No authenticated user — redirect to login immediately.
     window.location.replace("./auth.html");
     return;
   }
 
   const email = user.email || "Unknown user";
-  const name = user.displayName || email.split("@")[0];
+  const name  = user.displayName || email.split("@")[0];
 
-  userEmailEl.textContent = email;
+  userEmailEl.textContent  = email;
   userGreeting.textContent = `Hello, ${name}`;
 
   loadingScreen.classList.add("hidden");
   dashContent.classList.remove("hidden");
+
+  // Initialise transaction CRUD panel with the verified UID.
+  initTransactions(user.uid);
 });
