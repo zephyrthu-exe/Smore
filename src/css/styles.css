@@ -606,3 +606,223 @@ h2,
 .smore-modal .modal-body {
   padding: 1.25rem 1.5rem;
 }
+
+/* ── Analytics panel ──────────────────────────────────────── */
+
+.analytics-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--smore-muted);
+  margin: 0 0 0.75rem;
+}
+
+.analytics-subsection {
+  margin-bottom: 1.5rem;
+}
+
+.analytics-subsection:last-child {
+  margin-bottom: 0;
+}
+
+/* Category / budget / goal row */
+.analytics-category-row {
+  margin-bottom: 1rem;
+}
+
+.analytics-category-row:last-child {
+  margin-bottom: 0;
+}
+
+.analytics-category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.analytics-category-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--smore-ink);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.analytics-category-amount {
+  font-size: 0.85rem;
+  color: var(--smore-muted);
+  white-space: nowrap;
+}
+
+.analytics-category-share {
+  font-size: 0.75rem;
+  color: var(--smore-muted);
+}
+
+/* Bar track */
+.analytics-bar-track {
+  height: 8px;
+  background: var(--smore-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.analytics-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--smore-primary);
+  transition: width 0.4s ease;
+}
+
+.analytics-bar-fill--primary  { background: var(--smore-primary); }
+.analytics-bar-fill--success  { background: var(--smore-success); }
+.analytics-bar-fill--warning  { background: #d97706; }
+.analytics-bar-fill--danger   { background: var(--smore-danger); }
+
+.analytics-bar-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.25rem;
+}
+
+/* Period badge (Monthly / Yearly) inside budget rows */
+.analytics-period-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--smore-soft);
+  color: var(--smore-primary);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+}
+
+/* "Complete" goal badge */
+.analytics-goal-done-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #e8f6ef;
+  color: var(--smore-success);
+  border-radius: 999px;
+  padding: 0.15rem 0.45rem;
+}
+
+/* ── Import panel ─────────────────────────────────────────── */
+
+.import-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+}
+
+.import-file-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin-bottom: 0.35rem;
+  display: block;
+}
+
+.import-file-group {
+  flex: 1;
+  min-width: 200px;
+}
+
+.import-preview-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--smore-border);
+  border-radius: 0.75rem;
+  margin-top: 1rem;
+}
+
+.import-preview-count {
+  font-size: 0.85rem;
+  color: var(--smore-muted);
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.import-preview-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.import-preview-table thead th {
+  background: var(--smore-soft);
+  color: var(--smore-primary);
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--smore-border);
+  white-space: nowrap;
+}
+
+.import-preview-table tbody td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid #f0f3ff;
+  vertical-align: top;
+}
+
+.import-preview-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.import-row-valid  { background: #f0faf5; }
+.import-row-invalid { background: #fff7f7; }
+
+.import-col-desc {
+  max-width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.import-row-num {
+  color: var(--smore-muted);
+  font-size: 0.75rem;
+  text-align: center;
+  width: 40px;
+}
+
+/* Status badges inside preview */
+.import-status-badge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.import-status-badge--valid   { background: #e8f6ef; color: #1e7a4d; }
+.import-status-badge--invalid { background: #fdecea; color: #c0392b; }
+
+/* Error list inside invalid rows */
+.import-error-list {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  font-size: 0.75rem;
+  color: var(--smore-danger);
+}
+
+.import-error-list li::before {
+  content: "• ";
+}
+
