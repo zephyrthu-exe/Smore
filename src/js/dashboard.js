@@ -1,7 +1,8 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import { auth } from "./firebase-config.js";
 import { initTransactions } from "./transactions.js";
-
+import { initBudgets } from "./budgets.js";
+import { initGoals } from "./goals.js";
 const loadingScreen = document.getElementById("dash-loading");
 const dashContent   = document.getElementById("dash-content");
 const userEmailEl   = document.getElementById("user-email");
@@ -58,4 +59,6 @@ onAuthStateChanged(auth, (user) => {
 
   // Initialise transaction CRUD panel with the verified UID.
   initTransactions(user.uid);
+  initBudgets(user.uid);
+  initGoals(user.uid);
 });
