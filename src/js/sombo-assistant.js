@@ -335,7 +335,11 @@ class SomboAssistantWidget {
    */
   setUser(user) {
     this.currentUser = user;
-    if (!user && this.isOpen) {
+    if (user) {
+      // Auth can resolve after the panel was opened. Remove any temporary
+      // unauthenticated banner that was rendered during that short window.
+      this.chatBodyEl?.querySelectorAll(".sombo-state-banner.is-unauth").forEach((banner) => banner.remove());
+    } else if (this.isOpen) {
       this.renderUnauthenticatedState();
     }
   }

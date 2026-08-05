@@ -74,6 +74,14 @@ function createFirebaseGateway({ app = null } = {}) {
       }
       return decoded;
     } catch (cause) {
+      // Safe diagnostic: Firebase error metadata contains no token material.
+      // This identifies expiry/audience/format failures without exposing the
+      // credential or the submitted ID token in VPS logs.
+      console.warn(
+        "[gateway] Firebase ID token verification failed:",
+        cause && cause.code ? cause.code : "unknown",
+        cause && cause.message ? cause.message : "unknown error"
+      );
       // firebase-admin throws {code: "auth/id-token-expired"} etc. Surface a
       // stable, model-shaped error and never leak internals to the client.
       const err = new Error("Authentication failed. Please refresh your session and try again.");
