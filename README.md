@@ -1,10 +1,6 @@
-<<<<<<< HEAD
-# Smore
-Smore is a personal finance tracker built by UIT First Year 2nd Semester Students as a School Project to help solve financial managemnet system for its students.
-=======
 # Smore (Save More)
 
-Smore is a personal finance tracker and saving assistant for a school live demo.
+Smore is a personal finance tracker built by UIT First Year 2nd Semester Students as a school project. It helps students manage finances with login, transactions, budgets, savings goals, and analytics.
 
 ## Current stack
 
@@ -22,5 +18,4 @@ Financial calculations belong to Smore. Gemini interprets validated data and pro
 
 ## Start locally
 
-Open `src/index.html` with a local development server. Firebase configuration will be added during the Firebase setup task.
->>>>>>> ef4308e (Create Login/Register system. Connected to firebase database)
+Open `src/index.html` with a local development server.
