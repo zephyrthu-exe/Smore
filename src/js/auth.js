@@ -46,18 +46,24 @@ function getFriendlyAuthError(error) {
     "auth/weak-password": "Password is too weak. Use at least 6 characters.",
     "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
     "auth/network-request-failed": "Network error. Check your connection and try again.",
-    "auth/operation-not-allowed": "Email/password sign-in is not enabled for this project.",
+    "auth/operation-not-allowed": "Google sign-in is not enabled for this project. Enable it in the Firebase Console.",
     "auth/missing-password": "Please enter your password.",
-    "auth/popup-closed-by-user": "Sign-in was cancelled.",
-    "auth/popup-blocked": "Popup blocked by browser. Please allow popups for this site.",
-    "auth/account-exists-with-different-credential": "An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.",
+    "auth/popup-closed-by-user": "Sign-in was cancelled. Please try again.",
+    "auth/cancelled-popup-request": "Sign-in was cancelled. Please try again.",
+    "auth/popup-blocked": "Popup was blocked by your browser. Please allow popups for this site and try again.",
+    "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method. Try logging in with email/password instead.",
+    "auth/unauthorized-domain": "This site is not authorised to use Google sign-in. Add this domain to the Firebase Console under Authentication → Settings → Authorised domains.",
+    "auth/internal-error": "An internal error occurred. Please try again.",
+    "auth/user-cancelled": "Sign-in was cancelled. Please try again.",
   };
 
   if (typeof code === "string" && messages[code]) {
     return messages[code];
   }
 
-  return "Something went wrong. Please try again.";
+  // Return the raw code so it is visible in the UI if not mapped.
+  const rawCode = typeof code === "string" && code ? ` (${code})` : "";
+  return `Something went wrong. Please try again.${rawCode}`;
 }
 
 /**
@@ -310,11 +316,16 @@ googleSigninBtn.addEventListener("click", async () => {
     showStatus("success", "Logged in with Google. Redirecting...");
     window.location.href = "./dashboard.html";
   } catch (error) {
-    // If popup is blocked or unsuitable, use redirect as fallback
+    // Always log the raw error so the real code is visible in the browser console.
+    console.error("[Google sign-in error]", error?.code, error);
+
+    // If popup is blocked fall back to redirect.
     if (error && error.code === "auth/popup-blocked") {
+      showStatus("info", "Popup was blocked — opening a redirect sign-in page instead…");
       try {
         await signInWithRedirect(auth, provider);
       } catch (redirectError) {
+        console.error("[Google redirect error]", redirectError?.code, redirectError);
         showStatus("error", getFriendlyAuthError(redirectError));
         googleSigninBtn.disabled = false;
         googleSigninBtn.innerHTML = originalContent;
