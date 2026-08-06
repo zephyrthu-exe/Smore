@@ -77,6 +77,18 @@ function showStatus(type, message) {
   statusAlert.setAttribute("role", type === "error" ? "alert" : "status");
 }
 
+/**
+ * Like showStatus but renders trusted HTML so an inline action link can be included.
+ * Only call this with hard-coded markup — never with user-supplied strings.
+ * @param {"error" | "success" | "info"} type
+ * @param {string} html
+ */
+function showStatusHTML(type, html) {
+  statusAlert.innerHTML = html;
+  statusAlert.className = `status-alert is-visible is-${type}`;
+  statusAlert.setAttribute("role", type === "error" ? "alert" : "status");
+}
+
 function clearStatus() {
   statusAlert.textContent = "";
   statusAlert.className = "status-alert";
@@ -293,7 +305,19 @@ registerForm.addEventListener("submit", async (event) => {
     showStatus("success", "Account created. Redirecting to your dashboard...");
     window.location.href = "./dashboard.html";
   } catch (error) {
-    showStatus("error", getFriendlyAuthError(error));
+    if (error && error.code === "auth/email-already-in-use") {
+      // Show a rich error with an inline action link to switch to login.
+      showStatusHTML(
+        "error",
+        `This email is already registered. <button type="button" id="switch-to-login-btn" class="status-link-btn">Log in instead →</button>`
+      );
+      // Wire up the inline button every time it is rendered.
+      document.getElementById("switch-to-login-btn").addEventListener("click", () => {
+        switchMode("login");
+      });
+    } else {
+      showStatus("error", getFriendlyAuthError(error));
+    }
     setButtonLoading(registerSubmit, false, "Create account");
   }
 });
