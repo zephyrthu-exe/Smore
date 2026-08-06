@@ -239,6 +239,23 @@ h2,
   color: var(--smore-muted);
 }
 
+#google-signin-btn {
+  border-radius: 0.75rem;
+  padding: 0.8rem 1rem;
+  font-weight: 600;
+  border-color: #cfd8f6;
+  background-color: #ffffff;
+  color: var(--smore-ink);
+  transition: all 0.2s ease;
+}
+
+#google-signin-btn:hover {
+  background-color: var(--smore-soft);
+  border-color: var(--smore-primary);
+  color: var(--smore-primary);
+  box-shadow: 0 4px 14px rgba(49, 87, 213, 0.08);
+}
+
 .auth-submit {
   width: 100%;
   padding: 0.8rem 1rem;

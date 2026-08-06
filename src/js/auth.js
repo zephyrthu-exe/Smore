@@ -3,6 +3,9 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   updateProfile,
+  GoogleAuthProvider,
+  signInWithPopup,
+  signInWithRedirect
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import { auth } from "./firebase-config.js";
 
@@ -13,6 +16,7 @@ const registerTab = document.getElementById("register-tab");
 const statusAlert = document.getElementById("auth-status");
 const authPanel = document.getElementById("auth-panel");
 const authLoading = document.getElementById("auth-loading");
+const googleSigninBtn = document.getElementById("google-signin-btn");
 
 const loginEmail = document.getElementById("login-email");
 const loginPassword = document.getElementById("login-password");
@@ -44,6 +48,9 @@ function getFriendlyAuthError(error) {
     "auth/network-request-failed": "Network error. Check your connection and try again.",
     "auth/operation-not-allowed": "Email/password sign-in is not enabled for this project.",
     "auth/missing-password": "Please enter your password.",
+    "auth/popup-closed-by-user": "Sign-in was cancelled.",
+    "auth/popup-blocked": "Popup blocked by browser. Please allow popups for this site.",
+    "auth/account-exists-with-different-credential": "An account already exists with the same email address but different sign-in credentials. Sign in using a provider associated with this email address.",
   };
 
   if (typeof code === "string" && messages[code]) {
@@ -282,6 +289,41 @@ registerForm.addEventListener("submit", async (event) => {
   } catch (error) {
     showStatus("error", getFriendlyAuthError(error));
     setButtonLoading(registerSubmit, false, "Create account");
+  }
+});
+
+googleSigninBtn.addEventListener("click", async () => {
+  clearStatus();
+  
+  // Basic loading state for the Google button
+  const originalContent = googleSigninBtn.innerHTML;
+  googleSigninBtn.disabled = true;
+  googleSigninBtn.innerHTML = `
+    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
+    <span>Please wait...</span>
+  `;
+
+  const provider = new GoogleAuthProvider();
+
+  try {
+    await signInWithPopup(auth, provider);
+    showStatus("success", "Logged in with Google. Redirecting...");
+    window.location.href = "./dashboard.html";
+  } catch (error) {
+    // If popup is blocked or unsuitable, use redirect as fallback
+    if (error && error.code === "auth/popup-blocked") {
+      try {
+        await signInWithRedirect(auth, provider);
+      } catch (redirectError) {
+        showStatus("error", getFriendlyAuthError(redirectError));
+        googleSigninBtn.disabled = false;
+        googleSigninBtn.innerHTML = originalContent;
+      }
+    } else {
+      showStatus("error", getFriendlyAuthError(error));
+      googleSigninBtn.disabled = false;
+      googleSigninBtn.innerHTML = originalContent;
+    }
   }
 });
 
