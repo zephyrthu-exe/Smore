@@ -162,3 +162,13 @@
   font-weight: 700;
 }
 
+svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* .icon, .smore-icon {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+} */
