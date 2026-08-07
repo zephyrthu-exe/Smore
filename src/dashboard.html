@@ -121,15 +121,35 @@
                 <li><button class="dropdown-item" type="button" data-currency="EUR">EUR — Euro</button></li>
               </ul>
             </div>
-            
-        <button
+
+             <!-- Session indicator -->
+            <span class="smore-chip d-none d-xl-inline-flex">
+              <span class="dot" aria-hidden="true"></span> Active session
+            </span>
+
+            <!-- Add transaction -->
+            <a class="btn btn-smore" href="transactions.html#add">+ Add Transaction</a>
+
+            <!-- Account menu -->
+            <div class="dropdown">
+              <button
+                class="btn p-0 border-0 bg-transparent"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="Account menu"
+              >
+                <span class="smore-avatar">ZK</span>
+              </button>
+
+        <!-- <button
           id="logout-btn"
           class="btn btn-outline-primary btn-sm"
           type="button"
         >
           Log out
         </button>
-      </div>
+      </div> -->
     </nav>
 
     <main class="container py-4 py-md-5">
