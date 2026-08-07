@@ -3,13 +3,11 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  getDocs,
   doc,
-  query,
-  orderBy,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
+import { subscribeToStore } from "./store.js";
 
 // DOM references
 const goalList       = document.getElementById("goal-list");
@@ -18,7 +16,6 @@ const goalEmpty      = document.getElementById("goal-empty");
 const goalStatus     = document.getElementById("goal-status");
 
 const addGoalBtn     = document.getElementById("add-goal-btn");
-const refreshBtn     = document.getElementById("goal-refresh-btn");
 
 const goalModal      = document.getElementById("goalModal");
 const goalForm       = document.getElementById("goal-form");
@@ -37,6 +34,10 @@ const deleteConfirmBtn  = document.getElementById("delete-goal-confirm-btn");
 let bsModal       = null;
 let bsDeleteModal = null;
 let pendingDeleteId = null;
+
+let currentGoals = [];
+let isLoading = true;
+let isError = false;
 
 const MAX_AMOUNT = 9999999999;
 const MAX_TITLE  = 120;
@@ -173,38 +174,38 @@ function buildCard(id, data) {
   return card;
 }
 
-export async function loadGoals() {
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) return;
-
-  goalLoading.classList.remove("hidden");
-  goalList.classList.add("hidden");
-  goalEmpty.classList.add("hidden");
-  clearStatus();
-
-  try {
-    const goalSnap = await getDocs(query(collection(db, "users", uid, "goals"), orderBy("deadline", "asc")));
-    
-    goalList.innerHTML = "";
-
-    if (goalSnap.empty) {
-      goalLoading.classList.add("hidden");
-      goalEmpty.classList.remove("hidden");
-      return;
-    }
-
-    goalSnap.forEach((docSnap) => {
-      goalList.appendChild(buildCard(docSnap.id, docSnap.data()));
-    });
-
-    goalLoading.classList.add("hidden");
-    goalList.classList.remove("hidden");
-  } catch (err) {
-    console.error("loadGoals error:", err);
-    goalLoading.classList.add("hidden");
-    goalEmpty.classList.remove("hidden");
-    showStatus("error", "Could not load goals. Please refresh.");
+function renderGoals() {
+  if (isLoading) {
+    goalLoading.classList.remove("hidden");
+    goalList.classList.add("hidden");
+    goalEmpty.classList.add("hidden");
+    clearStatus();
+    return;
   }
+
+  goalLoading.classList.add("hidden");
+
+  if (isError) {
+    goalList.classList.add("hidden");
+    goalEmpty.classList.add("hidden");
+    showStatus("error", "Could not load goals. Please check your connection.");
+    return;
+  }
+
+  goalList.innerHTML = "";
+
+  if (currentGoals.length === 0) {
+    goalEmpty.classList.remove("hidden");
+    goalList.classList.add("hidden");
+    return;
+  }
+
+  currentGoals.forEach((data) => {
+    goalList.appendChild(buildCard(data.id, data));
+  });
+
+  goalEmpty.classList.add("hidden");
+  goalList.classList.remove("hidden");
 }
 
 function openAddModal() {
@@ -274,7 +275,6 @@ async function handleFormSubmit(event) {
     }
 
     bsModal.hide();
-    await loadGoals();
   } catch (err) {
     console.error(err);
     showStatus("error", "Could not save goal.");
@@ -295,7 +295,6 @@ async function handleDeleteConfirm() {
     await deleteDoc(doc(db, "users", uid, "goals", pendingDeleteId));
     bsDeleteModal.hide();
     showStatus("success", "Goal deleted.", 3000);
-    await loadGoals();
   } catch (err) {
     console.error(err);
     bsDeleteModal.hide();
@@ -313,10 +312,14 @@ export function initGoals(uid) {
   bsDeleteModal = new bootstrap.Modal(deleteGoalModal);
 
   addGoalBtn.addEventListener("click", openAddModal);
-  refreshBtn.addEventListener("click", () => loadGoals());
   goalForm.addEventListener("submit", handleFormSubmit);
   deleteConfirmBtn.addEventListener("click", handleDeleteConfirm);
   deleteGoalModal.addEventListener("hidden.bs.modal", () => pendingDeleteId = null);
 
-  loadGoals();
+  subscribeToStore((store) => {
+    currentGoals = store.goals;
+    isLoading = store.loading.goals;
+    isError = store.error.goals;
+    renderGoals();
+  });
 }

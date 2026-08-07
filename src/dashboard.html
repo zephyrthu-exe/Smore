@@ -83,14 +83,6 @@
           <div class="txn-panel-header">
             <h2 id="analytics-heading" class="h5 mb-0">Analytics</h2>
             <div class="txn-actions">
-              <button
-                id="analytics-refresh-btn"
-                class="btn btn-sm btn-outline-secondary"
-                type="button"
-                aria-label="Refresh analytics"
-              >
-                ↺ Refresh
-              </button>
             </div>
           </div>
 
@@ -147,14 +139,6 @@
           <div class="txn-panel-header">
             <h2 id="txn-heading" class="h5 mb-0">Transactions</h2>
             <div class="txn-actions">
-              <button
-                id="txn-refresh-btn"
-                class="btn btn-sm btn-outline-secondary"
-                type="button"
-                aria-label="Refresh transactions"
-              >
-                ↺ Refresh
-              </button>
               <button
                 id="add-txn-btn"
                 class="btn btn-sm btn-primary"
@@ -219,14 +203,6 @@
             <h2 id="budget-heading" class="h5 mb-0">Budgets</h2>
             <div class="txn-actions">
               <button
-                id="budget-refresh-btn"
-                class="btn btn-sm btn-outline-secondary"
-                type="button"
-                aria-label="Refresh budgets"
-              >
-                ↺ Refresh
-              </button>
-              <button
                 id="add-budget-btn"
                 class="btn btn-sm btn-primary"
                 type="button"
@@ -260,14 +236,6 @@
             <h2 id="goal-heading" class="h5 mb-0">Savings Goals</h2>
             <div class="txn-actions">
               <button
-                id="goal-refresh-btn"
-                class="btn btn-sm btn-outline-secondary"
-                type="button"
-                aria-label="Refresh goals"
-              >
-                ↺ Refresh
-              </button>
-              <button
                 id="add-goal-btn"
                 class="btn btn-sm btn-primary"
                 type="button"
@@ -295,77 +263,7 @@
           <div id="goal-list" class="txn-list hidden" aria-label="Goal list"></div>
         </section>
 
-        <!-- ── CSV Import panel ──────────────────────────────── -->
-        <section class="dash-panel mt-4" aria-labelledby="import-heading">
-          <div class="txn-panel-header">
-            <h2 id="import-heading" class="h5 mb-0">Import Transactions</h2>
-          </div>
 
-          <p class="text-secondary mb-3" style="font-size:0.9rem;">
-            Upload a <strong>.csv</strong> file with columns:
-            <code>type, amount, category, description, date</code>.
-            All rows are validated before saving — invalid rows are skipped.
-          </p>
-
-          <!-- Status -->
-          <div id="import-status" class="status-alert" aria-live="polite"></div>
-
-          <!-- Controls -->
-          <div class="import-controls">
-            <div class="import-file-group">
-              <label class="import-file-label" for="import-file-input">CSV file</label>
-              <input
-                class="form-control"
-                type="file"
-                id="import-file-input"
-                accept=".csv,text/csv"
-                aria-describedby="import-file-hint"
-              />
-              <div id="import-file-hint" class="field-hint mt-1">
-                Required columns: type, amount, category, description, date
-              </div>
-            </div>
-            <button
-              id="import-parse-btn"
-              class="btn btn-outline-primary"
-              type="button"
-            >
-              Preview CSV
-            </button>
-          </div>
-
-          <!-- Preview -->
-          <div id="import-preview-wrap" class="hidden">
-            <p id="import-preview-count" class="import-preview-count"></p>
-            <div class="import-preview-wrap">
-              <table class="import-preview-table" aria-label="CSV import preview">
-                <thead>
-                  <tr>
-                    <th scope="col">#</th>
-                    <th scope="col">Status</th>
-                    <th scope="col">Type</th>
-                    <th scope="col">Amount</th>
-                    <th scope="col">Category</th>
-                    <th scope="col">Description</th>
-                    <th scope="col">Date</th>
-                  </tr>
-                </thead>
-                <tbody id="import-preview-body"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- Submit -->
-          <div class="mt-3">
-            <button
-              id="import-submit-btn"
-              class="btn btn-primary hidden"
-              type="button"
-            >
-              Import Valid Rows
-            </button>
-          </div>
-        </section>
 
       </div>
     </main>

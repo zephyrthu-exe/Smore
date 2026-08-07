@@ -4,8 +4,8 @@ import { initTransactions } from "./transactions.js";
 import { initBudgets } from "./budgets.js";
 import { initGoals } from "./goals.js";
 import { initAnalytics } from "./analytics.js";
-import { initImport } from "./import.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
+import { initStore, cleanupStore } from "./store.js";
 
 const loadingScreen = document.getElementById("dash-loading");
 const dashContent   = document.getElementById("dash-content");
@@ -36,6 +36,7 @@ logoutBtn.addEventListener("click", async () => {
   logoutBtn.textContent = "Signing out...";
 
   try {
+    cleanupStore();
     await signOut(auth);
     destroySomboAssistant();
     window.location.href = "./auth.html";
@@ -63,10 +64,10 @@ onAuthStateChanged(auth, (user) => {
   dashContent.classList.remove("hidden");
 
   // Initialise each panel with the verified UID.
+  initStore(user.uid);
   initTransactions(user.uid);
   initBudgets(user.uid);
   initGoals(user.uid);
   initAnalytics(user.uid);
-  initImport(user.uid);
   initSomboAssistant(user);
 });

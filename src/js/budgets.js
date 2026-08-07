@@ -3,14 +3,11 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  getDocs,
   doc,
-  query,
-  orderBy,
-  where,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
+import { subscribeToStore } from "./store.js";
 
 // DOM references
 const budgetList       = document.getElementById("budget-list");
@@ -19,7 +16,6 @@ const budgetEmpty      = document.getElementById("budget-empty");
 const budgetStatus     = document.getElementById("budget-status");
 
 const addBudgetBtn     = document.getElementById("add-budget-btn");
-const refreshBtn       = document.getElementById("budget-refresh-btn");
 
 const budgetModal      = document.getElementById("budgetModal");
 const budgetForm       = document.getElementById("budget-form");
@@ -37,6 +33,11 @@ const deleteConfirmBtn    = document.getElementById("delete-budget-confirm-btn")
 let bsModal       = null;
 let bsDeleteModal = null;
 let pendingDeleteId = null;
+
+let currentBudgets = [];
+let currentTxns = [];
+let isLoading = true;
+let isError = false;
 
 const MAX_AMOUNT = 9999999999;
 const MAX_CAT    = 50;
@@ -165,63 +166,56 @@ function buildCard(id, data, spent) {
   return card;
 }
 
-export async function loadBudgets() {
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) return;
+function renderBudgets() {
+  if (isLoading) {
+    budgetLoading.classList.remove("hidden");
+    budgetList.classList.add("hidden");
+    budgetEmpty.classList.add("hidden");
+    clearStatus();
+    return;
+  }
 
-  budgetLoading.classList.remove("hidden");
-  budgetList.classList.add("hidden");
-  budgetEmpty.classList.add("hidden");
-  clearStatus();
+  budgetLoading.classList.add("hidden");
 
-  try {
-    const budgetSnap = await getDocs(query(collection(db, "users", uid, "budgets"), orderBy("createdAt", "desc")));
+  if (isError) {
+    budgetList.classList.add("hidden");
+    budgetEmpty.classList.add("hidden");
+    showStatus("error", "Could not load budgets. Please check your connection.");
+    return;
+  }
+
+  budgetList.innerHTML = "";
+
+  if (currentBudgets.length === 0) {
+    budgetEmpty.classList.remove("hidden");
+    budgetList.classList.add("hidden");
+    return;
+  }
+
+  const expenses = currentTxns.filter(t => t.type === "expense");
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth();
+
+  currentBudgets.forEach((data) => {
+    let spent = 0;
     
-    let expenses = [];
-    if (!budgetSnap.empty) {
-      // Fetch expenses to calculate spending
-      const expSnap = await getDocs(query(collection(db, "users", uid, "transactions"), where("type", "==", "expense")));
-      expenses = expSnap.docs.map(d => d.data());
-    }
-
-    budgetList.innerHTML = "";
-
-    if (budgetSnap.empty) {
-      budgetLoading.classList.add("hidden");
-      budgetEmpty.classList.remove("hidden");
-      return;
-    }
-
-    const now = new Date();
-    const curYear = now.getFullYear();
-    const curMonth = now.getMonth();
-
-    budgetSnap.forEach((docSnap) => {
-      const data = docSnap.data();
-      let spent = 0;
-      
-      expenses.forEach(exp => {
-        if (exp.category === data.category) {
-          const d = (exp.date && typeof exp.date.toDate === "function") ? exp.date.toDate() : new Date(exp.date);
-          if (data.period === 'monthly') {
-            if (d.getFullYear() === curYear && d.getMonth() === curMonth) spent += exp.amount;
-          } else if (data.period === 'yearly') {
-            if (d.getFullYear() === curYear) spent += exp.amount;
-          }
+    expenses.forEach(exp => {
+      if (exp.category === data.category) {
+        const d = (exp.date && typeof exp.date.toDate === "function") ? exp.date.toDate() : new Date(exp.date);
+        if (data.period === 'monthly') {
+          if (d.getFullYear() === curYear && d.getMonth() === curMonth) spent += exp.amount;
+        } else if (data.period === 'yearly') {
+          if (d.getFullYear() === curYear) spent += exp.amount;
         }
-      });
-
-      budgetList.appendChild(buildCard(docSnap.id, data, spent));
+      }
     });
 
-    budgetLoading.classList.add("hidden");
-    budgetList.classList.remove("hidden");
-  } catch (err) {
-    console.error("loadBudgets error:", err);
-    budgetLoading.classList.add("hidden");
-    budgetEmpty.classList.remove("hidden");
-    showStatus("error", "Could not load budgets. Please refresh.");
-  }
+    budgetList.appendChild(buildCard(data.id, data, spent));
+  });
+
+  budgetEmpty.classList.add("hidden");
+  budgetList.classList.remove("hidden");
 }
 
 function openAddModal() {
@@ -276,7 +270,6 @@ async function handleFormSubmit(event) {
     }
 
     bsModal.hide();
-    await loadBudgets();
   } catch (err) {
     console.error(err);
     showStatus("error", "Could not save budget.");
@@ -297,7 +290,6 @@ async function handleDeleteConfirm() {
     await deleteDoc(doc(db, "users", uid, "budgets", pendingDeleteId));
     bsDeleteModal.hide();
     showStatus("success", "Budget deleted.", 3000);
-    await loadBudgets();
   } catch (err) {
     console.error(err);
     bsDeleteModal.hide();
@@ -315,10 +307,15 @@ export function initBudgets(uid) {
   bsDeleteModal = new bootstrap.Modal(deleteBudgetModal);
 
   addBudgetBtn.addEventListener("click", openAddModal);
-  refreshBtn.addEventListener("click", () => loadBudgets());
   budgetForm.addEventListener("submit", handleFormSubmit);
   deleteConfirmBtn.addEventListener("click", handleDeleteConfirm);
   deleteBudgetModal.addEventListener("hidden.bs.modal", () => pendingDeleteId = null);
 
-  loadBudgets();
+  subscribeToStore((store) => {
+    currentBudgets = store.budgets;
+    currentTxns = store.transactions;
+    isLoading = store.loading.budgets || store.loading.transactions;
+    isError = store.error.budgets || store.error.transactions;
+    renderBudgets();
+  });
 }

@@ -11,14 +11,11 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  getDocs,
   doc,
-  query,
-  orderBy,
-  where,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
+import { subscribeToStore } from "./store.js";
 
 // ---------------------------------------------------------------------------
 // DOM references (all exist in dashboard.html)
@@ -29,7 +26,6 @@ const txnEmpty      = document.getElementById("txn-empty");
 const txnStatus     = document.getElementById("txn-status");
 
 const addTxnBtn     = document.getElementById("add-txn-btn");
-const refreshBtn    = document.getElementById("txn-refresh-btn");
 const filterBtns    = document.querySelectorAll(".txn-filter-btn");
 
 // Modal form elements
@@ -60,6 +56,11 @@ let bsDeleteModal = null;
 
 // Active filter state: "all" | "income" | "expense"
 let activeFilter = "all";
+
+// Local store state
+let currentTxns = [];
+let isLoading = true;
+let isError = false;
 
 // ID queued for deletion
 let pendingDeleteId = null;
@@ -346,65 +347,48 @@ function escapeHtml(str) {
 // ---------------------------------------------------------------------------
 
 /**
- * Fetches and renders the transaction list.
- * @param {"all" | "income" | "expense"} filter
+ * Renders the transaction list from local state.
  */
-async function loadTransactions(filter) {
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) return;
-
-  // Show spinner, hide list & empty state
-  txnLoading.classList.remove("hidden");
-  txnList.classList.add("hidden");
-  txnEmpty.classList.add("hidden");
+function renderTransactions() {
   clearStatus();
 
-  try {
-    const txnCol = collection(db, "users", uid, "transactions");
-
-    let q;
-    if (filter === "income" || filter === "expense") {
-      q = query(txnCol, where("type", "==", filter), orderBy("date", "desc"));
-    } else {
-      q = query(txnCol, orderBy("date", "desc"));
-    }
-
-    const snapshot = await getDocs(q);
-
-    // Build stats from the full (unfiltered) set when filter = all; otherwise
-    // fetch all anyway so stats always reflect the real totals.
-    let allItems = [];
-    if (filter === "all") {
-      snapshot.forEach((d) => allItems.push(d.data()));
-    } else {
-      // Fetch unfiltered for stats only (lightweight — same query minus where)
-      const allSnap = await getDocs(query(txnCol, orderBy("date", "desc")));
-      allSnap.forEach((d) => allItems.push(d.data()));
-    }
-    renderStats(allItems);
-
-    // Clear existing cards
-    txnList.innerHTML = "";
-
-    if (snapshot.empty) {
-      txnLoading.classList.add("hidden");
-      txnEmpty.classList.remove("hidden");
-      return;
-    }
-
-    snapshot.forEach((docSnap) => {
-      txnList.appendChild(buildCard(docSnap.id, docSnap.data()));
-    });
-
-    txnLoading.classList.add("hidden");
-    txnList.classList.remove("hidden");
-
-  } catch (err) {
-    console.error("loadTransactions error:", err);
-    txnLoading.classList.add("hidden");
-    txnEmpty.classList.remove("hidden");
-    showStatus("error", "Could not load transactions. Please refresh.");
+  if (isLoading) {
+    txnLoading.classList.remove("hidden");
+    txnList.classList.add("hidden");
+    txnEmpty.classList.add("hidden");
+    return;
   }
+
+  txnLoading.classList.add("hidden");
+
+  if (isError) {
+    txnList.classList.add("hidden");
+    txnEmpty.classList.add("hidden");
+    showStatus("error", "Could not load transactions. Please check your connection.");
+    return;
+  }
+
+  // Always calculate stats from the full list
+  renderStats(currentTxns);
+
+  // Clear existing cards
+  txnList.innerHTML = "";
+
+  // Apply filter
+  const filtered = currentTxns.filter(t => activeFilter === "all" || t.type === activeFilter);
+
+  if (filtered.length === 0) {
+    txnEmpty.classList.remove("hidden");
+    txnList.classList.add("hidden");
+    return;
+  }
+
+  filtered.forEach((data) => {
+    txnList.appendChild(buildCard(data.id, data));
+  });
+
+  txnEmpty.classList.add("hidden");
+  txnList.classList.remove("hidden");
 }
 
 // ---------------------------------------------------------------------------
@@ -508,7 +492,6 @@ async function handleFormSubmit(event) {
     }
 
     bsModal.hide();
-    await loadTransactions(activeFilter);
 
   } catch (err) {
     console.error("handleFormSubmit error:", err);
@@ -541,7 +524,6 @@ async function handleDeleteConfirm() {
 
     bsDeleteModal.hide();
     showStatus("success", "Transaction deleted.", 3000);
-    await loadTransactions(activeFilter);
 
   } catch (err) {
     console.error("handleDeleteConfirm error:", err);
@@ -572,7 +554,6 @@ export function initTransactions(uid) {
 
   // Button events
   addTxnBtn.addEventListener("click", openAddModal);
-  refreshBtn.addEventListener("click", () => loadTransactions(activeFilter));
 
   // Filter tabs
   filterBtns.forEach((btn) => {
@@ -584,7 +565,7 @@ export function initTransactions(uid) {
       btn.classList.add("is-active");
       btn.setAttribute("aria-selected", "true");
       activeFilter = btn.dataset.filter;
-      loadTransactions(activeFilter);
+      renderTransactions();
     });
   });
 
@@ -599,6 +580,11 @@ export function initTransactions(uid) {
     pendingDeleteId = null;
   });
 
-  // Initial load
-  loadTransactions("all");
+  // Subscribe to real-time store updates
+  subscribeToStore((store) => {
+    currentTxns = store.transactions;
+    isLoading = store.loading.transactions;
+    isError = store.error.transactions;
+    renderTransactions();
+  });
 }
