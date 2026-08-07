@@ -40,7 +40,7 @@
           <!-- Primary links -->
           <ul class="navbar-nav gap-lg-1 me-auto mb-2 mb-lg-0">
             <li class="nav-item">
-              <a class="nav-link" data-page="dashboard.html" href="dashboard.html">
+              <a class="nav-link" data-page="dashboard.html" href="#dashboard">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <rect x="3" y="3" width="7" height="9" rx="1.5" />
                   <rect x="14" y="3" width="7" height="5" rx="1.5" />
@@ -60,7 +60,7 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" data-page="budgets.html" href="budgets.html">
+              <a class="nav-link" data-page="budgets.html" href="#budgets">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M3 12a9 9 0 1 0 9-9v9z" />
                 </svg>
@@ -68,7 +68,7 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" data-page="goals.html" href="goals.html">
+              <a class="nav-link" data-page="goals.html" href="#goals">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <circle cx="12" cy="12" r="9" />
                   <circle cx="12" cy="12" r="4.5" />
@@ -78,7 +78,7 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" data-page="reports.html" href="reports.html">
+              <a class="nav-link" data-page="reports.html" href="#reports">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M4 20V4" />
                   <path d="M4 20h16" />
@@ -90,7 +90,7 @@
               </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" data-page="import.html" href="import.html">
+              <a class="nav-link" data-page="import.html" href="#import">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M12 16V4" />
                   <path d="M8 8l4-4 4 4" />
@@ -159,7 +159,7 @@
       </div>
 
       <div id="dash-content" class="hidden">
-        <header class="dash-header">
+        <header class="dash-header" id="dashboard">
           <div>
             <p class="auth-kicker mb-2">Your dashboard</p>
             <h1 id="user-greeting" class="h2 mb-1">Hello</h1>
@@ -265,7 +265,7 @@
 
         <!-- ── Transactions panel ────────────────────────── -->
         <section class="dash-panel mt-4" aria-labelledby="txn-heading">
-          <div class="txn-panel-header">
+          <div class="txn-panel-header" id="transaction">
             <h2 id="txn-heading" class="h5 mb-0">Transactions</h2>
             <div class="txn-actions">
               <button
@@ -336,7 +336,7 @@
 
         <!-- ── Budgets panel ────────────────────────────── -->
         <section class="dash-panel mt-4" aria-labelledby="budget-heading">
-          <div class="txn-panel-header">
+          <div class="txn-panel-header" id="budget">
             <h2 id="budget-heading" class="h5 mb-0">Budgets</h2>
             <div class="txn-actions">
               <button
@@ -377,7 +377,7 @@
 
         <!-- ── Goals panel ──────────────────────────────── -->
         <section class="dash-panel mt-4" aria-labelledby="goal-heading">
-          <div class="txn-panel-header">
+          <div class="txn-panel-header" id="goal">
             <h2 id="goal-heading" class="h5 mb-0">Savings Goals</h2>
             <div class="txn-actions">
               <button
@@ -418,7 +418,7 @@
 
         <!-- ── CSV Import panel ──────────────────────────────── -->
         <section class="dash-panel mt-4" aria-labelledby="import-heading">
-          <div class="txn-panel-header">
+          <div class="txn-panel-header" id="import">
             <h2 id="import-heading" class="h5 mb-0">Import Transactions</h2>
           </div>
 

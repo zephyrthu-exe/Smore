@@ -6,6 +6,7 @@ import { initGoals } from "./goals.js";
 import { initAnalytics } from "./analytics.js";
 import { initImport } from "./import.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
+import { initNav } from "./nav.js";
 
 const loadingScreen = document.getElementById("dash-loading");
 const dashContent   = document.getElementById("dash-content");
@@ -63,6 +64,7 @@ onAuthStateChanged(auth, (user) => {
   dashContent.classList.remove("hidden");
 
   // Initialise each panel with the verified UID.
+  initNav(user.uid);
   initTransactions(user.uid);
   initBudgets(user.uid);
   initGoals(user.uid);
