@@ -122,3 +122,6 @@
   }
 })();
 
+
+window.initNav = function() {};
+export function initNav() {}
