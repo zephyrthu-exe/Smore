@@ -14,6 +14,7 @@
     />
     <link rel="stylesheet" href="./css/styles.css" />
     <link rel="stylesheet" href="./css/sombo.css" />
+    <link rel="stylesheet" href="./css/nav.css" />
   </head>
   <body>
     <a class="visually-hidden-focusable" href="#dash-content">Skip to dashboard</a>
@@ -21,6 +22,106 @@
     <nav class="navbar smore-nav" aria-label="Primary">
       <div class="container py-2 d-flex justify-content-between align-items-center">
         <a class="navbar-brand brand-mark fw-bold text-primary" href="./dashboard.html">Smore</a>
+
+        <!-- Mobile toggler -->
+        <button
+          class="navbar-toggler ms-auto"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#smoreNav"
+          aria-controls="smoreNav"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="smoreNav">
+          <!-- Primary links -->
+          <ul class="navbar-nav gap-lg-1 me-auto mb-2 mb-lg-0">
+            <li class="nav-item">
+              <a class="nav-link" data-page="dashboard.html" href="dashboard.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="9" rx="1.5" />
+                  <rect x="14" y="3" width="7" height="5" rx="1.5" />
+                  <rect x="14" y="12" width="7" height="9" rx="1.5" />
+                  <rect x="3" y="16" width="7" height="5" rx="1.5" />
+                </svg>
+                Dashboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-page="transactions.html" href="transactions.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M4 7h13l-3-3" />
+                  <path d="M20 17H7l3 3" />
+                </svg>
+                Transactions
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-page="budgets.html" href="budgets.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 9-9v9z" />
+                </svg>
+                Budgets
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-page="goals.html" href="goals.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="9" />
+                  <circle cx="12" cy="12" r="4.5" />
+                  <circle cx="12" cy="12" r="1" />
+                </svg>
+                Goals
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-page="reports.html" href="reports.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M4 20V4" />
+                  <path d="M4 20h16" />
+                  <path d="M8 20v-7" />
+                  <path d="M13 20V8" />
+                  <path d="M18 20v-4" />
+                </svg>
+                Reports
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" data-page="import.html" href="import.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M12 16V4" />
+                  <path d="M8 8l4-4 4 4" />
+                  <path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" />
+                </svg>
+                Import
+              </a>
+            </li>
+          </ul>
+
+           <!-- Right side: currency, session, account -->
+          <div class="d-flex align-items-center gap-2 smore-nav-actions">
+            <!-- Currency switcher -->
+            <div class="dropdown">
+              <button
+                class="smore-chip dropdown-toggle"
+                type="button"
+                data-bs-toggle="dropdown"
+                aria-expanded="false"
+                aria-label="Change currency"
+              >
+                <span data-currency-label>MMK</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><button class="dropdown-item" type="button" data-currency="MMK">MMK — Myanmar Kyat</button></li>
+                <li><button class="dropdown-item" type="button" data-currency="USD">USD — US Dollar</button></li>
+                <li><button class="dropdown-item" type="button" data-currency="THB">THB — Thai Baht</button></li>
+                <li><button class="dropdown-item" type="button" data-currency="EUR">EUR — Euro</button></li>
+              </ul>
+            </div>
+            
         <button
           id="logout-btn"
           class="btn btn-outline-primary btn-sm"
@@ -723,5 +824,6 @@
       src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
     ></script>
     <script type="module" src="./js/dashboard.js"></script>
+    <script src="./js/nav.js"></script>
   </body>
 </html>
