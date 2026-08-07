@@ -124,4 +124,13 @@
 
 
 window.initNav = function() {};
-export function initNav() {}
+
+export function initNav() {
+    if (typeof highlightActiveLink === 'function') highlightActiveLink();
+    if (typeof wireCurrencySwitcher === 'function') wireCurrencySwitcher();
+    if (typeof wireLogout === 'function') wireLogout();
+    if (typeof closeMenuOnNavigate === 'function') closeMenuOnNavigate();
+    if (typeof shadowOnScroll === 'function') shadowOnScroll();
+}
+
+export default initNav;
