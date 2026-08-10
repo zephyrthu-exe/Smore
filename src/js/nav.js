@@ -1,136 +1,75 @@
 /* ==========================================================================
-   Smore — Budget Planner navbar behaviour
-   Plain JS, no framework. Depends on Bootstrap 5 bundle for collapse/dropdown.
+   Smore — Dashboard Behaviour
+   Handles dynamic interactivity, currency changes, and modal/drawer logic.
    ========================================================================== */
 
-(function () {
-  "use strict";
+document.addEventListener("DOMContentLoaded", function () {
+  initAskSmoreDrawer();
+  initBudgetProgressTooltips();
+  listenToCurrencyChanges();
+});
 
-  var STORAGE_KEY = "smore:currency";
+/**
+ * 1. Floating "Ask Smore" Action Button / AI Assistant Modal Trigger
+ */
+function initAskSmoreDrawer() {
+  const fabBtn = document.querySelector(".fab-ask");
+  if (!fabBtn) return;
 
-  document.addEventListener("DOMContentLoaded", function () {
-    highlightActiveLink();
-    wireCurrencySwitcher();
-    wireLogout();
-    closeMenuOnNavigate();
-    shadowOnScroll();
+  fabBtn.addEventListener("click", function () {
+    // Check if Assistant page redirect or offcanvas drawer
+    if (window.innerWidth < 768) {
+      window.location.href = "assistant.html";
+    } else {
+      openAssistantModal();
+    }
   });
-
-  /* Mark the nav link matching the current page as active. */
-  function highlightActiveLink() {
-    var links = document.querySelectorAll(".smore-nav .nav-link[href]");
-    var here = window.location.pathname.split("/").pop() || "index.html";
-
-    links.forEach(function (link) {
-      var target = link.getAttribute("href").split("/").pop();
-      var isActive = target === here || (link.dataset.page && link.dataset.page === here);
-      link.classList.toggle("active", !!isActive);
-      if (isActive) {
-        link.setAttribute("aria-current", "page");
-      } else {
-        link.removeAttribute("aria-current");
-      }
-    });
-  }
-
-  /* Currency chip + dropdown, persisted in localStorage. */
-  function wireCurrencySwitcher() {
-    var label = document.querySelector("[data-currency-label]");
-    var options = document.querySelectorAll("[data-currency]");
-    if (!label) return;
-
-    var saved = safeGet(STORAGE_KEY) || label.textContent.trim() || "MMK";
-    label.textContent = saved;
-
-    options.forEach(function (option) {
-      option.addEventListener("click", function (event) {
-        event.preventDefault();
-        var code = option.dataset.currency;
-        label.textContent = code;
-        safeSet(STORAGE_KEY, code);
-        document.dispatchEvent(
-          new CustomEvent("smore:currencychange", { detail: { currency: code } }),
-        );
-      });
-    });
-  }
-
-  /* Log out button — clears local session state then redirects. */
-  function wireLogout() {
-    var buttons = document.querySelectorAll("[data-action='logout']");
-    buttons.forEach(function (button) {
-      button.addEventListener("click", function (event) {
-        event.preventDefault();
-        try {
-          localStorage.removeItem("smore:session");
-          sessionStorage.clear();
-        } catch (error) {
-          /* storage unavailable — nothing to clear */
-        }
-        var target = button.dataset.redirect || "index.html";
-        window.location.href = target;
-      });
-    });
-  }
-
-  /* On mobile, collapse the menu after tapping a link. */
-  function closeMenuOnNavigate() {
-    var collapseEl = document.getElementById("smoreNav");
-    if (!collapseEl || !window.bootstrap) return;
-
-    collapseEl.querySelectorAll(".nav-link").forEach(function (link) {
-      link.addEventListener("click", function () {
-        if (window.innerWidth >= 992) return;
-        var instance = window.bootstrap.Collapse.getOrCreateInstance(collapseEl, {
-          toggle: false,
-        });
-        instance.hide();
-      });
-    });
-  }
-
-  /* Slightly stronger shadow once the page is scrolled. */
-  function shadowOnScroll() {
-    var nav = document.querySelector(".smore-nav");
-    if (!nav) return;
-
-    var apply = function () {
-      var scrolled = window.scrollY > 4;
-      nav.style.boxShadow = scrolled
-        ? "0 2px 4px rgba(16,24,40,.06), 0 12px 32px rgba(16,24,40,.10)"
-        : "";
-    };
-
-    apply();
-    window.addEventListener("scroll", apply, { passive: true });
-  }
-
-  function safeGet(key) {
-    try {
-      return localStorage.getItem(key);
-    } catch (error) {
-      return null;
-    }
-  }
-
-  function safeSet(key, value) {
-    try {
-      localStorage.setItem(key, value);
-    } catch (error) {
-      /* ignore */
-    }
-  }
-})();
-
-
-window.initNav = function() {};
-
-export function initNav() {
-    if (typeof highlightActiveLink === 'function') highlightActiveLink();
-    if (typeof wireCurrencySwitcher === 'function') wireCurrencySwitcher();
-    if (typeof wireLogout === 'function') wireLogout();
-    if (typeof closeMenuOnNavigate === 'function') closeMenuOnNavigate();
-    if (typeof shadowOnScroll === 'function') shadowOnScroll();
 }
 
-export default initNav;
+function openAssistantModal() {
+  // Simple quick-prompt dialog for AI Assistant
+  const userPrompt = prompt("Ask Smore Assistant a financial question (e.g., 'How much did I spend on dining?'):");
+  if (userPrompt && userPrompt.trim() !== "") {
+    alert(`Smore Assistant: Analyzing your data for "${userPrompt}"...`);
+  }
+}
+
+/**
+ * 2. Add Bootstrap tooltips to budget progress bars for precise visual feedback
+ */
+function initBudgetProgressTooltips() {
+  const progressBars = document.querySelectorAll(".progress-bar");
+  progressBars.forEach((bar) => {
+    const percentage = bar.style.width;
+    bar.setAttribute("data-bs-toggle", "tooltip");
+    bar.setAttribute("data-bs-placement", "top");
+    bar.setAttribute("title", `Used ${percentage} of monthly budget`);
+  });
+
+  // Initialize Bootstrap 5 tooltips if Bootstrap JS bundle is available
+  if (window.bootstrap && window.bootstrap.Tooltip) {
+    const tooltipTriggerList = [].slice.call(
+      document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    );
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new window.bootstrap.Tooltip(tooltipTriggerEl);
+    });
+  }
+}
+
+/**
+ * 3. React to global currency change events (dispatched from navbar/sidebar)
+ */
+function listenToCurrencyChanges() {
+  document.addEventListener("smore:currencychange", function (event) {
+    const newCurrency = event.detail ? event.detail.currency : "MMK";
+    
+    // Update currency labels across the dashboard cards
+    const amountElements = document.querySelectorAll(".h3.fw-bold, .text-muted.small");
+    amountElements.forEach((el) => {
+      if (el.textContent.includes("MMK") || el.textContent.includes("USD") || el.textContent.includes("THB")) {
+        el.textContent = el.textContent.replace(/(MMK|USD|THB|EUR)/g, newCurrency);
+      }
+    });
+  });
+}

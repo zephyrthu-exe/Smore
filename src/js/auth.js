@@ -1,380 +1,141 @@
-import {
+import { auth } from './firebase-config.js';
+import { 
+  signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  updateProfile,
-  GoogleAuthProvider,
-  signInWithPopup,
-  signInWithRedirect
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { auth } from "./firebase-config.js";
+  signOut 
+} from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
-const loginForm = document.getElementById("login-form");
-const registerForm = document.getElementById("register-form");
-const loginTab = document.getElementById("login-tab");
-const registerTab = document.getElementById("register-tab");
-const statusAlert = document.getElementById("auth-status");
-const authPanel = document.getElementById("auth-panel");
-const authLoading = document.getElementById("auth-loading");
-const googleSigninBtn = document.getElementById("google-signin-btn");
+// DOM Elements
+const loginSection = document.getElementById('loginSection');
+const registerSection = document.getElementById('registerSection');
+const showLoginBtn = document.getElementById('showLogin');
+const showRegisterBtn = document.getElementById('showRegister');
 
-const loginEmail = document.getElementById("login-email");
-const loginPassword = document.getElementById("login-password");
-const registerName = document.getElementById("register-name");
-const registerEmail = document.getElementById("register-email");
-const registerPassword = document.getElementById("register-password");
-const registerConfirm = document.getElementById("register-confirm");
+const bannerTitle = document.getElementById('bannerTitle');
+const bannerDesc = document.getElementById('bannerDesc');
 
-const loginSubmit = document.getElementById("login-submit");
-const registerSubmit = document.getElementById("register-submit");
+const loginForm = document.getElementById('login-form');
+const registerForm = document.getElementById('register-form');
+const authStatus = document.getElementById('auth-status');
 
-/**
- * Maps Firebase Auth error codes to friendly messages.
- * @param {unknown} error
- * @returns {string}
- */
-function getFriendlyAuthError(error) {
-  const code = error && typeof error === "object" && "code" in error ? error.code : "";
+// Switch Forms
+showLoginBtn?.addEventListener('click', () => {
+  registerSection.classList.add('d-none');
+  loginSection.classList.remove('d-none');
+  bannerTitle.textContent = "Save More, Stress Less";
+  bannerDesc.textContent = "Your all-in-one personal finance tracker built directly for smart daily budgets.";
+  hideMessage();
+});
 
-  const messages = {
-    "auth/email-already-in-use": "An account with this email already exists. Try logging in.",
-    "auth/invalid-email": "Please enter a valid email address.",
-    "auth/invalid-credential": "Incorrect email or password. Please try again.",
-    "auth/wrong-password": "Incorrect email or password. Please try again.",
-    "auth/user-not-found": "No account found with that email. Please register first.",
-    "auth/user-disabled": "This account has been disabled. Contact support if you need help.",
-    "auth/weak-password": "Password is too weak. Use at least 6 characters.",
-    "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
-    "auth/network-request-failed": "Network error. Check your connection and try again.",
-    "auth/operation-not-allowed": "Google sign-in is not enabled for this project. Enable it in the Firebase Console.",
-    "auth/missing-password": "Please enter your password.",
-    "auth/popup-closed-by-user": "Sign-in was cancelled. Please try again.",
-    "auth/cancelled-popup-request": "Sign-in was cancelled. Please try again.",
-    "auth/popup-blocked": "Popup was blocked by your browser. Please allow popups for this site and try again.",
-    "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method. Try logging in with email/password instead.",
-    "auth/unauthorized-domain": "This site is not authorised to use Google sign-in. Add this domain to the Firebase Console under Authentication → Settings → Authorised domains.",
-    "auth/internal-error": "An internal error occurred. Please try again.",
-    "auth/user-cancelled": "Sign-in was cancelled. Please try again.",
-  };
+showRegisterBtn?.addEventListener('click', () => {
+  loginSection.classList.add('d-none');
+  registerSection.classList.remove('d-none');
+  bannerTitle.textContent = "Start Your Savings Journey";
+  bannerDesc.textContent = "Join thousands of users building strong financial habits and crushing their savings goals.";
+  hideMessage();
+});
 
-  if (typeof code === "string" && messages[code]) {
-    return messages[code];
+// Password Show/Hide Toggle (Global Event Listener for Reliability)
+document.addEventListener('click', (e) => {
+  if (e.target && e.target.classList.contains('toggle-pass')) {
+    e.preventDefault();
+    const targetId = e.target.getAttribute('data-target');
+    const input = document.getElementById(targetId);
+    if (input) {
+      if (input.type === 'password') {
+        input.type = 'text';
+        e.target.textContent = 'Hide';
+      } else {
+        input.type = 'password';
+        e.target.textContent = 'Show';
+      }
+    }
   }
+});
 
-  // Return the raw code so it is visible in the UI if not mapped.
-  const rawCode = typeof code === "string" && code ? ` (${code})` : "";
-  return `Something went wrong. Please try again.${rawCode}`;
+function showMessage(msg, isError = true) {
+  if (!authStatus) return;
+  authStatus.textContent = msg;
+  authStatus.className = isError ? 'status-alert is-visible is-error' : 'status-alert is-visible is-success';
 }
 
-/**
- * Shows a status message above the forms.
- * @param {"error" | "success" | "info"} type
- * @param {string} message
- */
-function showStatus(type, message) {
-  statusAlert.textContent = message;
-  statusAlert.className = `status-alert is-visible is-${type}`;
-  statusAlert.setAttribute("role", type === "error" ? "alert" : "status");
+function hideMessage() {
+  if (!authStatus) return;
+  authStatus.className = 'status-alert';
 }
 
-/**
- * Like showStatus but renders trusted HTML so an inline action link can be included.
- * Only call this with hard-coded markup — never with user-supplied strings.
- * @param {"error" | "success" | "info"} type
- * @param {string} html
- */
-function showStatusHTML(type, html) {
-  statusAlert.innerHTML = html;
-  statusAlert.className = `status-alert is-visible is-${type}`;
-  statusAlert.setAttribute("role", type === "error" ? "alert" : "status");
-}
+// Login
+if (loginForm) {
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email')?.value.trim();
+    const password = document.getElementById('login-password')?.value;
 
-function clearStatus() {
-  statusAlert.textContent = "";
-  statusAlert.className = "status-alert";
-  statusAlert.removeAttribute("role");
-}
+    if (!email || !password) {
+      showMessage('Please enter both email and password.');
+      return;
+    }
 
-/**
- * Clears Bootstrap-style field validation.
- * @param {HTMLFormElement} form
- */
-function clearFieldErrors(form) {
-  form.querySelectorAll(".is-invalid").forEach((el) => el.classList.remove("is-invalid"));
-  form.querySelectorAll("[data-error-for]").forEach((el) => {
-    el.textContent = "";
+    try {
+      await signOut(auth);
+      await signInWithEmailAndPassword(auth, email, password);
+      showMessage('Signed in successfully.', false);
+      window.location.href = './dashboard.html';
+    } catch (err) {
+      handleAuthError(err.code);
+    }
   });
 }
 
-/**
- * Marks a field invalid and sets its message.
- * @param {HTMLInputElement} input
- * @param {string} message
- */
-function setFieldError(input, message) {
-  input.classList.add("is-invalid");
-  const feedback = document.querySelector(`[data-error-for="${input.id}"]`);
-  if (feedback) {
-    feedback.textContent = message;
-  }
-}
+// Register
+if (registerForm) {
+  registerForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('register-email')?.value.trim();
+    const password = document.getElementById('register-password')?.value;
+    const confirmPassword = document.getElementById('regConfirmPassword')?.value;
+    const termsCheck = document.getElementById('termsCheck')?.checked;
 
-/**
- * @param {HTMLButtonElement} button
- * @param {boolean} isLoading
- * @param {string} idleLabel
- */
-function setButtonLoading(button, isLoading, idleLabel) {
-  button.disabled = isLoading;
-  button.classList.toggle("btn-loading", isLoading);
-
-  if (isLoading) {
-    button.innerHTML = `
-      <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-      <span>Please wait...</span>
-    `;
-  } else {
-    button.textContent = idleLabel;
-  }
-}
-
-/**
- * Switches between login and register views.
- * @param {"login" | "register"} mode
- */
-function switchMode(mode) {
-  const isLogin = mode === "login";
-
-  loginTab.classList.toggle("is-active", isLogin);
-  registerTab.classList.toggle("is-active", !isLogin);
-  loginTab.setAttribute("aria-selected", String(isLogin));
-  registerTab.setAttribute("aria-selected", String(!isLogin));
-
-  loginForm.classList.toggle("hidden", !isLogin);
-  registerForm.classList.toggle("hidden", isLogin);
-
-  clearStatus();
-  clearFieldErrors(loginForm);
-  clearFieldErrors(registerForm);
-
-  const title = document.getElementById("auth-title");
-  const subtitle = document.getElementById("auth-subtitle");
-
-  if (isLogin) {
-    title.textContent = "Welcome back";
-    subtitle.textContent = "Log in to track spending and savings in MMK.";
-    loginEmail.focus();
-  } else {
-    title.textContent = "Create your account";
-    subtitle.textContent = "Register to start organizing your student finances.";
-    registerName.focus();
-  }
-}
-
-/**
- * @param {string} email
- * @returns {boolean}
- */
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-}
-
-/**
- * Validates the login form. Returns false if invalid.
- * @returns {boolean}
- */
-function validateLogin() {
-  clearFieldErrors(loginForm);
-  let valid = true;
-
-  const email = loginEmail.value.trim();
-  const password = loginPassword.value;
-
-  if (!email) {
-    setFieldError(loginEmail, "Email is required.");
-    valid = false;
-  } else if (!isValidEmail(email)) {
-    setFieldError(loginEmail, "Enter a valid email address.");
-    valid = false;
-  }
-
-  if (!password) {
-    setFieldError(loginPassword, "Password is required.");
-    valid = false;
-  }
-
-  return valid;
-}
-
-/**
- * Validates the register form. Returns false if invalid.
- * @returns {boolean}
- */
-function validateRegister() {
-  clearFieldErrors(registerForm);
-  let valid = true;
-
-  const name = registerName.value.trim();
-  const email = registerEmail.value.trim();
-  const password = registerPassword.value;
-  const confirm = registerConfirm.value;
-
-  if (!name) {
-    setFieldError(registerName, "Name is required.");
-    valid = false;
-  }
-
-  if (!email) {
-    setFieldError(registerEmail, "Email is required.");
-    valid = false;
-  } else if (!isValidEmail(email)) {
-    setFieldError(registerEmail, "Enter a valid email address.");
-    valid = false;
-  }
-
-  if (!password) {
-    setFieldError(registerPassword, "Password is required.");
-    valid = false;
-  } else if (password.length < 6) {
-    setFieldError(registerPassword, "Use at least 6 characters.");
-    valid = false;
-  }
-
-  if (!confirm) {
-    setFieldError(registerConfirm, "Please confirm your password.");
-    valid = false;
-  } else if (password !== confirm) {
-    setFieldError(registerConfirm, "Passwords do not match.");
-    valid = false;
-  }
-
-  return valid;
-}
-
-loginTab.addEventListener("click", () => switchMode("login"));
-registerTab.addEventListener("click", () => switchMode("register"));
-
-loginForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  clearStatus();
-
-  if (!validateLogin()) {
-    showStatus("error", "Please fix the highlighted fields.");
-    return;
-  }
-
-  setButtonLoading(loginSubmit, true, "Log in");
-
-  try {
-    await signInWithEmailAndPassword(
-      auth,
-      loginEmail.value.trim(),
-      loginPassword.value
-    );
-    showStatus("success", "Logged in successfully. Redirecting...");
-    window.location.href = "./dashboard.html";
-  } catch (error) {
-    showStatus("error", getFriendlyAuthError(error));
-    setButtonLoading(loginSubmit, false, "Log in");
-  }
-});
-
-registerForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  clearStatus();
-
-  if (!validateRegister()) {
-    showStatus("error", "Please fix the highlighted fields.");
-    return;
-  }
-
-  setButtonLoading(registerSubmit, true, "Create account");
-
-  try {
-    const credential = await createUserWithEmailAndPassword(
-      auth,
-      registerEmail.value.trim(),
-      registerPassword.value
-    );
-
-    const displayName = registerName.value.trim();
-    if (displayName) {
-      await updateProfile(credential.user, { displayName });
+    if (!email || !password || !confirmPassword) {
+      showMessage('Please fill in all required fields.');
+      return;
     }
 
-    showStatus("success", "Account created. Redirecting to your dashboard...");
-    window.location.href = "./dashboard.html";
-  } catch (error) {
-    if (error && error.code === "auth/email-already-in-use") {
-      // Show a rich error with an inline action link to switch to login.
-      showStatusHTML(
-        "error",
-        `This email is already registered. <button type="button" id="switch-to-login-btn" class="status-link-btn">Log in instead →</button>`
-      );
-      // Wire up the inline button every time it is rendered.
-      document.getElementById("switch-to-login-btn").addEventListener("click", () => {
-        switchMode("login");
-      });
-    } else {
-      showStatus("error", getFriendlyAuthError(error));
+    if (password !== confirmPassword) {
+      showMessage('Passwords do not match.');
+      return;
     }
-    setButtonLoading(registerSubmit, false, "Create account");
-  }
-});
 
-googleSigninBtn.addEventListener("click", async () => {
-  clearStatus();
-  
-  // Basic loading state for the Google button
-  const originalContent = googleSigninBtn.innerHTML;
-  googleSigninBtn.disabled = true;
-  googleSigninBtn.innerHTML = `
-    <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-    <span>Please wait...</span>
-  `;
-
-  const provider = new GoogleAuthProvider();
-
-  try {
-    await signInWithPopup(auth, provider);
-    showStatus("success", "Logged in with Google. Redirecting...");
-    window.location.href = "./dashboard.html";
-  } catch (error) {
-    // Always log the raw error so the real code is visible in the browser console.
-    console.error("[Google sign-in error]", error?.code, error);
-
-    // If popup is blocked fall back to redirect.
-    if (error && error.code === "auth/popup-blocked") {
-      showStatus("info", "Popup was blocked — opening a redirect sign-in page instead…");
-      try {
-        await signInWithRedirect(auth, provider);
-      } catch (redirectError) {
-        console.error("[Google redirect error]", redirectError?.code, redirectError);
-        showStatus("error", getFriendlyAuthError(redirectError));
-        googleSigninBtn.disabled = false;
-        googleSigninBtn.innerHTML = originalContent;
-      }
-    } else {
-      showStatus("error", getFriendlyAuthError(error));
-      googleSigninBtn.disabled = false;
-      googleSigninBtn.innerHTML = originalContent;
+    if (!termsCheck) {
+      showMessage('Please accept the Terms of Service to continue.');
+      return;
     }
+
+    try {
+      await signOut(auth);
+      await createUserWithEmailAndPassword(auth, email, password);
+      showMessage('Account created successfully.', false);
+      window.location.href = './dashboard.html';
+    } catch (err) {
+      handleAuthError(err.code);
+    }
+  });
+}
+
+function handleAuthError(code) {
+  let msg = 'An unexpected error occurred. Please try again.';
+  switch (code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':
+      msg = 'Invalid email or password.';
+      break;
+    case 'auth/email-already-in-use':
+      msg = 'This email is already registered.';
+      break;
+    case 'auth/weak-password':
+      msg = 'Password should be at least 6 characters long.';
+      break;
   }
-});
-
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    window.location.replace("./dashboard.html");
-    return;
-  }
-
-  authLoading.classList.add("hidden");
-  authPanel.classList.remove("hidden");
-});
-
-const params = new URLSearchParams(window.location.search);
-if (params.get("mode") === "register") {
-  switchMode("register");
-} else {
-  switchMode("login");
+  showMessage(msg, true);
 }

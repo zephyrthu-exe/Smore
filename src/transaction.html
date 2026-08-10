@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smore — Dashboard</title>
+  <title>Smore — Transactions</title>
 
-  <!-- Bootstrap 5 & Icons -->
+  <!-- Bootstrap 5 CSS & Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
@@ -142,16 +142,7 @@
     </style>
 
 </head>
-<body>
-
-<!-- Mobile Header -->
-<header class="d-lg-none d-flex align-items-center justify-content-between p-3 bg-dark text-white border-bottom">
-  <button class="btn btn-outline-light btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#appSidebar">
-    <i class="bi bi-list fs-5"></i>
-  </button>
-  <span class="fw-bold">Smore</span>
-  <div class="user-avatar-sm bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center">AC</div>
-</header>
+<body class="bg-light">
 
 <div class="d-flex">
   <!-- Sidebar Navigation -->
@@ -163,15 +154,15 @@
       </div>
 
       <nav class="nav flex-column gap-1">
-        <a href="dashboard.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
-        <a href="transaction.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
+        <a href="dashboard.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
+        <a href="transaction.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
         <a href="budget.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
         <a href="goals.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
         <a href="analytics.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
       </nav>
     </div>
 
-    
+    <!-- User Account -->
         <div class="profile-wrap" id="profileWrap">
           <button class="profile-chip" type="button" aria-haspopup="true" aria-expanded="false">
             <span class="avatar">Z</span>
@@ -224,180 +215,153 @@
             </div>
           </div>
         </div>
-      </aside>
-
-
+</aside>
   <!-- Main Content Area -->
-  <main class="flex-grow-1 p-3 p-lg-4">
-    <!-- Header -->
+  <main class="flex-grow-1 p-4">
+    <!-- Header Controls -->
     <div class="d-flex justify-content-between align-items-center mb-4">
       <div>
-        <h1 class="h4 fw-bold mb-1">Welcome, <span id="welcomeName">User</span>!</h1>
-        <p class="text-muted small mb-0">Track your finances and start setting up your budget!</p>
+        <h1 class="h4 fw-bold mb-1">Transactions</h1>
+        <p class="text-muted small mb-0">Track and manage every expense and tutoring income</p>
       </div>
-      <button class="btn btn-sm btn-outline-dark d-flex align-items-center gap-1" id="logoutBtn">
-        <i class="bi bi-box-arrow-right"></i> Logout
-      </button>
+
+      <div class="d-flex align-items-center gap-2">
+        <select class="form-select form-select-sm border-0 shadow-sm" id="categoryFilter" style="width: 140px;">
+          <option value="All">All Categories</option>
+          <option value="Food & Dining">Food & Dining</option>
+          <option value="Transportation">Transportation</option>
+          <option value="Education">Education</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Income">Income</option>
+        </select>
+
+        <button class="btn btn-sm btn-warning text-dark fw-bold px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addTxModal">
+          <i class="bi bi-plus-lg"></i> Add Transaction
+        </button>
+      </div>
     </div>
 
-    <!-- Top Summary Cards -->
+    <!-- Top Stats Row -->
     <div class="row g-3 mb-4">
       <div class="col-12 col-md-4">
-        <div class="card card-dark-balance p-3 h-100 position-relative">
-          <div class="text-white-50 small mb-2">Total Balance</div>
-          <div class="h3 fw-bold mb-0" id="totalBalanceText">0 MMK</div>
-          <div class="text-white-50 small mt-1">Available Funds</div>
-          <i class="bi bi-wallet2 position-absolute top-0 end-0 m-3 text-white-50 fs-4"></i>
+        <div class="card p-3 h-100 border-0 shadow-sm">
+          <div class="text-muted small mb-1">Total Transactions</div>
+          <div class="h3 fw-bold mb-0" id="statTotalCount">0</div>
+          <div class="text-muted style-small" style="font-size: 0.75rem;">This month</div>
         </div>
       </div>
 
       <div class="col-12 col-md-4">
-        <div class="card p-3 h-100 position-relative">
-          <div class="text-muted small mb-2">Monthly Income</div>
-          <div class="h3 fw-bold mb-0 text-success" id="monthlyIncomeText">0 MMK</div>
-          <div class="text-muted small mt-1">Total Inflow</div>
+        <div class="card p-3 h-100 border-0 shadow-sm">
+          <div class="text-muted small mb-1">Total Spent</div>
+          <div class="h3 fw-bold mb-0 text-danger" id="statTotalSpent">0 MMK</div>
+          <div class="text-muted style-small" style="font-size: 0.75rem;">Expenses</div>
         </div>
       </div>
 
       <div class="col-12 col-md-4">
-        <div class="card p-3 h-100 position-relative">
-          <div class="text-muted small mb-2">Monthly Expenses</div>
-          <div class="h3 fw-bold mb-0 text-danger" id="monthlyExpenseText">0 MMK</div>
-          <div class="text-muted small mt-1">Total Outflow</div>
+        <div class="card p-3 h-100 border-0 shadow-sm">
+          <div class="text-muted small mb-1">Total Received</div>
+          <div class="h3 fw-bold mb-0 text-success" id="statTotalReceived">0 MMK</div>
+          <div class="text-muted style-small" style="font-size: 0.75rem;">Inflow / Income</div>
         </div>
       </div>
     </div>
 
-    <!-- MIDDLE ROW: Spending Overview (Chart) + Monthly Budget Limits -->
-    <div class="row g-3 mb-4">
-      <!-- Spending Overview Chart -->
-      <div class="col-12 col-lg-6">
-        <div class="card p-3 h-100">
-          <h2 class="h6 fw-bold mb-3">Spending Overview</h2>
-          <div class="row align-items-center">
-            <div class="col-6 position-relative d-flex justify-content-center">
-              <div style="width: 150px; height: 150px;">
-                <canvas id="spendingChart"></canvas>
-              </div>
-            </div>
-            <div class="col-6 small" id="chartLegend">
-              <div class="text-muted">No expense data yet</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Monthly Budget Limits -->
-      <div class="col-12 col-lg-6">
-        <div class="card p-3 h-100">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h6 fw-bold mb-0">Monthly Budget Limits</h2>
-            <button class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#adjustBudgetModal">Set Limit</button>
-          </div>
-          <div id="budgetsContainer" class="d-flex flex-column gap-2">
-            <!-- Dynamic Budgets -->
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- BOTTOM ROW: Savings Goals + Recent Transactions -->
+    <!-- History Table Area + Empty State Layout -->
     <div class="row g-3">
-      <!-- Savings Goals -->
-      <div class="col-12 col-lg-5">
-        <div class="card p-3 h-100">
+      <!-- Main Table Card -->
+      <div class="col-12 col-lg-8" id="tableColumn">
+        <div class="card border-0 shadow-sm p-3">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h6 fw-bold mb-0">Savings Goals</h2>
-            <button class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#addGoalModal">+ New Goal</button>
+            <h2 class="h6 fw-bold mb-0">History</h2>
+            <div class="d-flex gap-2">
+              <input type="text" class="form-control form-control-sm" id="searchTxInput" placeholder="Search items..." style="width: 180px;">
+            </div>
           </div>
-          <div id="goalsContainer" class="d-flex flex-column gap-2">
-            <!-- Dynamic Goals -->
+
+          <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+              <thead class="table-light small text-muted">
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                  <th>Category</th>
+                  <th class="text-end">Amount</th>
+                  <th class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="txTableBody" class="small">
+                <!-- Dynamic Rows Rendered by JS -->
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <!-- Recent Transactions -->
-      <div class="col-12 col-lg-7">
-        <div class="card p-3 h-100">
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2 class="h6 fw-bold mb-0">Recent Transactions</h2>
-            <a href="transactions.html" class="text-muted small text-decoration-none">See All</a>
+      <!-- Right Side Empty State Card (Visible when 0 transactions) -->
+      <div class="col-12 col-lg-4 d-none" id="emptyStateCol">
+        <div class="card border-0 shadow-sm p-4 text-center h-100 d-flex flex-column align-items-center justify-content-center">
+          <div class="bg-light rounded-circle p-3 mb-3">
+            <i class="bi bi-search text-warning fs-1"></i>
           </div>
-          <div id="recentTransactionsContainer" class="d-flex flex-column gap-2">
-            <!-- Dynamic Recent Transactions -->
-          </div>
+          <h6 class="fw-bold mb-1">No transactions yet</h6>
+          <p class="text-muted small mb-3">You haven't recorded any expenses or income this month.</p>
+          <button class="btn btn-warning btn-sm fw-bold px-3" data-bs-toggle="modal" data-bs-target="#addTxModal">
+            + Add first record
+          </button>
         </div>
       </div>
     </div>
   </main>
 </div>
 
-<!-- ================= MODALS ================= -->
-<div class="modal fade" id="addGoalModal" tabindex="-1" aria-hidden="true">
+<!-- ================= MODAL: ADD TRANSACTION ================= -->
+<div class="modal fade" id="addTxModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
+    <div class="modal-content border-0 shadow">
       <div class="modal-header">
-        <h5 class="modal-title fw-bold">New Savings Goal</h5>
+        <h5 class="modal-title fw-bold fs-6">Add New Transaction</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
-      <form id="addGoalForm">
+      <form id="addTxForm">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Goal Name</label>
-            <input type="text" class="form-control" id="goalName" placeholder="e.g. Travel, Emergency Fund" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">Target Amount (MMK)</label>
-            <input type="number" class="form-control" id="targetAmount" placeholder="1000000" min="1" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">Initial Deposit (MMK)</label>
-            <input type="number" class="form-control" id="goalInitial" placeholder="5000" min="0">
-          </div>       
-        <div class="modal-footer">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-dark">Save Goal</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="adjustBudgetModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title fw-bold">Set Category Budget Limit</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-      <form id="adjustBudgetForm">
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">Category</label>
-            <select class="form-select" id="budgetCategory" required>
-              <option value="Food & Dining">Food & Dining</option>
-              <option value="Transportation">Transportation</option>
-              <option value="Entertainment">Entertainment</option>
-              <option value="Education">Education</option>
+            <label class="form-label small fw-semibold">Type</label>
+            <select class="form-select" id="txType" required>
+              <option value="expense">Expense (-)</option>
+              <option value="income">Income (+)</option>
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Monthly Limit (MMK)</label>
-            <input type="number" class="form-control" id="limitAmount" placeholder="250000" min="1" required>
+            <label class="form-label small fw-semibold">Description</label>
+            <input type="text" class="form-control" id="txDescription" placeholder="e.g. Grab Food, Part-time Tutoring" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Category</label>
+            <select class="form-select" id="txCategory" required>
+              <option value="Food & Dining">Food & Dining</option>
+              <option value="Transportation">Transportation</option>
+              <option value="Education">Education</option>
+              <option value="Entertainment">Entertainment</option>
+              <option value="Income">Income</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Amount (MMK)</label>
+            <input type="number" class="form-control" id="txAmount" placeholder="15000" min="1" required>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-dark">Save Limit</button>
+          <button type="submit" class="btn btn-dark" id="saveTxBtn">Save Transaction</button>
         </div>
       </form>
     </div>
   </div>
 </div>
 
-<!-- Chart.js & Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<script type="module" src="./js/dashboard.js"></script>
+<script type="module" src="./js/transactions.js"></script>
 </body>
 </html>

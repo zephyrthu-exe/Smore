@@ -1,604 +1,318 @@
-/**
- * transactions.js — Smore transaction CRUD
- *
- * All Firestore reads/writes use the authenticated user's own UID, sourced
- * from auth.currentUser.uid. No user-supplied UID is ever interpolated into a
- * document path; the Firestore security rules enforce the same constraint.
- */
-
-import {
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDocs,
-  doc,
-  query,
-  orderBy,
-  where,
-  Timestamp,
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+  collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc, increment 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-// ---------------------------------------------------------------------------
-// DOM references (all exist in dashboard.html)
-// ---------------------------------------------------------------------------
-const txnList       = document.getElementById("txn-list");
-const txnLoading    = document.getElementById("txn-loading");
-const txnEmpty      = document.getElementById("txn-empty");
-const txnStatus     = document.getElementById("txn-status");
+let allTransactions = [];
 
-const addTxnBtn     = document.getElementById("add-txn-btn");
-const refreshBtn    = document.getElementById("txn-refresh-btn");
-const filterBtns    = document.querySelectorAll(".txn-filter-btn");
-
-// Modal form elements
-const txnModal      = document.getElementById("txnModal");
-const txnForm       = document.getElementById("txn-form");
-const txnEditId     = document.getElementById("txn-edit-id");
-const txnModalTitle = document.getElementById("txnModalLabel");
-const txnSubmitBtn  = document.getElementById("txn-submit-btn");
-
-const fldType        = document.getElementById("txn-type");
-const fldAmount      = document.getElementById("txn-amount");
-const fldCategory    = document.getElementById("txn-category");
-const fldDescription = document.getElementById("txn-description");
-const fldDate        = document.getElementById("txn-date");
-
-// Delete confirm modal
-const deleteTxnModal    = document.getElementById("deleteTxnModal");
-const deleteConfirmBtn  = document.getElementById("delete-confirm-btn");
-
-// Summary stat elements (live)
-const statBalance  = document.getElementById("stat-balance");
-const statSpent    = document.getElementById("stat-spent");
-const statIncome   = document.getElementById("stat-income");
-
-// Bootstrap Modal instances (initialised after DOM ready)
-let bsModal       = null;
-let bsDeleteModal = null;
-
-// Active filter state: "all" | "income" | "expense"
-let activeFilter = "all";
-
-// ID queued for deletion
-let pendingDeleteId = null;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Formats a whole-number MMK amount with thousands separators.
- * @param {number} n
- * @returns {string}
- */
-function formatMMK(n) {
-  return Number(n).toLocaleString("en-US") + " MMK";
-}
-
-/**
- * Converts a Firestore Timestamp or ISO string to a short human date.
- * @param {import("firebase/firestore").Timestamp | string} ts
- * @returns {string}
- */
-function formatDate(ts) {
-  let d;
-  if (ts && typeof ts.toDate === "function") {
-    d = ts.toDate();
-  } else if (typeof ts === "string") {
-    d = new Date(ts);
-  } else {
-    return "Unknown date";
-  }
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-}
-
-/**
- * Shows a status message in the transactions area.
- * @param {"error" | "success" | "info"} type
- * @param {string} message
- * @param {number} [autoDismiss] ms before auto-hide; 0 = never
- */
-function showStatus(type, message, autoDismiss = 0) {
-  txnStatus.textContent = message;
-  txnStatus.className = `status-alert is-visible is-${type}`;
-  txnStatus.setAttribute("role", type === "error" ? "alert" : "status");
-  if (autoDismiss > 0) {
-    setTimeout(clearStatus, autoDismiss);
-  }
-}
-
-function clearStatus() {
-  txnStatus.textContent = "";
-  txnStatus.className = "status-alert";
-  txnStatus.removeAttribute("role");
-}
-
-/**
- * Puts a submit button into loading / idle state.
- * @param {HTMLButtonElement} btn
- * @param {boolean} isLoading
- * @param {string} idleLabel
- */
-function setButtonLoading(btn, isLoading, idleLabel) {
-  btn.disabled = isLoading;
-  btn.classList.toggle("btn-loading", isLoading);
-  if (isLoading) {
-    btn.innerHTML = `
-      <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-      <span>Saving...</span>
-    `;
-  } else {
-    btn.textContent = idleLabel;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-const MAX_AMOUNT   = 9_999_999_999;
-const MAX_CAT      = 50;
-const MAX_DESC     = 300;
-
-/**
- * Marks a form field invalid and shows a message.
- * @param {HTMLElement} el
- * @param {string} msg
- */
-function setFieldError(el, msg) {
-  el.classList.add("is-invalid");
-  const fb = el.nextElementSibling;
-  if (fb && fb.classList.contains("invalid-feedback")) {
-    fb.textContent = msg;
-  }
-}
-
-function clearFieldErrors() {
-  txnForm.querySelectorAll(".is-invalid").forEach((el) => el.classList.remove("is-invalid"));
-  txnForm.querySelectorAll(".invalid-feedback").forEach((el) => { el.textContent = ""; });
-}
-
-/**
- * Validates the transaction form.
- * @returns {{ valid: boolean, data?: object }}
- */
-function validateForm() {
-  clearFieldErrors();
-  let valid = true;
-
-  const type = fldType.value;
-  if (type !== "income" && type !== "expense") {
-    setFieldError(fldType, "Please select income or expense.");
-    valid = false;
-  }
-
-  const rawAmount = fldAmount.value.trim();
-  const amount = parseInt(rawAmount, 10);
-  if (!rawAmount || isNaN(amount) || amount < 0 || amount > MAX_AMOUNT || String(amount) !== rawAmount) {
-    setFieldError(fldAmount, `Enter a whole number between 0 and ${MAX_AMOUNT.toLocaleString("en-US")}.`);
-    valid = false;
-  }
-
-  const category = fldCategory.value.trim();
-  if (!category) {
-    setFieldError(fldCategory, "Category is required.");
-    valid = false;
-  } else if (category.length > MAX_CAT) {
-    setFieldError(fldCategory, `Category must be ${MAX_CAT} characters or fewer.`);
-    valid = false;
-  }
-
-  const description = fldDescription.value.trim();
-  if (description.length > MAX_DESC) {
-    setFieldError(fldDescription, `Description must be ${MAX_DESC} characters or fewer.`);
-    valid = false;
-  }
-
-  const dateVal = fldDate.value; // "YYYY-MM-DD"
-  if (!dateVal) {
-    setFieldError(fldDate, "Date is required.");
-    valid = false;
-  }
-
-  if (!valid) return { valid: false };
-
-  // Convert local date string to a Firestore Timestamp (midnight UTC of that date).
-  const [y, m, d] = dateVal.split("-").map(Number);
-  const dateObj = new Date(Date.UTC(y, m - 1, d));
-  const dateTimestamp = Timestamp.fromDate(dateObj);
-
-  return {
-    valid: true,
-    data: {
-      type,
-      amount,
-      category,
-      description,
-      date: dateTimestamp,
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Summary stats
-// ---------------------------------------------------------------------------
-
-/**
- * Recomputes and renders balance / spent / income tiles from a snapshot array.
- * @param {Array<{type: string, amount: number}>} items
- */
-function renderStats(items) {
-  let totalIncome  = 0;
-  let totalExpense = 0;
-
-  // Only count current month for "spent this month"
-  const now    = new Date();
-  const curYear  = now.getFullYear();
-  const curMonth = now.getMonth();
-
-  let spentThisMonth = 0;
-
-  for (const item of items) {
-    const amt = item.amount || 0;
-    if (item.type === "income") {
-      totalIncome += amt;
-    } else if (item.type === "expense") {
-      totalExpense += amt;
-      // Check if the date falls in the current month
-      let d;
-      if (item.date && typeof item.date.toDate === "function") {
-        d = item.date.toDate();
-      } else if (typeof item.date === "string") {
-        d = new Date(item.date);
-      }
-      if (d && d.getFullYear() === curYear && d.getMonth() === curMonth) {
-        spentThisMonth += amt;
-      }
+document.addEventListener("DOMContentLoaded", () => {
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      bindSidebarUser(user);
+      listenToTransactions(user.uid);
+      setupAddTransactionForm(user.uid);
+      setupSearchAndFilters();
+    } else {
+      window.location.href = "auth.html";
     }
-  }
-
-  const balance = totalIncome - totalExpense;
-
-  statBalance.textContent = formatMMK(balance);
-  statSpent.textContent   = formatMMK(spentThisMonth);
-  statIncome.textContent  = formatMMK(totalIncome);
-}
-
-// ---------------------------------------------------------------------------
-// Rendering
-// ---------------------------------------------------------------------------
-
-/**
- * Builds an article card element for a transaction document.
- * @param {string} id  Firestore document ID
- * @param {object} data  Document fields
- * @returns {HTMLElement}
- */
-function buildCard(id, data) {
-  const isIncome = data.type === "income";
-
-  const card = document.createElement("article");
-  card.className = `txn-card txn-card--${data.type}`;
-  card.dataset.id = id;
-
-  const dateStr = formatDate(data.date);
-  const amountStr = formatMMK(data.amount);
-  const desc = data.description ? data.description : "";
-
-  card.innerHTML = `
-    <div class="txn-card-body">
-      <div class="txn-card-left">
-        <span class="txn-badge txn-badge--${data.type}">${isIncome ? "Income" : "Expense"}</span>
-        <span class="txn-category">${escapeHtml(data.category)}</span>
-      </div>
-      <div class="txn-card-right">
-        <span class="txn-amount txn-amount--${data.type}">${isIncome ? "+" : "−"}${amountStr}</span>
-        <span class="txn-date">${dateStr}</span>
-      </div>
-    </div>
-    ${desc ? `<p class="txn-desc">${escapeHtml(desc)}</p>` : ""}
-    <div class="txn-card-actions">
-      <button
-        class="btn btn-sm btn-outline-secondary txn-edit-btn"
-        data-id="${id}"
-        aria-label="Edit transaction: ${escapeHtml(data.category)}"
-      >Edit</button>
-      <button
-        class="btn btn-sm btn-outline-danger txn-delete-btn"
-        data-id="${id}"
-        aria-label="Delete transaction: ${escapeHtml(data.category)}"
-      >Delete</button>
-    </div>
-  `;
-
-  // Wire edit button
-  card.querySelector(".txn-edit-btn").addEventListener("click", () => {
-    openEditModal(id, data);
   });
+});
 
-  // Wire delete button
-  card.querySelector(".txn-delete-btn").addEventListener("click", () => {
-    pendingDeleteId = id;
-    bsDeleteModal.show();
-  });
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
-  return card;
-}
+// 1. Profile Data bind လုပ်ခြင်း နှင့် Edit Mode Toggle ပြုလုပ်ခြင်း
+async function bindSidebarUser(user) {
+  const nameEl = document.getElementById("userNameDisplay");
+  const emailEl = document.getElementById("userEmailDisplay");
+  const avatarEl = document.getElementById("userAvatarDisplay");
 
-/**
- * Minimal HTML escape to prevent XSS in card content.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+  const dropdownNameEl = document.getElementById("dropdownNameDisplay");
+  const dropdownEmailEl = document.getElementById("dropdownEmailDisplay");
+  const dropdownAvatarEl = document.getElementById("dropdownAvatarDisplay");
+  const dropdownUsernameEl = document.getElementById("dropdownUsernameDisplay");
 
-// ---------------------------------------------------------------------------
-// Load transactions
-// ---------------------------------------------------------------------------
+  const inlineEditName = document.getElementById("inlineEditName");
+  const inlineEditUsername = document.getElementById("inlineEditUsername");
 
-/**
- * Fetches and renders the transaction list.
- * @param {"all" | "income" | "expense"} filter
- */
-async function loadTransactions(filter) {
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) return;
-
-  // Show spinner, hide list & empty state
-  txnLoading.classList.remove("hidden");
-  txnList.classList.add("hidden");
-  txnEmpty.classList.add("hidden");
-  clearStatus();
+  let fullName = user.displayName;
+  let username = "";
 
   try {
-    const txnCol = collection(db, "users", uid, "transactions");
-
-    let q;
-    if (filter === "income" || filter === "expense") {
-      q = query(txnCol, where("type", "==", filter), orderBy("date", "desc"));
-    } else {
-      q = query(txnCol, orderBy("date", "desc"));
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userDocRef);
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      fullName = fullName || data.name || "";
+      username = data.username || "";
     }
+  } catch (err) {
+    console.error("Error fetching user data:", err);
+  }
 
-    const snapshot = await getDocs(q);
+  const finalName = fullName || user.email.split("@")[0] || "User";
+  const userEmail = user.email || "";
+  const finalUsername = username || userEmail.split("@")[0];
+  const firstLetter = finalName.charAt(0).toUpperCase();
 
-    // Build stats from the full (unfiltered) set when filter = all; otherwise
-    // fetch all anyway so stats always reflect the real totals.
-    let allItems = [];
-    if (filter === "all") {
-      snapshot.forEach((d) => allItems.push(d.data()));
-    } else {
-      // Fetch unfiltered for stats only (lightweight — same query minus where)
-      const allSnap = await getDocs(query(txnCol, orderBy("date", "desc")));
-      allSnap.forEach((d) => allItems.push(d.data()));
+  // Sidebar Bottom & Popup View Update
+  if (nameEl) nameEl.textContent = finalName;
+  if (emailEl) emailEl.textContent = userEmail;
+  if (avatarEl) avatarEl.textContent = firstLetter;
+
+  if (dropdownNameEl) dropdownNameEl.textContent = finalName;
+  if (dropdownEmailEl) dropdownEmailEl.textContent = userEmail;
+  if (dropdownUsernameEl) dropdownUsernameEl.textContent = `@${finalUsername}`;
+  if (dropdownAvatarEl) dropdownAvatarEl.textContent = firstLetter;
+
+  if (inlineEditName) inlineEditName.value = finalName;
+  if (inlineEditUsername) inlineEditUsername.value = finalUsername;
+}
+
+// 2. Toggle between View Mode and Edit Mode inside Popup
+document.addEventListener("click", (e) => {
+  const viewMode = document.getElementById("profileViewMode");
+  const editMode = document.getElementById("profileEditMode");
+  const toggleBtn = document.getElementById("toggleEditModeBtn");
+  const cancelBtn = document.getElementById("cancelEditBtn");
+
+  if (e.target && e.target.id === "toggleEditModeBtn") {
+    viewMode?.classList.add("d-none");
+    editMode?.classList.remove("d-none");
+    toggleBtn?.classList.add("d-none");
+  }
+
+  if (e.target && e.target.id === "cancelEditBtn") {
+    editMode?.classList.add("d-none");
+    viewMode?.classList.remove("d-none");
+    toggleBtn?.classList.remove("d-none");
+  }
+});
+
+// 3. Inline Form Submit (Save Changes)
+document.addEventListener("submit", async (e) => {
+  if (e.target && e.target.id === "inlineSettingsForm") {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const newName = document.getElementById("inlineEditName").value.trim();
+    const newUsername = document.getElementById("inlineEditUsername").value.trim().replace(/^@/, "");
+
+    try {
+      const userDocRef = doc(db, "users", user.uid);
+
+      // Auth Profile & Firestore update
+      await updateProfile(user, { displayName: newName });
+      await updateDoc(userDocRef, {
+        name: newName,
+        username: newUsername
+      });
+
+      alert("Profile updated successfully!");
+      window.location.reload();
+    } catch (err) {
+      alert("Failed to update: " + err.message);
     }
-    renderStats(allItems);
+  }
+});
 
-    // Clear existing cards
-    txnList.innerHTML = "";
-
-    if (snapshot.empty) {
-      txnLoading.classList.add("hidden");
-      txnEmpty.classList.remove("hidden");
-      return;
+// 4. Sidebar Logout Handler
+document.addEventListener("click", async (e) => {
+  if (e.target && e.target.id === "sidebarLogoutBtn") {
+    try {
+      await signOut(auth);
+      window.location.href = "auth.html";
+    } catch (err) {
+      console.error("Logout error:", err);
     }
+  }
+});
+
+// 2. Realtime Listener for Transactions Table
+function listenToTransactions(userId) {
+  const q = query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc"));
+
+  onSnapshot(q, (snapshot) => {
+    allTransactions = [];
+    let totalSpent = 0;
+    let totalReceived = 0;
 
     snapshot.forEach((docSnap) => {
-      txnList.appendChild(buildCard(docSnap.id, docSnap.data()));
+      const data = docSnap.data();
+      allTransactions.push({ id: docSnap.id, ...data });
+
+      if (data.type === "expense") {
+        totalSpent += data.amount || 0;
+      } else {
+        totalReceived += data.amount || 0;
+      }
     });
 
-    txnLoading.classList.add("hidden");
-    txnList.classList.remove("hidden");
+    // Stats Calculation
+    document.getElementById("statTotalCount").textContent = allTransactions.length;
+    document.getElementById("statTotalSpent").textContent = `${totalSpent.toLocaleString()} MMK`;
+    document.getElementById("statTotalReceived").textContent = `${totalReceived.toLocaleString()} MMK`;
 
-  } catch (err) {
-    console.error("loadTransactions error:", err);
-    txnLoading.classList.add("hidden");
-    txnEmpty.classList.remove("hidden");
-    showStatus("error", "Could not load transactions. Please refresh.");
-  }
+    // Render Table
+    renderTable(allTransactions, userId);
+  });
 }
 
-// ---------------------------------------------------------------------------
-// Modal helpers
-// ---------------------------------------------------------------------------
+// 3. Table Rendering Function
+function renderTable(data, userId) {
+  const tbody = document.getElementById("txTableBody");
+  const emptyCol = document.getElementById("emptyStateCol");
+  const tableCol = document.getElementById("tableColumn");
 
-/** Resets the form to a blank "Add" state. */
-function openAddModal() {
-  txnForm.reset();
-  clearFieldErrors();
-  txnEditId.value = "";
-  txnModalTitle.textContent = "Add Transaction";
-  txnSubmitBtn.textContent = "Add Transaction";
-
-  // Default date to today (local)
-  const today = new Date();
-  const yyyy  = today.getFullYear();
-  const mm    = String(today.getMonth() + 1).padStart(2, "0");
-  const dd    = String(today.getDate()).padStart(2, "0");
-  fldDate.value = `${yyyy}-${mm}-${dd}`;
-
-  bsModal.show();
-}
-
-/**
- * Populates the form for editing an existing transaction.
- * @param {string} id  Firestore document ID
- * @param {object} data  Document fields
- */
-function openEditModal(id, data) {
-  txnForm.reset();
-  clearFieldErrors();
-  txnEditId.value = id;
-  txnModalTitle.textContent = "Edit Transaction";
-  txnSubmitBtn.textContent = "Save Changes";
-
-  fldType.value        = data.type || "expense";
-  fldAmount.value      = String(data.amount || 0);
-  fldCategory.value    = data.category || "";
-  fldDescription.value = data.description || "";
-
-  // Restore date field from Firestore Timestamp
-  if (data.date && typeof data.date.toDate === "function") {
-    const d    = data.date.toDate();
-    const yyyy = d.getUTCFullYear();
-    const mm   = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const dd2  = String(d.getUTCDate()).padStart(2, "0");
-    fldDate.value = `${yyyy}-${mm}-${dd2}`;
-  }
-
-  bsModal.show();
-}
-
-// ---------------------------------------------------------------------------
-// Form submit — Add or Edit
-// ---------------------------------------------------------------------------
-
-async function handleFormSubmit(event) {
-  event.preventDefault();
-
-  const { valid, data } = validateForm();
-  if (!valid) {
-    showStatus("error", "Please fix the highlighted fields.");
-    return;
-  }
-
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) {
-    showStatus("error", "You are not signed in. Please log in again.");
-    return;
-  }
-
-  setButtonLoading(txnSubmitBtn, true, txnEditId.value ? "Save Changes" : "Add Transaction");
-
-  try {
-    const txnCol = collection(db, "users", uid, "transactions");
-    const editId = txnEditId.value;
-
-    if (editId) {
-      // Update existing document
-      const docRef = doc(db, "users", uid, "transactions", editId);
-      await updateDoc(docRef, {
-        type:        data.type,
-        amount:      data.amount,
-        category:    data.category,
-        description: data.description,
-        date:        data.date,
-      });
-      showStatus("success", "Transaction updated.", 3000);
-    } else {
-      // Create new document
-      await addDoc(txnCol, {
-        type:        data.type,
-        amount:      data.amount,
-        category:    data.category,
-        description: data.description,
-        date:        data.date,
-        createdAt:   Timestamp.now(),
-      });
-      showStatus("success", "Transaction added.", 3000);
+  if (data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No matching records found.</td></tr>`;
+    
+    if (allTransactions.length === 0) {
+      emptyCol.classList.remove("d-none");
+      tableCol.className = "col-12 col-lg-8";
     }
-
-    bsModal.hide();
-    await loadTransactions(activeFilter);
-
-  } catch (err) {
-    console.error("handleFormSubmit error:", err);
-    showStatus("error", "Could not save transaction. Please try again.");
-  } finally {
-    setButtonLoading(txnSubmitBtn, false, txnEditId.value ? "Save Changes" : "Add Transaction");
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Delete
-// ---------------------------------------------------------------------------
-
-async function handleDeleteConfirm() {
-  if (!pendingDeleteId) return;
-
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) {
-    showStatus("error", "You are not signed in. Please log in again.");
-    bsDeleteModal.hide();
     return;
   }
 
-  deleteConfirmBtn.disabled = true;
-  deleteConfirmBtn.textContent = "Deleting...";
+  emptyCol.classList.add("d-none");
+  tableCol.className = "col-12";
 
-  try {
-    const docRef = doc(db, "users", uid, "transactions", pendingDeleteId);
-    await deleteDoc(docRef);
+  let html = "";
+  data.forEach((item) => {
+    const isIncome = item.type === "income";
+    const dateStr = item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent";
+    
+    // Category Badge Colors
+    let badgeClass = "bg-light text-dark";
+    if (item.category === "Food & Dining") badgeClass = "bg-info-subtle text-info-emphasis";
+    else if (item.category === "Education") badgeClass = "bg-primary-subtle text-primary";
+    else if (item.category === "Transportation") badgeClass = "bg-warning-subtle text-warning-emphasis";
+    else if (item.category === "Entertainment") badgeClass = "bg-secondary-subtle text-secondary";
+    else if (isIncome) badgeClass = "bg-success-subtle text-success";
 
-    bsDeleteModal.hide();
-    showStatus("success", "Transaction deleted.", 3000);
-    await loadTransactions(activeFilter);
+    html += `
+      <tr>
+        <td class="text-muted">${dateStr}</td>
+        <td class="fw-semibold">${escapeHtml(item.description)}</td>
+        <td><span class="badge ${badgeClass} fw-normal px-2 py-1">${escapeHtml(item.category)}</span></td>
+        <td class="text-end fw-bold ${isIncome ? 'text-success' : 'text-danger'}">
+          ${isIncome ? '+' : '-'}${item.amount.toLocaleString()} MMK
+        </td>
+        <td class="text-center">
+          <button class="btn btn-sm text-danger p-0 border-0 ms-2" onclick="deleteTransaction('${userId}', '${item.id}', ${item.amount}, '${item.type}')">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+  });
 
-  } catch (err) {
-    console.error("handleDeleteConfirm error:", err);
-    bsDeleteModal.hide();
-    showStatus("error", "Could not delete transaction. Please try again.");
-  } finally {
-    pendingDeleteId = null;
-    deleteConfirmBtn.disabled = false;
-    deleteConfirmBtn.textContent = "Delete";
-  }
+  tbody.innerHTML = html;
 }
 
-// ---------------------------------------------------------------------------
-// Public entry point
-// ---------------------------------------------------------------------------
+// 4. Add Transaction + Auto Update User Balance
+function setupAddTransactionForm(userId) {
+  const form = document.getElementById("addTxForm");
+  if (!form) return;
 
-/**
- * Initialises the transactions panel.
- * Must be called once the authenticated user is confirmed.
- * @param {string} uid  Firebase Auth UID (from onAuthStateChanged callback)
- */
-export function initTransactions(uid) {
-  if (!uid) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById("saveTxBtn");
+    saveBtn.disabled = true;
 
-  // Initialise Bootstrap Modal instances
-  bsModal       = new bootstrap.Modal(txnModal);
-  bsDeleteModal = new bootstrap.Modal(deleteTxnModal);
+    const type = document.getElementById("txType").value;
+    const description = document.getElementById("txDescription").value.trim();
+    const category = document.getElementById("txCategory").value;
+    const amount = parseFloat(document.getElementById("txAmount").value) || 0;
 
-  // Button events
-  addTxnBtn.addEventListener("click", openAddModal);
-  refreshBtn.addEventListener("click", () => loadTransactions(activeFilter));
-
-  // Filter tabs
-  filterBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      filterBtns.forEach((b) => {
-        b.classList.remove("is-active");
-        b.setAttribute("aria-selected", "false");
+    try {
+      // 1. Add Transaction Record
+      await addDoc(collection(db, "users", userId, "transactions"), {
+        type, description, category, amount, createdAt: new Date()
       });
-      btn.classList.add("is-active");
-      btn.setAttribute("aria-selected", "true");
-      activeFilter = btn.dataset.filter;
-      loadTransactions(activeFilter);
-    });
+
+      // 2. Update Main Balance & Income/Expense Stats in User Doc
+      const userRef = doc(db, "users", userId);
+      if (type === "income") {
+        await updateDoc(userRef, {
+          balance: increment(amount),
+          totalIncome: increment(amount)
+        });
+      } else {
+        await updateDoc(userRef, {
+          balance: increment(-amount),
+          totalSpent: increment(amount)
+        });
+      }
+
+      form.reset();
+      const modalEl = document.getElementById("addTxModal");
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    } catch (err) {
+      alert("Error adding transaction: " + err.message);
+    } finally {
+      saveBtn.disabled = false;
+    }
   });
-
-  // Form submit
-  txnForm.addEventListener("submit", handleFormSubmit);
-
-  // Delete confirm
-  deleteConfirmBtn.addEventListener("click", handleDeleteConfirm);
-
-  // Reset pending delete when delete modal is closed without confirming
-  deleteTxnModal.addEventListener("hidden.bs.modal", () => {
-    pendingDeleteId = null;
-  });
-
-  // Initial load
-  loadTransactions("all");
 }
+
+// 5. Delete Transaction Handler
+window.deleteTransaction = async (userId, txId, amount, type) => {
+  if (confirm("Delete this transaction?")) {
+    try {
+      await deleteDoc(doc(db, "users", userId, "transactions", txId));
+      
+      // Revert Main Balance
+      const userRef = doc(db, "users", userId);
+      if (type === "income") {
+        await updateDoc(userRef, { balance: increment(-amount), totalIncome: increment(-amount) });
+      } else {
+        await updateDoc(userRef, { balance: increment(amount), totalSpent: increment(-amount) });
+      }
+    } catch (err) {
+      alert("Failed to delete transaction: " + err.message);
+    }
+  }
+};
+
+// 6. Search & Category Filters
+function setupSearchAndFilters() {
+  const searchInput = document.getElementById("searchTxInput");
+  const categoryFilter = document.getElementById("categoryFilter");
+
+  const filterAction = () => {
+    const query = searchInput.value.toLowerCase();
+    const category = categoryFilter.value;
+
+    const filtered = allTransactions.filter((tx) => {
+      const matchesSearch = tx.description.toLowerCase().includes(query) || tx.category.toLowerCase().includes(query);
+      const matchesCategory = category === "All" || tx.category === category || (category === "Income" && tx.type === "income");
+      return matchesSearch && matchesCategory;
+    });
+
+    renderTable(filtered, auth.currentUser?.uid);
+  };
+
+  searchInput?.addEventListener("input", filterAction);
+  categoryFilter?.addEventListener("change", filterAction);
+}
+
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+
+document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async () => {
+  try {
+    await signOut(auth);
+    window.location.href = "auth.html";
+  } catch (err) {
+    console.error("Logout error:", err);
+  }
+});
+
+

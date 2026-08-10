@@ -1,174 +1,172 @@
+/* ==========================================================================
+   Smore — Monochrome Theme
+   Clean, high-contrast greyscale theme for Dashboard & Transactions pages.
+   ========================================================================== */
 
-/* ---------- Currency / session chips ---------- */
-.smore-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.75rem;
-  border: 1px solid var(--smore-line);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--smore-muted);
-  font-size: 0.82rem;
-  font-weight: 500;
-  white-space: nowrap;
+:root {
+  /* Brand & Core Palettes */
+  --sidebar-bg: #121212;
+  --sidebar-color: #a0a0a0;
+  --sidebar-active-bg: #262626;
+  --sidebar-active-color: #ffffff;
+  --primary-accent: #000000;
+  --primary-accent-hover: #333333;
+  --bg-light: #f4f4f5;
+
+  /* Card & Border Styling */
+  --card-bg: #ffffff;
+  --card-border: #e4e4e7;
+  --text-main: #09090b;
+  --text-muted: #71717a;
+
+  /* Chart & Status Indicator Grays */
+  --gray-100: #f4f4f5;
+  --gray-200: #e4e4e7;
+  --gray-300: #d4d4d8;
+  --gray-400: #a1a1aa;
+  --gray-600: #52525b;
+  --gray-800: #27272a;
 }
 
-.smore-chip .dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #12b76a;
+/* Base Document */
+body {
+  background-color: var(--bg-light) !important;
+  color: var(--text-main) !important;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-/* ---------- Buttons ---------- */
-.btn-smore {
-  background-color: var(--smore-brand);
-  border: 1px solid var(--smore-brand);
-  color: #fff;
-  font-weight: 600;
-  font-size: 0.9rem;
-  border-radius: 10px;
-  padding: 0.45rem 1rem;
+/* Sidebar Styles */
+.app-sidebar,
+.smore-sidebar {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--sidebar-color) !important;
+  border-right: 1px solid #27272a !important;
 }
 
+.brand-logo,
+.smore-brand {
+  color: #ffffff !important;
+}
+
+.sidebar-link,
+.smore-sidebar .nav-link {
+  color: var(--sidebar-color) !important;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-link:hover,
+.smore-sidebar .nav-link:hover {
+  color: #ffffff !important;
+  background-color: #1f1f1f !important;
+}
+
+.sidebar-link.active,
+.smore-sidebar .nav-link.active {
+  background-color: var(--sidebar-active-bg) !important;
+  color: var(--sidebar-active-color) !important;
+}
+
+.sidebar-link.active::after {
+  background-color: #ffffff !important;
+}
+
+/* Monochrome Buttons */
+.btn-orange,
+.btn-smore,
+.fab-ask {
+  background-color: var(--text-main) !important;
+  color: #ffffff !important;
+  border: 1px solid var(--text-main) !important;
+  box-shadow: none !important;
+}
+
+.btn-orange:hover,
 .btn-smore:hover,
-.btn-smore:focus {
-  background-color: var(--smore-brand-hover);
-  border-color: var(--smore-brand-hover);
-  color: #fff;
+.fab-ask:hover {
+  background-color: var(--primary-accent-hover) !important;
+  color: #ffffff !important;
 }
 
-.btn-smore-outline {
-  background-color: #fff;
-  border: 1px solid var(--smore-brand);
-  color: var(--smore-brand);
-  font-weight: 600;
-  font-size: 0.9rem;
-  border-radius: 10px;
-  padding: 0.45rem 1rem;
+.btn-outline-danger,
+.text-danger {
+  color: var(--text-main) !important;
+  border-color: var(--gray-300) !important;
 }
 
-.btn-smore-outline:hover,
-.btn-smore-outline:focus {
-  background-color: var(--smore-tint);
-  color: var(--smore-brand-hover);
-  border-color: var(--smore-brand-hover);
-}
-
-/* ---------- Avatar dropdown ---------- */
-.smore-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--smore-tint);
-  color: var(--smore-brand);
-  display: grid;
-  place-items: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-  border: 1px solid var(--smore-line);
-}
-
-.smore-nav .dropdown-menu {
-  border: 1px solid var(--smore-line);
-  border-radius: var(--smore-radius);
-  box-shadow: var(--smore-shadow);
-  padding: 0.4rem;
-  min-width: 230px;
-}
-
-.smore-nav .dropdown-item {
-  border-radius: 8px;
-  font-size: 0.9rem;
-  padding: 0.5rem 0.65rem;
-  color: var(--smore-ink);
-}
-
-.smore-nav .dropdown-item:hover {
-  background-color: var(--smore-tint);
-  color: var(--smore-brand);
-}
-
-.smore-nav .dropdown-header {
-  padding: 0.5rem 0.65rem 0.25rem;
-}
-
-/* ---------- Toggler ---------- */
-.smore-nav .navbar-toggler {
-  border: 1px solid var(--smore-line);
-  border-radius: 10px;
-  padding: 0.35rem 0.55rem;
-}
-
-.smore-nav .navbar-toggler:focus {
-  box-shadow: 0 0 0 3px rgba(30, 64, 255, 0.15);
-}
-
-/* ---------- Collapsed (mobile) panel ---------- */
-@media (max-width: 991.98px) {
-  .smore-nav .navbar-collapse {
-    border-top: 1px solid var(--smore-line);
-    margin-top: 0.75rem;
-    padding-top: 0.75rem;
-  }
-
-  .smore-nav .nav-link {
-    padding: 0.65rem 0.75rem;
-  }
-
-  .smore-nav-actions {
-    flex-direction: column;
-    align-items: stretch !important;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-
-  .smore-nav-actions .btn-smore,
-  .smore-nav-actions .btn-smore-outline {
-    width: 100%;
-  }
-}
-
-/* ---------- Demo page content ---------- */
-.demo-wrap {
-  max-width: 1400px;
-}
-
+/* Cards & Containers */
+.card,
 .demo-card {
-  background: #fff;
-  border: 1px solid var(--smore-line);
-  border-radius: 16px;
-  box-shadow: var(--smore-shadow);
+  background-color: var(--card-bg) !important;
+  border: 1px solid var(--card-border) !important;
+  color: var(--text-main) !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
 }
 
-.demo-eyebrow {
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.75rem;
+.card-dark-balance,
+.demo-card-dark {
+  background-color: #18181b !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+/* Badges & Category Tags */
+.badge,
+.badge-food,
+.badge-education,
+.badge-income,
+.badge-transport,
+.badge-entertainment {
+  background-color: var(--gray-200) !important;
+  color: var(--text-main) !important;
+  border: 1px solid var(--gray-300) !important;
+  font-weight: 500;
+}
+
+/* Tables & Financial Text */
+.table {
+  color: var(--text-main) !important;
+}
+
+.table-light {
+  background-color: var(--gray-100) !important;
+  color: var(--gray-600) !important;
+}
+
+.text-amount-positive,
+.text-success {
+  color: var(--text-main) !important;
   font-weight: 700;
-  color: var(--smore-muted);
 }
 
-.demo-title {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.9rem, 4vw, 2.6rem);
-  font-weight: 700;
+.text-amount-negative,
+.text-danger {
+  color: var(--gray-600) !important;
+  font-weight: 600;
 }
 
-.demo-amount {
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.5rem;
-  font-weight: 700;
+/* Progress Bars & Chart Visuals */
+.progress {
+  background-color: var(--gray-200) !important;
 }
 
-svg {
-  width: 24px;
-  height: 24px;
+.progress-bar,
+.bg-food,
+.bg-transport,
+.bg-entertainment {
+  background-color: var(--text-main) !important;
 }
 
-/* .icon, .smore-icon {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-} */
+.legend-dot {
+  background-color: var(--gray-600) !important;
+}
+
+.empty-state-icon {
+  background-color: var(--gray-200) !important;
+  color: var(--text-main) !important;
+}
+
+/* SVG Chart Grayscaling */
+svg path[stroke="#f97316"] { stroke: #09090b !important; }
+svg path[stroke="#22c55e"] { stroke: #52525b !important; }
+svg path[stroke="#3b82f6"] { stroke: #a1a1aa !important; }
+svg path[stroke="#1e293b"] { stroke: #d4d4d8 !important; }
