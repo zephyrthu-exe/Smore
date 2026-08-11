@@ -151,8 +151,15 @@ function renderGoalsView() {
         </div>
       </div>`;
   });
+});
 
-  container.innerHTML = html;
+// Sidebar Profile Binding
+async function bindSidebarUser(user) {
+  const nameEl = document.getElementById("userNameDisplay");
+  const avatarEl = document.getElementById("userAvatarDisplay");
+  let fullName = user.displayName || user.email.split("@")[0];
+  if (nameEl) nameEl.textContent = fullName;
+  if (avatarEl) avatarEl.textContent = fullName.charAt(0).toUpperCase();
 }
 
 window.deleteGoalRecord = async (goalId) => {
@@ -171,32 +178,28 @@ function setupAddGoalForm(userId) {
   const form = document.getElementById("addGoalForm");
   if (!form) return;
 
+  } catch (err) {
+    console.error("Error loading goals:", err);
+  }
+}
+
+// 📌 2. Save Goal Form Handler (Firestore ထဲသို့ သိမ်းမည်)
+function setupAddGoalForm(user) {
+  const form = document.getElementById("addGoalForm");
+  if (!form) return;
+
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
+    
+    const titleInput = document.getElementById("goalTitle");
+    const amountInput = document.getElementById("goalAmount");
+    const initialInput = document.getElementById("goalInitial");
     const saveBtn = document.getElementById("saveGoalBtn");
-    if (saveBtn) saveBtn.disabled = true;
 
-    const title = document.getElementById("goalTitle").value.trim();
-    const targetAmount = parseFloat(document.getElementById("goalAmount").value) || 0;
-    const initialSaved = parseFloat(document.getElementById("goalInitial")?.value) || 0;
-    const dateVal = document.getElementById("goalDate").value;
-
-    if (!title || targetAmount <= 0 || !dateVal) {
-      if (saveBtn) saveBtn.disabled = false;
-      return;
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
     }
-
-    const [y, m, d] = dateVal.split("-").map(Number);
-    const deadlineObj = new Date(y, m - 1, d);
-
-    try {
-      await addDoc(collection(db, "users", userId, "goals"), {
-        title,
-        targetAmount,
-        savedAmount: initialSaved,
-        deadline: Timestamp.fromDate(deadlineObj),
-        createdAt: Timestamp.now()
-      });
 
       form.reset();
       const modalEl = document.getElementById("addGoalModal");

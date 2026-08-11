@@ -9,91 +9,144 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
-  <!-- External Stylesheets -->
+  <!-- External Stylesheet -->
   <link rel="stylesheet" href="./css/styles.css">
-  <link rel="stylesheet" href="./css/sombo.css">
-  <style>
-    body {
-      background: #f8fafc;
-    }
-    .profile-wrap {
-      position: relative;
-      margin-top: auto;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding-top: 0.75rem;
-    }
-    .profile-chip {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      width: 100%;
-      background: transparent;
-      border: 0;
-      color: inherit;
-      text-align: left;
-      padding: 0.6rem 0.75rem;
-      border-radius: 0.85rem;
-      transition: background 0.15s ease;
-    }
-    .profile-chip:hover,
-    .profile-wrap.is-open .profile-chip {
-      background: rgba(255, 255, 255, 0.08);
-    }
-    .avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: #1f2937;
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-weight: 600;
-      flex: 0 0 auto;
-    }
-    .profile-card {
-      position: absolute;
-      left: calc(100% + 14px);
-      bottom: 0;
-      width: 290px;
-      background: #fff;
-      color: #0f172a;
-      border-radius: 1rem;
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
-      opacity: 0;
-      visibility: hidden;
-      transform: translateY(8px) scale(0.98);
-      transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
-      z-index: 1050;
-    }
-    .profile-wrap:hover .profile-card,
-    .profile-wrap:focus-within .profile-card,
-    .profile-wrap.is-open .profile-card {
-      opacity: 1;
-      visibility: visible;
-      transform: translateY(0) scale(1);
-    }
-    .profile-card::before {
-      content: "";
-      position: absolute;
-      left: -16px;
-      top: 0;
-      bottom: 0;
-      width: 16px;
-    }
-    @media (max-width: 767.98px) {
-      .profile-card {
-        left: 0;
-        bottom: calc(100% + 10px);
-        width: 100%;
+
+    <style>
+      body {
+        background: #f8fafc;
       }
-    }
-  </style>
+      .sidebar {
+        width: 260px;
+        min-height: 100vh;
+        background: #101418;
+        color: #f1f5f9;
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+      }
+      .sidebar .nav-link {
+        color: rgba(241, 245, 249, 0.7);
+        border-radius: 0.75rem;
+        padding: 0.65rem 0.85rem;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+      .sidebar .nav-link:hover {
+        background: rgba(255, 255, 255, 0.07);
+        color: #fff;
+      }
+      .sidebar .nav-link.active {
+        background: rgba(255, 255, 255, 0.12);
+        color: #fff;
+      }
+   /* ---- Profile hover box ---- */
+      .profile-wrap {
+        position: relative;
+        margin-top: auto;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 0.75rem;
+      }
+      .profile-chip {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        width: 100%;
+        background: transparent;
+        border: 0;
+        color: inherit;
+        text-align: left;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.85rem;
+        transition: background 0.15s ease;
+      }
+      .profile-chip:hover,
+      .profile-wrap.is-open .profile-chip {
+        background: rgba(255, 255, 255, 0.08);
+      }
+      .avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: #1f2937;
+        color: #fff;
+        display: grid;
+        place-items: center;
+        font-weight: 600;
+        flex: 0 0 auto;
+      }
+
+      .profile-card {
+        position: absolute;
+        left: calc(100% + 14px);
+        bottom: 0;
+        width: 290px;
+        background: #fff;
+        color: #0f172a;
+        border-radius: 1rem;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(8px) scale(0.98);
+        transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+        z-index: 1050;
+      }
+
+        /* hovering the chip OR the card itself keeps it open */
+      .profile-wrap:hover .profile-card,
+      .profile-wrap:focus-within .profile-card,
+      .profile-wrap.is-open .profile-card {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0) scale(1);
+      }
+      
+      /* invisible bridge so moving the mouse across the gap doesn't close it */
+      .profile-card::before {
+        content: "";
+        position: absolute;
+        left: -16px;
+        top: 0;
+        bottom: 0;
+        width: 16px;
+      }
+      .profile-card .list-group-item {
+        border: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.65rem 1rem;
+        cursor: pointer;
+      }
+      .profile-card .list-group-item:hover {
+        background: #f1f5f9;
+      }
+      .icon-pill {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: #eff6ff;
+        color: #2563eb;
+        display: grid;
+        place-items: center;
+        font-size: 0.8rem;
+      }
+      @media (max-width: 767.98px) {
+        .profile-card {
+          left: 0;
+          bottom: calc(100% + 10px);
+          width: 100%;
+        }
+      }
+    </style>
 </head>
 <body class="bg-light">
 
 <div class="d-flex">
-  <!-- Sidebar Navigation -->
-  <aside class="app-sidebar p-3 d-flex flex-column justify-content-between" style="width: 260px; min-height: 100vh; background-color: #000000;">
+  <!-- Sidebar Navigation (Same as Transactions/Dashboard) -->
+<aside class="app-sidebar p-3 d-flex flex-column justify-content-between" style="width: 260px; min-height: 100vh; background-color: #000000;">
     <div>
       <div class="brand-logo d-flex align-items-center gap-2 mb-4 px-2">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffffff"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
@@ -104,40 +157,66 @@
         <a href="dashboard.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
         <a href="transaction.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
         <a href="budget.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
-        <a href="goals.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="goals.html" class="sidebar-link d-flex active align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
         <a href="analytics.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
-        <hr style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
-        <a href="#" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="customizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
       </nav>
     </div>
 
     <!-- User Account -->
-    <div class="profile-wrap" id="profileWrap">
-      <button class="profile-chip" type="button" aria-haspopup="true" aria-expanded="false">
-        <span class="avatar" id="sidebarAvatar">U</span>
-        <span class="flex-grow-1 min-w-0">
-          <span class="d-block small fw-semibold text-truncate" id="userNameDisplay">User</span>
-          <span class="d-block text-white-50" style="font-size: 0.75rem">Smore Account</span>
-        </span>
-        <i class="bi bi-chevron-right text-white-50"></i>
-      </button>
-
-      <div class="profile-card" role="menu">
-        <div class="text-center px-4 pt-4 pb-3">
-          <div class="avatar mx-auto mb-2" style="width: 62px; height: 62px; font-size: 1.25rem" id="dropdownAvatar">
-            U
-          </div>
-          <div class="fw-semibold" id="userEmailDisplay">user@example.com</div>
-        </div>
-
-        <div class="border-top p-3">
-          <button class="btn btn-danger w-100 rounded-3" id="sidebarLogoutBtn">
-            <i class="bi bi-box-arrow-right"></i> Log Out
+        <div class="profile-wrap" id="profileWrap">
+          <button class="profile-chip" type="button" aria-haspopup="true" aria-expanded="false">
+            <span class="avatar">Z</span>
+            <span class="flex-grow-1 min-w-0">
+              <span class="d-block small fw-semibold text-truncate">zenx19759</span>
+              <span class="d-block text-white-50" style="font-size: 0.75rem">Free plan</span>
+            </span>
+            <i class="bi bi-chevron-right text-white-50"></i>
           </button>
+
+          <div class="profile-card" role="menu">
+            <div class="text-center px-4 pt-4 pb-3">
+              <div class="avatar mx-auto mb-2" style="width: 62px; height: 62px; font-size: 1.25rem">
+                Z
+              </div>
+              <div class="fw-semibold">zenx19759</div>
+              <div class="text-secondary" style="font-size: 0.8rem">
+                <div><i class="bi bi-envelope"></i> zenx19759@gmail.com</div>
+                <div><i class="bi bi-telephone"></i> +95 9 584 548 5254</div>
+              </div>
+            </div>
+
+            <div class="list-group list-group-flush border-top">
+              <div class="list-group-item">
+                <span class="icon-pill"><i class="bi bi-person"></i></span>
+                <span class="flex-grow-1 small">Edit Profile</span>
+                <i class="bi bi-chevron-right text-secondary small"></i>
+              </div>
+              <div class="list-group-item">
+                <span class="icon-pill"><i class="bi bi-key"></i></span>
+                <span class="flex-grow-1 small">Change Password</span>
+                <i class="bi bi-chevron-right text-secondary small"></i>
+              </div>
+              <div class="list-group-item">
+                <span class="icon-pill"><i class="bi bi-geo-alt"></i></span>
+                <span class="flex-grow-1 small">Change Location</span>
+                <i class="bi bi-chevron-right text-secondary small"></i>
+              </div>
+              <div class="list-group-item">
+                <span class="icon-pill"><i class="bi bi-info-circle"></i></span>
+                <span class="flex-grow-1 small">App Information</span>
+                <i class="bi bi-chevron-right text-secondary small"></i>
+              </div>
+            </div>
+
+            <div class="border-top p-3">
+              <button class="btn btn-danger w-100 rounded-3">
+                <i class="bi bi-box-arrow-right"></i> Log Out
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
-  </aside>
+      
+      </aside>
 
   <!-- Main Content Area -->
   <main class="flex-grow-1 p-4">
@@ -155,7 +234,133 @@
 
     <!-- Goals Grid -->
     <div class="row g-3" id="goalsGridContainer">
-      <!-- Dynamic Goals Rendered by JS -->
+
+      <!-- Goal Item 1 -->
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h2 class="h6 fw-bold mb-0">New Macbook Pro</h2>
+              <span class="badge badge-mono-dark px-2 py-1">Ongoing</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="mb-3">
+              <div class="progress-mono mb-2">
+                <div class="progress-bar-mono" style="width: 73.5%;"></div>
+              </div>
+              <div class="d-flex justify-content-between small text-muted">
+                <span>Progress: <strong class="text-dark">73.5%</strong></span>
+                <strong class="text-dark">1,837,500 MMK</strong>
+              </div>
+            </div>
+
+            <hr class="my-3 text-secondary opacity-25">
+
+            <!-- Meta details -->
+            <div class="d-flex justify-content-between small text-muted mb-3">
+              <div>
+                <div style="font-size: 0.75rem;">Target Amount</div>
+                <div class="fw-bold text-dark">2,500,000 MMK</div>
+              </div>
+              <div class="text-end">
+                <div style="font-size: 0.75rem;">Target Date</div>
+                <div class="fw-bold text-dark">Dec 31, 2026</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between gap-2 pt-2 border-top">
+            <button class="btn btn-sm btn-outline-danger border-0">Delete</button>
+            <button class="btn btn-sm btn-outline-dark">Manage</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Goal Item 2 -->
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h2 class="h6 fw-bold mb-0">Tuition Fee</h2>
+              <span class="badge badge-mono-dark px-2 py-1">Ongoing</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="mb-3">
+              <div class="progress-mono mb-2">
+                <div class="progress-bar-mono" style="width: 32.1%;"></div>
+              </div>
+              <div class="d-flex justify-content-between small text-muted">
+                <span>Progress: <strong class="text-dark">32.1%</strong></span>
+                <strong class="text-dark">450,000 MMK</strong>
+              </div>
+            </div>
+
+            <hr class="my-3 text-secondary opacity-25">
+
+            <!-- Meta details -->
+            <div class="d-flex justify-content-between small text-muted mb-3">
+              <div>
+                <div style="font-size: 0.75rem;">Target Amount</div>
+                <div class="fw-bold text-dark">1,400,000 MMK</div>
+              </div>
+              <div class="text-end">
+                <div style="font-size: 0.75rem;">Target Date</div>
+                <div class="fw-bold text-dark">Aug 15, 2026</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between gap-2 pt-2 border-top">
+            <button class="btn btn-sm btn-outline-danger border-0">Delete</button>
+            <button class="btn btn-sm btn-outline-dark">Manage</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Goal Item 3 (Achieved) -->
+      <div class="col-12 col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm p-3 h-100 d-flex flex-column justify-content-between">
+          <div>
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h2 class="h6 fw-bold mb-0">Digital Marketing Course</h2>
+              <span class="badge badge-mono-light px-2 py-1">Achieved</span>
+            </div>
+
+            <!-- Progress Bar -->
+            <div class="mb-3">
+              <div class="progress-mono mb-2">
+                <div class="progress-bar-mono" style="width: 100%;"></div>
+              </div>
+              <div class="d-flex justify-content-between small text-muted">
+                <span>Status: <strong class="text-dark">Completed</strong></span>
+                <strong class="text-dark">120,000 MMK</strong>
+              </div>
+            </div>
+
+            <hr class="my-3 text-secondary opacity-25">
+
+            <!-- Meta details -->
+            <div class="d-flex justify-content-between small text-muted mb-3">
+              <div>
+                <div style="font-size: 0.75rem;">Target Amount</div>
+                <div class="fw-bold text-dark">120,000 MMK</div>
+              </div>
+              <div class="text-end">
+                <div style="font-size: 0.75rem;">Target Date</div>
+                <div class="fw-bold text-dark">Completed</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between gap-2 pt-2 border-top">
+            <button class="btn btn-sm btn-outline-danger border-0 delete-goal-btn">Delete</button>
+            <button class="btn btn-sm btn-outline-dark">Manage</button>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 </div>
@@ -177,10 +382,6 @@
           <div class="mb-3">
             <label class="form-label small fw-semibold">Target Amount (MMK)</label>
             <input type="number" class="form-control" id="goalAmount" placeholder="500000" min="1" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label small fw-semibold">Initial Saved Amount (MMK)</label>
-            <input type="number" class="form-control" id="goalInitial" placeholder="0" min="0">
           </div>
           <div class="mb-3">
             <label class="form-label small fw-semibold">Target Date</label>
