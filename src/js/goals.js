@@ -3,10 +3,11 @@ import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, Timesta
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { cleanupStore, initStore } from "./store.js";
+import { initProfileManager } from "./profile-manager.js";
 
 onAuthStateChanged(auth, (user) => {
   if (!user) { cleanupStore(); destroySomboAssistant(); window.location.replace("./index.html"); return; }
-  bindUser(user); initStore(user.uid); listenToGoals(user.uid); setupForm(user.uid); setupLogout(); initSomboAssistant(user);
+  bindUser(user); initProfileManager(user).catch((error) => console.error("Could not load profile:", error)); initStore(user.uid); listenToGoals(user.uid); setupForm(user.uid); setupLogout(); initSomboAssistant(user);
 });
 
 function bindUser(user) { const name = user.displayName || user.email?.split("@")[0] || "User"; const initial = name.charAt(0).toUpperCase(); setText("userNameDisplay", name); setText("userEmailDisplay", user.email || ""); setText("sidebarAvatar", initial); setText("dropdownAvatar", initial); }

@@ -3,6 +3,7 @@ import { addDoc, collection, onSnapshot, orderBy, query, Timestamp } from "https
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { cleanupStore, initStore } from "./store.js";
+import { initProfileManager } from "./profile-manager.js";
 
 let spendingChartInstance = null;
 
@@ -15,6 +16,7 @@ onAuthStateChanged(auth, (user) => {
   }
 
   bindUserData(user);
+  initProfileManager(user).catch((error) => console.error("Could not load profile:", error));
   setupLogout();
   initStore(user.uid);
   listenToTransactions(user.uid);

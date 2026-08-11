@@ -3,9 +3,10 @@ import { collection, onSnapshot, orderBy, query } from "https://www.gstatic.com/
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { cleanupStore, initStore } from "./store.js";
+import { initProfileManager } from "./profile-manager.js";
 
 let transactions = []; let selectedRange = "month"; let trendChart; let categoryChart;
-onAuthStateChanged(auth, (user) => { if (!user) { cleanupStore(); destroySomboAssistant(); window.location.replace("./index.html"); return; } bindUser(user); initStore(user.uid); listen(user.uid); bindRangeButtons(); setupLogout(); initSomboAssistant(user); });
+onAuthStateChanged(auth, (user) => { if (!user) { cleanupStore(); destroySomboAssistant(); window.location.replace("./index.html"); return; } bindUser(user); initProfileManager(user).catch((error) => console.error("Could not load profile:", error)); initStore(user.uid); listen(user.uid); bindRangeButtons(); setupLogout(); initSomboAssistant(user); });
 
 function bindUser(user) { const name = user.displayName || user.email?.split("@")[0] || "User"; const initial = name.charAt(0).toUpperCase(); setText("userNameDisplay", name); setText("userEmailDisplay", user.email || ""); setText("sidebarAvatar", initial); setText("dropdownAvatar", initial); }
 function listen(userId) { onSnapshot(query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc")), (snapshot) => { transactions = snapshot.docs.map((entry) => entry.data()); render(); }, (error) => console.error("Could not load analytics:", error)); }
