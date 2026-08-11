@@ -1,395 +1,187 @@
-/**
- * analytics.js — Smore Analytics panel
- *
- * Fetches transactions, budgets, and goals from the authenticated user's own
- * Firestore subtree and renders deterministic summaries. No Gemini calls are
- * made here; all math is plain JavaScript.
- *
- * All Firestore paths use auth.currentUser.uid. No user-supplied UIDs are
- * ever interpolated — the security rules enforce the same constraint.
- */
-
+﻿import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
-import { subscribeToStore } from "./store.js";
+import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
+import { initStore, cleanupStore } from "./store.js";
 
-// ---------------------------------------------------------------------------
-// DOM references (elements added to dashboard.html)
-// ---------------------------------------------------------------------------
-const analyticsLoading = document.getElementById("analytics-loading");
-const analyticsEmpty   = document.getElementById("analytics-empty");
-const analyticsError   = document.getElementById("analytics-error");
-const analyticsContent = document.getElementById("analytics-content");
+let trendChartInstance = null;
+let categoryChartInstance = null;
 
-// Summary tiles (reuse the existing Overview tiles + two new ones)
-const statTotalExpenses = document.getElementById("stat-total-expenses");
-
-// Category breakdown
-const categoryList = document.getElementById("analytics-category-list");
-
-// Budget usage
-const budgetUsageList = document.getElementById("analytics-budget-list");
-
-// Goal progress
-const goalProgressList = document.getElementById("analytics-goal-list");
-
-// ---------------------------------------------------------------------------
-// State
-// ---------------------------------------------------------------------------
-let currentTxns = [];
-let currentBudgets = [];
-let currentGoals = [];
-let isLoading = true;
-let isError = false;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Formats a whole-number MMK amount with thousands separators.
- * @param {number} n
- * @returns {string}
- */
-function formatMMK(n) {
-  return Number(n).toLocaleString("en-US") + " MMK";
-}
-
-/**
- * Converts a Firestore Timestamp or date-string to a JS Date.
- * @param {object|string} ts
- * @returns {Date|null}
- */
-function toDate(ts) {
-  if (ts && typeof ts.toDate === "function") return ts.toDate();
-  if (typeof ts === "string") return new Date(ts);
-  return null;
-}
-
-/**
- * Minimal HTML escape to prevent XSS.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-// ---------------------------------------------------------------------------
-// Show / hide helpers
-// ---------------------------------------------------------------------------
-
-function showLoading() {
-  analyticsLoading.classList.remove("hidden");
-  analyticsEmpty.classList.add("hidden");
-  analyticsError.classList.add("hidden");
-  analyticsContent.classList.add("hidden");
-}
-
-function showEmpty() {
-  analyticsLoading.classList.add("hidden");
-  analyticsEmpty.classList.remove("hidden");
-  analyticsError.classList.add("hidden");
-  analyticsContent.classList.add("hidden");
-}
-
-function showError() {
-  analyticsLoading.classList.add("hidden");
-  analyticsEmpty.classList.add("hidden");
-  analyticsError.classList.remove("hidden");
-  analyticsContent.classList.add("hidden");
-}
-
-function showContent() {
-  analyticsLoading.classList.add("hidden");
-  analyticsEmpty.classList.add("hidden");
-  analyticsError.classList.add("hidden");
-  analyticsContent.classList.remove("hidden");
-}
-
-// ---------------------------------------------------------------------------
-// Calculation helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Groups expense transactions by category and returns a sorted array.
- * @param {Array<{type:string, amount:number, category:string}>} txns
- * @returns {Array<{category:string, total:number}>} descending by total
- */
-function calcCategoryBreakdown(txns) {
-  const map = {};
-  for (const t of txns) {
-    if (t.type !== "expense") continue;
-    const cat = t.category || "Uncategorised";
-    map[cat] = (map[cat] || 0) + (t.amount || 0);
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    cleanupStore();
+    destroySomboAssistant();
+    window.location.replace("./auth.html");
+    return;
   }
-  return Object.entries(map)
-    .map(([category, total]) => ({ category, total }))
-    .sort((a, b) => b.total - a.total);
+
+  // 1. Bind User Info
+  bindUserData(user);
+
+  // 2. Setup Logout
+  setupLogout();
+
+  // 3. Initialize Realtime Listeners
+  initStore(user.uid);
+  listenToAnalyticsData(user.uid);
+
+  // 4. Initialize Sombo Assistant Widget
+  initSomboAssistant(user);
+});
+
+function bindUserData(user) {
+  const name = user.displayName || user.email.split("@")[0] || "User";
+  const email = user.email || "";
+  const firstLetter = name.charAt(0).toUpperCase();
+
+  const nameDisplay = document.getElementById("userNameDisplay");
+  const emailDisplay = document.getElementById("userEmailDisplay");
+  const sidebarAvatar = document.getElementById("sidebarAvatar");
+  const dropdownAvatar = document.getElementById("dropdownAvatar");
+  const avatarDisplay = document.getElementById("userAvatarDisplay");
+
+  if (nameDisplay) nameDisplay.textContent = name;
+  if (emailDisplay) emailDisplay.textContent = email;
+  if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
+  if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
+  if (avatarDisplay) avatarDisplay.textContent = firstLetter;
 }
 
-/**
- * Calculates how much was spent in a budget's period for a given category.
- * @param {Array<{type:string, amount:number, category:string, date:object}>} txns
- * @param {string} category
- * @param {"monthly"|"yearly"} period
- * @returns {number}
- */
-function calcBudgetSpent(txns, category, period) {
-  const now      = new Date();
-  const curYear  = now.getFullYear();
-  const curMonth = now.getMonth();
-  let spent = 0;
+function setupLogout() {
+  document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async function() {
+    this.disabled = true;
+    this.textContent = "Signing out...";
+    try {
+      cleanupStore();
+      destroySomboAssistant();
+      await signOut(auth);
+      window.location.href = "./auth.html";
+    } catch (err) {
+      console.error("Logout error:", err);
+      this.disabled = false;
+      this.textContent = "Log Out";
+    }
+  });
+}
 
-  for (const t of txns) {
-    if (t.type !== "expense") continue;
-    if (t.category !== category) continue;
-    const d = toDate(t.date);
-    if (!d) continue;
-    if (period === "monthly") {
-      if (d.getFullYear() === curYear && d.getMonth() === curMonth) {
-        spent += t.amount || 0;
+function listenToAnalyticsData(userId) {
+  const q = query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc"));
+
+  onSnapshot(q, (snapshot) => {
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    const categoryMap = {};
+
+    snapshot.forEach((docSnap) => {
+      const tx = docSnap.data();
+      const amt = parseFloat(tx.amount) || 0;
+      if (tx.type === "income") {
+        totalIncome += amt;
+      } else {
+        totalExpenses += amt;
+        const cat = tx.category || "General";
+        categoryMap[cat] = (categoryMap[cat] || 0) + amt;
       }
-    } else if (period === "yearly") {
-      if (d.getFullYear() === curYear) {
-        spent += t.amount || 0;
+    });
+
+    const netSavings = totalIncome - totalExpenses;
+    const savingsRate = totalIncome > 0 ? Math.max(0, Math.round((netSavings / totalIncome) * 100)) : 0;
+
+    // Update Summary Cards
+    const incomeEl = document.getElementById("analyticsIncomeText");
+    const expenseEl = document.getElementById("analyticsExpenseText");
+    const netSavingsEl = document.getElementById("analyticsNetSavingsText");
+    const rateEl = document.getElementById("analyticsSavingsRateText");
+
+    if (incomeEl) incomeEl.textContent = `${totalIncome.toLocaleString()} MMK`;
+    if (expenseEl) expenseEl.textContent = `${totalExpenses.toLocaleString()} MMK`;
+    if (netSavingsEl) netSavingsEl.textContent = `${netSavings.toLocaleString()} MMK`;
+    if (rateEl) rateEl.innerHTML = `<i class="bi bi-wallet2"></i> ${savingsRate}% savings rate`;
+
+    // Render Charts
+    renderTrendChart(totalIncome, totalExpenses);
+    renderCategoryChart(categoryMap, totalExpenses);
+  });
+}
+
+function renderTrendChart(income, expenses) {
+  const ctx = document.getElementById("trendChart")?.getContext("2d");
+  if (!ctx) return;
+
+  if (trendChartInstance) trendChartInstance.destroy();
+
+  trendChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: ["Total Income", "Total Expenses"],
+      datasets: [
+        {
+          label: "MMK",
+          data: [income, expenses],
+          backgroundColor: ["#16a34a", "#dc2626"],
+          borderRadius: 6
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        y: {
+          beginAtZero: true,
+          ticks: {
+            callback: (val) => `${val.toLocaleString()} MMK`
+          }
+        }
       }
     }
-  }
-  return spent;
-}
-
-// ---------------------------------------------------------------------------
-// Render helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Renders the category breakdown list.
- * @param {Array<{category:string, total:number}>} breakdown
- * @param {number} totalExpenses
- */
-function renderCategoryBreakdown(breakdown, totalExpenses) {
-  categoryList.innerHTML = "";
-
-  if (breakdown.length === 0) {
-    categoryList.innerHTML =
-      `<p class="text-secondary mb-0" style="font-size:0.9rem;">No expense categories to display.</p>`;
-    return;
-  }
-
-  const maxTotal = breakdown[0].total || 1; // avoid division by zero
-
-  breakdown.forEach(({ category, total }) => {
-    const pct = Math.round((total / maxTotal) * 100);
-    const sharePct = totalExpenses > 0 ? ((total / totalExpenses) * 100).toFixed(1) : "0.0";
-
-    const row = document.createElement("div");
-    row.className = "analytics-category-row";
-    row.innerHTML = `
-      <div class="analytics-category-header">
-        <span class="analytics-category-name">${escapeHtml(category)}</span>
-        <span class="analytics-category-amount">${formatMMK(total)}
-          <span class="analytics-category-share">(${sharePct}%)</span>
-        </span>
-      </div>
-      <div class="analytics-bar-track">
-        <div
-          class="analytics-bar-fill"
-          style="width:${pct}%"
-          role="progressbar"
-          aria-valuenow="${total}"
-          aria-valuemin="0"
-          aria-valuemax="${maxTotal}"
-          aria-label="${escapeHtml(category)}: ${formatMMK(total)}"
-        ></div>
-      </div>
-    `;
-    categoryList.appendChild(row);
   });
 }
 
-/**
- * Renders the budget usage list.
- * @param {Array<object>} budgets  Firestore budget docs (data only)
- * @param {Array<object>} txns     All transaction docs (data only)
- */
-function renderBudgetUsage(budgets, txns) {
-  budgetUsageList.innerHTML = "";
+function renderCategoryChart(categoryMap, totalExpenses) {
+  const ctx = document.getElementById("categoryChart")?.getContext("2d");
+  if (!ctx) return;
 
-  if (budgets.length === 0) {
-    budgetUsageList.innerHTML =
-      `<p class="text-secondary mb-0" style="font-size:0.9rem;">No budgets set up yet.</p>`;
+  if (categoryChartInstance) categoryChartInstance.destroy();
+
+  const categories = Object.keys(categoryMap);
+  const values = Object.values(categoryMap);
+
+  if (categories.length === 0 || totalExpenses === 0) {
+    categoryChartInstance = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: ["No Expenses"],
+        datasets: [{ data: [1], backgroundColor: ["#e4e4e7"] }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "70%",
+        plugins: { legend: { position: "bottom" } }
+      }
+    });
     return;
   }
 
-  budgets.forEach((b) => {
-    const spent   = calcBudgetSpent(txns, b.category, b.period);
-    const limit   = b.limit || 0;
-    const pct     = limit > 0 ? (spent / limit) * 100 : 0;
-    const fillPct = Math.min(pct, 100);
+  const colors = ["#18181b", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#e4e4e7"];
 
-    let barClass = "analytics-bar-fill--primary";
-    if (pct >= 100) barClass = "analytics-bar-fill--danger";
-    else if (pct >= 80) barClass = "analytics-bar-fill--warning";
-
-    const remaining = Math.max(0, limit - spent);
-    const overText  = pct > 100 ? `${formatMMK(spent - limit)} over` : `${formatMMK(remaining)} left`;
-
-    const row = document.createElement("div");
-    row.className = "analytics-category-row";
-    row.innerHTML = `
-      <div class="analytics-category-header">
-        <span class="analytics-category-name">
-          ${escapeHtml(b.category)}
-          <span class="analytics-period-badge">${b.period === "yearly" ? "Yearly" : "Monthly"}</span>
-        </span>
-        <span class="analytics-category-amount">${formatMMK(spent)} / ${formatMMK(limit)}</span>
-      </div>
-      <div class="analytics-bar-track">
-        <div
-          class="analytics-bar-fill ${barClass}"
-          style="width:${fillPct}%"
-          role="progressbar"
-          aria-valuenow="${spent}"
-          aria-valuemin="0"
-          aria-valuemax="${limit}"
-          aria-label="${escapeHtml(b.category)} budget: ${pct.toFixed(1)}% used"
-        ></div>
-      </div>
-      <div class="analytics-bar-footer">
-        <small class="${pct >= 100 ? "text-danger fw-bold" : pct >= 80 ? "text-warning fw-bold" : "text-muted"}">${pct.toFixed(1)}%</small>
-        <small class="text-muted">${overText}</small>
-      </div>
-    `;
-    budgetUsageList.appendChild(row);
-  });
-}
-
-/**
- * Renders the goal progress list.
- * @param {Array<object>} goals  Firestore goal docs (data only)
- */
-function renderGoalProgress(goals) {
-  goalProgressList.innerHTML = "";
-
-  if (goals.length === 0) {
-    goalProgressList.innerHTML =
-      `<p class="text-secondary mb-0" style="font-size:0.9rem;">No savings goals set up yet.</p>`;
-    return;
-  }
-
-  goals.forEach((g) => {
-    const saved  = g.savedAmount  || 0;
-    const target = g.targetAmount || 0;
-    const pct    = target > 0 ? (saved / target) * 100 : 0;
-    const fillPct = Math.min(pct, 100);
-    const done   = pct >= 100;
-
-    let deadlineStr = "";
-    const dl = toDate(g.deadline);
-    if (dl) {
-      deadlineStr = dl.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+  categoryChartInstance = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: categories,
+      datasets: [{ data: values, backgroundColor: colors }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: "70%",
+      plugins: {
+        legend: { position: "bottom" }
+      }
     }
-
-    const row = document.createElement("div");
-    row.className = "analytics-category-row";
-    row.innerHTML = `
-      <div class="analytics-category-header">
-        <span class="analytics-category-name">
-          ${escapeHtml(g.title)}
-          ${done ? `<span class="analytics-goal-done-badge">✓ Complete</span>` : ""}
-        </span>
-        <span class="analytics-category-amount">${formatMMK(saved)} / ${formatMMK(target)}</span>
-      </div>
-      <div class="analytics-bar-track">
-        <div
-          class="analytics-bar-fill analytics-bar-fill--success"
-          style="width:${fillPct}%"
-          role="progressbar"
-          aria-valuenow="${saved}"
-          aria-valuemin="0"
-          aria-valuemax="${target}"
-          aria-label="${escapeHtml(g.title)}: ${pct.toFixed(1)}% saved"
-        ></div>
-      </div>
-      <div class="analytics-bar-footer">
-        <small class="${done ? "text-success fw-bold" : "text-muted"}">${pct.toFixed(1)}%</small>
-        ${deadlineStr ? `<small class="text-muted">Deadline: ${deadlineStr}</small>` : ""}
-      </div>
-    `;
-    goalProgressList.appendChild(row);
-  });
-}
-
-/**
- * Calculates all data and renders the analytics panel from local state.
- */
-function renderAnalytics() {
-  if (isLoading) {
-    showLoading();
-    return;
-  }
-
-  if (isError) {
-    showError();
-    return;
-  }
-
-  const txns = currentTxns;
-  const budgets = currentBudgets;
-  const goals = currentGoals;
-
-  // If no data at all, show the empty state.
-  if (txns.length === 0 && budgets.length === 0 && goals.length === 0) {
-    showEmpty();
-    return;
-  }
-
-  // ── Aggregate transaction totals ────────────────────────
-  let totalIncome  = 0;
-  let totalExpense = 0;
-
-  for (const t of txns) {
-    if (t.type === "income")  totalIncome  += t.amount || 0;
-    if (t.type === "expense") totalExpense += t.amount || 0;
-  }
-
-  const balance = totalIncome - totalExpense;
-
-  // Update the existing Overview stat tiles (managed by transactions.js)
-  // plus the new "Total expenses" tile added to dashboard.html.
-  if (statTotalExpenses) statTotalExpenses.textContent = formatMMK(totalExpense);
-
-  // ── Category breakdown ──────────────────────────────────
-  const breakdown = calcCategoryBreakdown(txns);
-  renderCategoryBreakdown(breakdown, totalExpense);
-
-  // ── Budget usage ────────────────────────────────────────
-  renderBudgetUsage(budgets, txns);
-
-  // ── Goal progress ────────────────────────────────────────
-  renderGoalProgress(goals);
-
-  showContent();
-}
-
-// ---------------------------------------------------------------------------
-// Public entry point
-// ---------------------------------------------------------------------------
-
-export function initAnalytics(uid) {
-  if (!uid) return;
-
-  subscribeToStore((store) => {
-    currentTxns = store.transactions;
-    currentBudgets = store.budgets;
-    currentGoals = store.goals;
-    isLoading = store.loading.transactions || store.loading.budgets || store.loading.goals;
-    isError = store.error.transactions || store.error.budgets || store.error.goals;
-    renderAnalytics();
   });
 }

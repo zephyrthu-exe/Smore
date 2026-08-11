@@ -1,4 +1,4 @@
-/* ==========================================================================
+﻿/* ==========================================================================
    Sombo Companion & Smore Assistant Styles
    ========================================================================== */
 
@@ -18,7 +18,7 @@
   --sombo-panel-border: #e2e8f0;
 }
 
-/* ── Floating Container ─────────────────────────────────────────────────── */
+/* â”€â”€ Floating Container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sombo-widget-container {
   position: fixed;
   bottom: 24px;
@@ -31,7 +31,7 @@
   /* position is overridden by JS drag logic */
 }
 
-/* ── Sombo Avatar Button ────────────────────────────────────────────────── */
+/* â”€â”€ Sombo Avatar Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sombo-avatar-btn {
   background: none;
   border: none;
@@ -79,7 +79,7 @@
   text-overflow: ellipsis;
 }
 
-/* ── SVG Animations (Idle State) ────────────────────────────────────────── */
+/* â”€â”€ SVG Animations (Idle State) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sombo-svg {
   width: 86px;
   height: 94px;
@@ -131,7 +131,7 @@
   animation: sombo-breathing 4s ease-in-out infinite;
 }
 
-/* ── Interactive Animation Classes ─────────────────────────────────────── */
+/* â”€â”€ Interactive Animation Classes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 /* Waving state */
 .sombo-avatar-btn.is-waving .sombo-arm-left,
 .sombo-avatar-btn:hover .sombo-arm-left {
@@ -175,7 +175,7 @@
   animation: sombo-land 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* ── Keyframe Animations ────────────────────────────────────────────────── */
+/* â”€â”€ Keyframe Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes sombo-float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   50%       { transform: translateY(-8px) rotate(1.5deg); }
@@ -244,7 +244,7 @@
   100% { transform: scale(1);   opacity: 1; }
 }
 
-/* ── Chat Panel Window ──────────────────────────────────────────────────── */
+/* â”€â”€ Chat Panel Window â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .sombo-chat-panel {
   position: fixed;
   bottom: 120px;
@@ -616,46 +616,24 @@
   margin-bottom: 0;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   STYLE PRESETS — applied via [data-bot-style="..."] on widget root / panel
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   STYLE PRESETS â€” applied via [data-bot-style="..."] on #sombo-widget-root
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* Classic — original Sombo robot (default styles above) */
-
-/* Friendly — warmer colors, softer rounded look, cheerful expression */
+/* Friendly â€” warmer, rounder, larger avatar */
 [data-bot-style="friendly"] .sombo-chat-header {
-  background: linear-gradient(135deg, #ea580c, #f97316, #fbbf24);
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
 }
-[data-bot-style="friendly"] .sombo-chat-body { background: #fff7ed; }
+[data-bot-style="friendly"] .sombo-chat-body { background: #fdf4ff; }
 [data-bot-style="friendly"] .sombo-msg-bubble { border-radius: 20px; }
 [data-bot-style="friendly"] .sombo-welcome-card {
-  background: #fffbeb;
-  border-color: #fcd34d;
-  border-radius: 18px;
+  background: #faf5ff;
+  border-color: #d8b4fe;
 }
 [data-bot-style="friendly"] .sombo-avatar-btn { width: 104px; height: 118px; }
-[data-bot-style="friendly"] .sombo-svg {
-  width: 94px;
-  height: 102px;
-  filter: drop-shadow(0 6px 14px rgba(249, 115, 22, 0.35));
-  animation-duration: 3.2s;
-}
-[data-bot-style="friendly"] .sombo-eye {
-  fill: #fbbf24 !important;
-}
-[data-bot-style="friendly"] .sombo-body-group > rect:nth-of-type(3),
-[data-bot-style="friendly"] .sombo-body-group > rect:nth-of-type(4) {
-  rx: 20;
-}
-[data-bot-style="friendly"] .sombo-badge {
-  border-radius: 16px;
-  background: linear-gradient(135deg, #fb923c, #f97316);
-}
-[data-bot-style="friendly"] .sombo-send-btn {
-  box-shadow: 0 4px 14px rgba(249, 115, 22, 0.45);
-}
+[data-bot-style="friendly"] .sombo-svg { width: 94px; height: 102px; }
 
-/* Minimal — clean monochrome, restrained animation */
+/* Minimal â€” clean white header, muted tones, thinner borders */
 [data-bot-style="minimal"] .sombo-chat-header {
   background: #ffffff;
   color: #1e293b;
@@ -668,103 +646,42 @@
   color: #475569;
 }
 [data-bot-style="minimal"] .sombo-chat-panel {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
-  border-color: #cbd5e1;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  border-radius: 14px;
 }
-[data-bot-style="minimal"] .sombo-chat-body { background: #f8fafc; }
-[data-bot-style="minimal"] .sombo-msg-bubble { border-radius: 8px; }
-[data-bot-style="minimal"] .sombo-svg {
-  animation: none;
-  filter: grayscale(1) contrast(1.05);
-}
-[data-bot-style="minimal"] .sombo-body-group,
-[data-bot-style="minimal"] .sombo-shadow,
-[data-bot-style="minimal"] .sombo-antenna-tip,
-[data-bot-style="minimal"] .sombo-emblem-glow {
-  animation: none;
-}
-[data-bot-style="minimal"] .sombo-eye {
-  fill: #64748b !important;
-}
-[data-bot-style="minimal"] .sombo-antenna-tip,
-[data-bot-style="minimal"] .sombo-arm-left circle,
-[data-bot-style="minimal"] .sombo-arm-right circle,
-[data-bot-style="minimal"] .sombo-body-group ellipse {
-  fill: #94a3b8 !important;
-}
-[data-bot-style="minimal"] .sombo-badge {
-  background: #475569;
-  box-shadow: none;
-}
+[data-bot-style="minimal"] .sombo-msg-bubble { border-radius: 10px; }
+[data-bot-style="minimal"] .sombo-svg { animation: none; }
+[data-bot-style="minimal"] .sombo-body-group { animation: none; }
 
-/* Energetic — brighter accent, lively movement and eyes */
+/* Energetic â€” bolder gradients, stronger glow, faster float */
 [data-bot-style="energetic"] .sombo-chat-header {
-  background: linear-gradient(135deg, #dc2626, #f97316, #facc15);
+  background: linear-gradient(135deg, #dc2626, #f97316);
 }
-[data-bot-style="energetic"] .sombo-chat-body { background: #fff1f2; }
 [data-bot-style="energetic"] .sombo-svg {
-  animation-duration: 1.6s;
-  filter: drop-shadow(0 8px 18px rgba(249, 115, 22, 0.5));
+  animation-duration: 2s;
 }
 [data-bot-style="energetic"] .sombo-body-group {
-  animation-duration: 1.6s;
-}
-[data-bot-style="energetic"] .sombo-antenna-tip {
-  animation-duration: 0.7s;
-}
-[data-bot-style="energetic"] .sombo-eye {
-  fill: #f97316 !important;
   animation-duration: 2s;
 }
 [data-bot-style="energetic"] .sombo-chat-panel {
   border-radius: 16px;
-  border-color: #fdba74;
-  box-shadow: 0 24px 50px rgba(249, 115, 22, 0.25), 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-[data-bot-style="energetic"] .sombo-avatar-btn:hover {
-  transform: scale(1.1);
-}
-[data-bot-style="energetic"] .sombo-status-dot.is-thinking {
-  animation-duration: 0.5s;
+  box-shadow: 0 24px 50px rgba(249,115,22,0.2), 0 4px 12px rgba(0,0,0,0.1);
 }
 
-/* Calm — cool blue/purple accent, slower gentle movement */
+/* Calm â€” muted slate tones, slower animations, softer shadows */
 [data-bot-style="calm"] .sombo-chat-header {
-  background: linear-gradient(135deg, #4338ca, #6366f1, #818cf8);
+  background: linear-gradient(135deg, #475569, #64748b);
 }
-[data-bot-style="calm"] .sombo-chat-body { background: #eef2ff; }
-[data-bot-style="calm"] .sombo-svg {
-  animation-duration: 7s;
-}
-[data-bot-style="calm"] .sombo-body-group {
-  animation-duration: 7s;
-}
-[data-bot-style="calm"] .sombo-antenna-tip {
-  animation-duration: 4s;
-  fill: #818cf8 !important;
-}
-[data-bot-style="calm"] .sombo-eye {
-  fill: #818cf8 !important;
-}
+[data-bot-style="calm"] .sombo-svg { animation-duration: 7s; }
+[data-bot-style="calm"] .sombo-body-group { animation-duration: 7s; }
 [data-bot-style="calm"] .sombo-chat-panel {
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.18);
-  border-color: #c7d2fe;
+  box-shadow: 0 8px 24px rgba(15,23,42,0.10);
 }
-[data-bot-style="calm"] .sombo-welcome-card {
-  background: #eef2ff;
-  border-color: #c7d2fe;
-}
-[data-bot-style="calm"] .sombo-avatar-btn {
-  transition: transform 0.35s ease;
-}
-[data-bot-style="calm"] .sombo-avatar-btn:hover {
-  transform: scale(1.03);
-}
+[data-bot-style="calm"] .sombo-chat-body { background: #f1f5f9; }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   ONBOARDING MODAL — one-time setup modal
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   ONBOARDING MODAL â€” one-time setup modal
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .sombo-onboard-overlay {
   position: fixed;
@@ -797,13 +714,6 @@
   width: 72px;
   height: 72px;
   margin: 0 auto 12px;
-  overflow: visible;
-}
-
-.sombo-onboard-avatar .sombo-svg {
-  width: 56px;
-  height: 62px;
-  animation: sombo-float 4s ease-in-out infinite;
 }
 
 .sombo-onboard-modal h5 {
@@ -956,9 +866,9 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   CUSTOMIZE MODAL — accessible from sidebar link
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   CUSTOMIZE MODAL â€” accessible from sidebar link
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 .sombo-customize-overlay {
   position: fixed;
@@ -1054,27 +964,6 @@
   box-shadow: 0 0 0 2px #e2e8f0;
 }
 
-/* Live preview boxes inherit style preset rules */
-.sombo-bot-preview,
-.sombo-onboard-avatar {
-  --sombo-accent: #ff6b35;
-}
-
-/* In-page save error (replaces window.alert) */
-.sombo-save-error {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #991b1b;
-  border-radius: 10px;
-  padding: 10px 12px;
-  font-size: 0.84rem;
-  margin-bottom: 14px;
-  line-height: 1.4;
-}
-
 /* Customize action row */
 .sombo-customize-actions {
   display: flex;
@@ -1091,7 +980,7 @@
   width: auto;
 }
 
-/* ── Mobile Layout Adjustments ───────────────────────────────────────────── */
+/* â”€â”€ Mobile Layout Adjustments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 576px) {
   .sombo-widget-container {
     bottom: 16px;
@@ -1131,7 +1020,7 @@
   }
 }
 
-/* ── Reduced Motion Respect ──────────────────────────────────────────────── */
+/* â”€â”€ Reduced Motion Respect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (prefers-reduced-motion: reduce) {
   .sombo-svg,
   .sombo-shadow,

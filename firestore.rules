@@ -1,6 +1,6 @@
-rules_version = '2';
+﻿rules_version = '2';
 
-// Smore (Save More) — Firestore security rules
+// Smore (Save More) â€” Firestore security rules
 // Project ID: smore-6464b
 //
 // Design principles:
@@ -9,7 +9,7 @@ rules_version = '2';
 //      so isolation is enforced by the document path itself, not by a stored
 //      owner field. A user can only ever reach their own subtree.
 //   3. Users must never read or write another user's transactions, budgets,
-//      savings goals, or assistant profiles — the path guard guarantees this.
+//      savings goals, or assistant profiles â€” the path guard guarantees this.
 //   4. Server time is trusted for timestamps; a user may not forge a date
 //      field by reading from a request field.
 //   5. Data shape is validated at write time (required fields + types), so
@@ -171,7 +171,7 @@ service cloud.firestore {
   // No credentials, tokens, API keys, or private data permitted.
   // --------------------------------------------------------------------
   function validAssistantProfile(data) {
-    return requiredFields(data, ['name', 'style', 'accentColor', 'createdAt', 'updatedAt'])
+    return requiredFields(data, ['name', 'style', 'accentColor', 'createdAt'])
         && isString(data.name)
         && data.name.size() >= 1
         && data.name.size() <= 40
@@ -180,7 +180,6 @@ service cloud.firestore {
         && isString(data.accentColor)
         && data.accentColor.size() >= 4
         && data.accentColor.size() <= 9
-        && isTimestamp(data.createdAt)
-        && isTimestamp(data.updatedAt);
+        && isTimestamp(data.createdAt);
   }
 }

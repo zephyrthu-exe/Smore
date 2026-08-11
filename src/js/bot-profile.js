@@ -1,12 +1,12 @@
-/**
- * bot-profile.js — Firestore CRUD for users/{uid}/assistantProfile/profile
+﻿/**
+ * bot-profile.js â€” Firestore CRUD for users/{uid}/assistantProfile/profile
  *
  * Exposes three functions:
- *   loadBotProfile()   → Promise<profile | null>
- *   saveBotProfile(data) → Promise<void>
- *   resetBotProfile()  → Promise<void>
+ *   loadBotProfile(uid)        â†’ Promise<profile | null>
+ *   saveBotProfile(uid, data)  â†’ Promise<void>
+ *   resetBotProfile(uid)       â†’ Promise<void>
  *
- * Security: always uses auth.currentUser.uid — never a client-supplied UID.
+ * Security: uid MUST always be auth.currentUser.uid â€” never a client-supplied value.
  * No API keys, tokens, or credentials are stored here.
  */
 
@@ -16,7 +16,7 @@ import {
   setDoc,
   Timestamp,
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
-import { auth, db } from "./firebase-config.js";
+import { db } from "./firebase-config.js";
 
 /** Default bot profile values (Sombo defaults). */
 export const DEFAULT_BOT_PROFILE = {
@@ -27,79 +27,62 @@ export const DEFAULT_BOT_PROFILE = {
 
 const VALID_STYLES = ["classic", "friendly", "minimal", "energetic", "calm"];
 
-/** Profile document path: users/{uid}/assistantProfile/profile */
-function profileDocRef(uid) {
-  return doc(db, "users", uid, "assistantProfile", "profile");
-}
-
 /**
- * Returns the authenticated user's UID. Never accepts a client-supplied UID.
- * @returns {string}
- */
-function requireAuthUid() {
-  const uid = auth.currentUser?.uid;
-  if (!uid) throw new Error("Not authenticated");
-  return uid;
-}
-
-/**
- * Loads the assistant profile for the signed-in user.
+ * Loads the assistant profile for the given uid.
+ * @param {string} uid - Firebase Auth UID (must be auth.currentUser.uid)
  * @returns {Promise<object|null>} - Profile data or null if not set yet.
  */
-export async function loadBotProfile() {
-  const uid = auth.currentUser?.uid;
+export async function loadBotProfile(uid) {
   if (!uid) return null;
   try {
-    const snap = await getDoc(profileDocRef(uid));
+    const ref = doc(db, "users", uid, "assistantProfile", "profile");
+    const snap = await getDoc(ref);
     if (snap.exists()) {
-      const data = snap.data();
-      return {
-        name: data.name,
-        style: data.style,
-        accentColor: data.accentColor,
-      };
+      return snap.data();
     }
     return null;
   } catch (err) {
-    console.warn("[BotProfile] Could not load profile:", err.code || err.message, err.message);
+    console.warn("[BotProfile] Could not load profile:", err.message);
     return null;
   }
 }
 
 /**
- * Saves (creates or updates) the assistant profile for the signed-in user.
- * Document shape matches validAssistantProfile() in firestore.rules exactly.
+ * Saves (creates or updates) the assistant profile for the given uid.
+ * Sanitises all fields before writing. Never stores credentials.
+ * @param {string} uid - Firebase Auth UID (must be auth.currentUser.uid)
  * @param {object} data - { name, style, accentColor }
  */
-export async function saveBotProfile(data) {
-  const uid = requireAuthUid();
+export async function saveBotProfile(uid, data) {
+  if (!uid) throw new Error("uid is required");
 
+  // Sanitize
   const name = String(data.name || DEFAULT_BOT_PROFILE.name).slice(0, 40).trim() || DEFAULT_BOT_PROFILE.name;
   const style = VALID_STYLES.includes(data.style) ? data.style : DEFAULT_BOT_PROFILE.style;
   const accentColor = sanitizeHexColor(data.accentColor) || DEFAULT_BOT_PROFILE.accentColor;
 
-  const ref = profileDocRef(uid);
+  const ref = doc(db, "users", uid, "assistantProfile", "profile");
   const existingSnap = await getDoc(ref);
-  const now = Timestamp.now();
 
   const profileData = {
     name,
     style,
     accentColor,
-    createdAt: existingSnap.exists() && existingSnap.data().createdAt
+    updatedAt: Timestamp.now(),
+    createdAt: existingSnap.exists()
       ? existingSnap.data().createdAt
-      : now,
-    updatedAt: now,
+      : Timestamp.now(),
   };
 
-  await setDoc(ref, profileData);
+  await setDoc(ref, profileData, { merge: false });
 }
 
 /**
  * Resets the assistant profile to Sombo defaults.
+ * @param {string} uid - Firebase Auth UID (must be auth.currentUser.uid)
  */
-export async function resetBotProfile() {
-  await saveBotProfile(DEFAULT_BOT_PROFILE);
+export async function resetBotProfile(uid) {
+  await saveBotProfile(uid, DEFAULT_BOT_PROFILE);
 }
 
 /**

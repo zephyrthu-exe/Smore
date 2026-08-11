@@ -1,590 +1,228 @@
-/**
- * transactions.js — Smore transaction CRUD
- *
- * All Firestore reads/writes use the authenticated user's own UID, sourced
- * from auth.currentUser.uid. No user-supplied UID is ever interpolated into a
- * document path; the Firestore security rules enforce the same constraint.
- */
-
-import {
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  Timestamp,
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+﻿import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
-import { subscribeToStore } from "./store.js";
+import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
+import { initStore, cleanupStore } from "./store.js";
 
-// ---------------------------------------------------------------------------
-// DOM references (all exist in dashboard.html)
-// ---------------------------------------------------------------------------
-const txnList       = document.getElementById("txn-list");
-const txnLoading    = document.getElementById("txn-loading");
-const txnEmpty      = document.getElementById("txn-empty");
-const txnStatus     = document.getElementById("txn-status");
+let allTransactions = [];
 
-const addTxnBtn     = document.getElementById("add-txn-btn");
-const filterBtns    = document.querySelectorAll(".txn-filter-btn");
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    cleanupStore();
+    destroySomboAssistant();
+    window.location.replace("./auth.html");
+    return;
+  }
 
-// Modal form elements
-const txnModal      = document.getElementById("txnModal");
-const txnForm       = document.getElementById("txn-form");
-const txnEditId     = document.getElementById("txn-edit-id");
-const txnModalTitle = document.getElementById("txnModalLabel");
-const txnSubmitBtn  = document.getElementById("txn-submit-btn");
+  // 1. Bind User Info
+  bindUserData(user);
 
-const fldType        = document.getElementById("txn-type");
-const fldAmount      = document.getElementById("txn-amount");
-const fldCategory    = document.getElementById("txn-category");
-const fldDescription = document.getElementById("txn-description");
-const fldDate        = document.getElementById("txn-date");
+  // 2. Setup Logout
+  setupLogout();
 
-// Delete confirm modal
-const deleteTxnModal    = document.getElementById("deleteTxnModal");
-const deleteConfirmBtn  = document.getElementById("delete-confirm-btn");
+  // 3. Initialize Realtime Listeners
+  initStore(user.uid);
+  listenToTransactions(user.uid);
 
-// Summary stat elements (live)
-const statBalance  = document.getElementById("stat-balance");
-const statSpent    = document.getElementById("stat-spent");
-const statIncome   = document.getElementById("stat-income");
+  // 4. Setup Form and Filter Handlers
+  setupAddTransactionForm(user.uid);
+  setupSearchAndFilters();
 
-// Bootstrap Modal instances (initialised after DOM ready)
-let bsModal       = null;
-let bsDeleteModal = null;
+  // 5. Initialize Sombo Assistant Widget
+  initSomboAssistant(user);
+});
 
-// Active filter state: "all" | "income" | "expense"
-let activeFilter = "all";
+function bindUserData(user) {
+  const name = user.displayName || user.email.split("@")[0] || "User";
+  const email = user.email || "";
+  const firstLetter = name.charAt(0).toUpperCase();
 
-// Local store state
-let currentTxns = [];
-let isLoading = true;
-let isError = false;
+  const nameDisplay = document.getElementById("userNameDisplay");
+  const emailDisplay = document.getElementById("userEmailDisplay");
+  const sidebarAvatar = document.getElementById("sidebarAvatar");
+  const dropdownAvatar = document.getElementById("dropdownAvatar");
+  const avatarDisplay = document.getElementById("userAvatarDisplay");
 
-// ID queued for deletion
-let pendingDeleteId = null;
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-/**
- * Formats a whole-number MMK amount with thousands separators.
- * @param {number} n
- * @returns {string}
- */
-function formatMMK(n) {
-  return Number(n).toLocaleString("en-US") + " MMK";
+  if (nameDisplay) nameDisplay.textContent = name;
+  if (emailDisplay) emailDisplay.textContent = email;
+  if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
+  if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
+  if (avatarDisplay) avatarDisplay.textContent = firstLetter;
 }
 
-/**
- * Converts a Firestore Timestamp or ISO string to a short human date.
- * @param {import("firebase/firestore").Timestamp | string} ts
- * @returns {string}
- */
-function formatDate(ts) {
-  let d;
-  if (ts && typeof ts.toDate === "function") {
-    d = ts.toDate();
-  } else if (typeof ts === "string") {
-    d = new Date(ts);
-  } else {
-    return "Unknown date";
-  }
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
-}
-
-/**
- * Shows a status message in the transactions area.
- * @param {"error" | "success" | "info"} type
- * @param {string} message
- * @param {number} [autoDismiss] ms before auto-hide; 0 = never
- */
-function showStatus(type, message, autoDismiss = 0) {
-  txnStatus.textContent = message;
-  txnStatus.className = `status-alert is-visible is-${type}`;
-  txnStatus.setAttribute("role", type === "error" ? "alert" : "status");
-  if (autoDismiss > 0) {
-    setTimeout(clearStatus, autoDismiss);
-  }
-}
-
-function clearStatus() {
-  txnStatus.textContent = "";
-  txnStatus.className = "status-alert";
-  txnStatus.removeAttribute("role");
-}
-
-/**
- * Puts a submit button into loading / idle state.
- * @param {HTMLButtonElement} btn
- * @param {boolean} isLoading
- * @param {string} idleLabel
- */
-function setButtonLoading(btn, isLoading, idleLabel) {
-  btn.disabled = isLoading;
-  btn.classList.toggle("btn-loading", isLoading);
-  if (isLoading) {
-    btn.innerHTML = `
-      <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-      <span>Saving...</span>
-    `;
-  } else {
-    btn.textContent = idleLabel;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-const MAX_AMOUNT   = 9_999_999_999;
-const MAX_CAT      = 50;
-const MAX_DESC     = 300;
-
-/**
- * Marks a form field invalid and shows a message.
- * @param {HTMLElement} el
- * @param {string} msg
- */
-function setFieldError(el, msg) {
-  el.classList.add("is-invalid");
-  const fb = el.nextElementSibling;
-  if (fb && fb.classList.contains("invalid-feedback")) {
-    fb.textContent = msg;
-  }
-}
-
-function clearFieldErrors() {
-  txnForm.querySelectorAll(".is-invalid").forEach((el) => el.classList.remove("is-invalid"));
-  txnForm.querySelectorAll(".invalid-feedback").forEach((el) => { el.textContent = ""; });
-}
-
-/**
- * Validates the transaction form.
- * @returns {{ valid: boolean, data?: object }}
- */
-function validateForm() {
-  clearFieldErrors();
-  let valid = true;
-
-  const type = fldType.value;
-  if (type !== "income" && type !== "expense") {
-    setFieldError(fldType, "Please select income or expense.");
-    valid = false;
-  }
-
-  const rawAmount = fldAmount.value.trim();
-  const amount = parseInt(rawAmount, 10);
-  if (!rawAmount || isNaN(amount) || amount < 0 || amount > MAX_AMOUNT || String(amount) !== rawAmount) {
-    setFieldError(fldAmount, `Enter a whole number between 0 and ${MAX_AMOUNT.toLocaleString("en-US")}.`);
-    valid = false;
-  }
-
-  const category = fldCategory.value.trim();
-  if (!category) {
-    setFieldError(fldCategory, "Category is required.");
-    valid = false;
-  } else if (category.length > MAX_CAT) {
-    setFieldError(fldCategory, `Category must be ${MAX_CAT} characters or fewer.`);
-    valid = false;
-  }
-
-  const description = fldDescription.value.trim();
-  if (description.length > MAX_DESC) {
-    setFieldError(fldDescription, `Description must be ${MAX_DESC} characters or fewer.`);
-    valid = false;
-  }
-
-  const dateVal = fldDate.value; // "YYYY-MM-DD"
-  if (!dateVal) {
-    setFieldError(fldDate, "Date is required.");
-    valid = false;
-  }
-
-  if (!valid) return { valid: false };
-
-  // Convert local date string to a Firestore Timestamp (midnight UTC of that date).
-  const [y, m, d] = dateVal.split("-").map(Number);
-  const dateObj = new Date(Date.UTC(y, m - 1, d));
-  const dateTimestamp = Timestamp.fromDate(dateObj);
-
-  return {
-    valid: true,
-    data: {
-      type,
-      amount,
-      category,
-      description,
-      date: dateTimestamp,
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Summary stats
-// ---------------------------------------------------------------------------
-
-/**
- * Recomputes and renders balance / spent / income tiles from a snapshot array.
- * @param {Array<{type: string, amount: number}>} items
- */
-function renderStats(items) {
-  let totalIncome  = 0;
-  let totalExpense = 0;
-
-  // Only count current month for "spent this month"
-  const now    = new Date();
-  const curYear  = now.getFullYear();
-  const curMonth = now.getMonth();
-
-  let spentThisMonth = 0;
-
-  for (const item of items) {
-    const amt = item.amount || 0;
-    if (item.type === "income") {
-      totalIncome += amt;
-    } else if (item.type === "expense") {
-      totalExpense += amt;
-      // Check if the date falls in the current month
-      let d;
-      if (item.date && typeof item.date.toDate === "function") {
-        d = item.date.toDate();
-      } else if (typeof item.date === "string") {
-        d = new Date(item.date);
-      }
-      if (d && d.getFullYear() === curYear && d.getMonth() === curMonth) {
-        spentThisMonth += amt;
-      }
+function setupLogout() {
+  document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async function() {
+    this.disabled = true;
+    this.textContent = "Signing out...";
+    try {
+      cleanupStore();
+      destroySomboAssistant();
+      await signOut(auth);
+      window.location.href = "./auth.html";
+    } catch (err) {
+      console.error("Logout error:", err);
+      this.disabled = false;
+      this.textContent = "Log Out";
     }
-  }
-
-  const balance = totalIncome - totalExpense;
-
-  statBalance.textContent = formatMMK(balance);
-  statSpent.textContent   = formatMMK(spentThisMonth);
-  statIncome.textContent  = formatMMK(totalIncome);
-}
-
-// ---------------------------------------------------------------------------
-// Rendering
-// ---------------------------------------------------------------------------
-
-/**
- * Builds an article card element for a transaction document.
- * @param {string} id  Firestore document ID
- * @param {object} data  Document fields
- * @returns {HTMLElement}
- */
-function buildCard(id, data) {
-  const isIncome = data.type === "income";
-
-  const card = document.createElement("article");
-  card.className = `txn-card txn-card--${data.type}`;
-  card.dataset.id = id;
-
-  const dateStr = formatDate(data.date);
-  const amountStr = formatMMK(data.amount);
-  const desc = data.description ? data.description : "";
-
-  card.innerHTML = `
-    <div class="txn-card-body">
-      <div class="txn-card-left">
-        <span class="txn-badge txn-badge--${data.type}">${isIncome ? "Income" : "Expense"}</span>
-        <span class="txn-category">${escapeHtml(data.category)}</span>
-      </div>
-      <div class="txn-card-right">
-        <span class="txn-amount txn-amount--${data.type}">${isIncome ? "+" : "−"}${amountStr}</span>
-        <span class="txn-date">${dateStr}</span>
-      </div>
-    </div>
-    ${desc ? `<p class="txn-desc">${escapeHtml(desc)}</p>` : ""}
-    <div class="txn-card-actions">
-      <button
-        class="btn btn-sm btn-outline-secondary txn-edit-btn"
-        data-id="${id}"
-        aria-label="Edit transaction: ${escapeHtml(data.category)}"
-      >Edit</button>
-      <button
-        class="btn btn-sm btn-outline-danger txn-delete-btn"
-        data-id="${id}"
-        aria-label="Delete transaction: ${escapeHtml(data.category)}"
-      >Delete</button>
-    </div>
-  `;
-
-  // Wire edit button
-  card.querySelector(".txn-edit-btn").addEventListener("click", () => {
-    openEditModal(id, data);
   });
+}
 
-  // Wire delete button
-  card.querySelector(".txn-delete-btn").addEventListener("click", () => {
-    pendingDeleteId = id;
-    bsDeleteModal.show();
+function listenToTransactions(userId) {
+  const q = query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc"));
+
+  onSnapshot(q, (snapshot) => {
+    allTransactions = [];
+    let totalSpent = 0;
+    let totalReceived = 0;
+
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      allTransactions.push({ id: docSnap.id, ...data });
+
+      const amt = parseFloat(data.amount) || 0;
+      if (data.type === "expense") {
+        totalSpent += amt;
+      } else {
+        totalReceived += amt;
+      }
+    });
+
+    // Update Top Stats
+    document.getElementById("statTotalCount").textContent = allTransactions.length;
+    document.getElementById("statTotalSpent").textContent = `${totalSpent.toLocaleString()} MMK`;
+    document.getElementById("statTotalReceived").textContent = `${totalReceived.toLocaleString()} MMK`;
+
+    // Render Table
+    renderFilteredTable(userId);
   });
-
-  return card;
 }
 
-/**
- * Minimal HTML escape to prevent XSS in card content.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
+function renderFilteredTable(userId) {
+  const searchInput = document.getElementById("searchTxInput");
+  const categoryFilter = document.getElementById("categoryFilter");
+  const tableBody = document.getElementById("txTableBody");
+  const emptyState = document.getElementById("emptyStateCol");
 
-// ---------------------------------------------------------------------------
-// Load transactions
-// ---------------------------------------------------------------------------
+  if (!tableBody) return;
 
-/**
- * Renders the transaction list from local state.
- */
-function renderTransactions() {
-  clearStatus();
+  const searchQuery = (searchInput?.value || "").toLowerCase().trim();
+  const categoryVal = categoryFilter?.value || "All";
 
-  if (isLoading) {
-    txnLoading.classList.remove("hidden");
-    txnList.classList.add("hidden");
-    txnEmpty.classList.add("hidden");
-    return;
-  }
-
-  txnLoading.classList.add("hidden");
-
-  if (isError) {
-    txnList.classList.add("hidden");
-    txnEmpty.classList.add("hidden");
-    showStatus("error", "Could not load transactions. Please check your connection.");
-    return;
-  }
-
-  // Always calculate stats from the full list
-  renderStats(currentTxns);
-
-  // Clear existing cards
-  txnList.innerHTML = "";
-
-  // Apply filter
-  const filtered = currentTxns.filter(t => activeFilter === "all" || t.type === activeFilter);
+  const filtered = allTransactions.filter((tx) => {
+    const desc = (tx.description || "").toLowerCase();
+    const cat = (tx.category || "").toLowerCase();
+    const matchesSearch = !searchQuery || desc.includes(searchQuery) || cat.includes(searchQuery);
+    const matchesCategory = categoryVal === "All" || tx.category === categoryVal || (categoryVal === "Income" && tx.type === "income");
+    return matchesSearch && matchesCategory;
+  });
 
   if (filtered.length === 0) {
-    txnEmpty.classList.remove("hidden");
-    txnList.classList.add("hidden");
+    tableBody.innerHTML = "";
+    emptyState?.classList.remove("d-none");
     return;
   }
 
-  filtered.forEach((data) => {
-    txnList.appendChild(buildCard(data.id, data));
-  });
+  emptyState?.classList.add("d-none");
 
-  txnEmpty.classList.add("hidden");
-  txnList.classList.remove("hidden");
-}
+  let html = "";
+  filtered.forEach((tx) => {
+    const amt = parseFloat(tx.amount) || 0;
+    const isIncome = tx.type === "income";
+    let dateStr = "Recent";
 
-// ---------------------------------------------------------------------------
-// Modal helpers
-// ---------------------------------------------------------------------------
-
-/** Resets the form to a blank "Add" state. */
-function openAddModal() {
-  txnForm.reset();
-  clearFieldErrors();
-  txnEditId.value = "";
-  txnModalTitle.textContent = "Add Transaction";
-  txnSubmitBtn.textContent = "Add Transaction";
-
-  // Default date to today (local)
-  const today = new Date();
-  const yyyy  = today.getFullYear();
-  const mm    = String(today.getMonth() + 1).padStart(2, "0");
-  const dd    = String(today.getDate()).padStart(2, "0");
-  fldDate.value = `${yyyy}-${mm}-${dd}`;
-
-  bsModal.show();
-}
-
-/**
- * Populates the form for editing an existing transaction.
- * @param {string} id  Firestore document ID
- * @param {object} data  Document fields
- */
-function openEditModal(id, data) {
-  txnForm.reset();
-  clearFieldErrors();
-  txnEditId.value = id;
-  txnModalTitle.textContent = "Edit Transaction";
-  txnSubmitBtn.textContent = "Save Changes";
-
-  fldType.value        = data.type || "expense";
-  fldAmount.value      = String(data.amount || 0);
-  fldCategory.value    = data.category || "";
-  fldDescription.value = data.description || "";
-
-  // Restore date field from Firestore Timestamp
-  if (data.date && typeof data.date.toDate === "function") {
-    const d    = data.date.toDate();
-    const yyyy = d.getUTCFullYear();
-    const mm   = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const dd2  = String(d.getUTCDate()).padStart(2, "0");
-    fldDate.value = `${yyyy}-${mm}-${dd2}`;
-  }
-
-  bsModal.show();
-}
-
-// ---------------------------------------------------------------------------
-// Form submit — Add or Edit
-// ---------------------------------------------------------------------------
-
-async function handleFormSubmit(event) {
-  event.preventDefault();
-
-  const { valid, data } = validateForm();
-  if (!valid) {
-    showStatus("error", "Please fix the highlighted fields.");
-    return;
-  }
-
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) {
-    showStatus("error", "You are not signed in. Please log in again.");
-    return;
-  }
-
-  setButtonLoading(txnSubmitBtn, true, txnEditId.value ? "Save Changes" : "Add Transaction");
-
-  try {
-    const txnCol = collection(db, "users", uid, "transactions");
-    const editId = txnEditId.value;
-
-    if (editId) {
-      // Update existing document
-      const docRef = doc(db, "users", uid, "transactions", editId);
-      await updateDoc(docRef, {
-        type:        data.type,
-        amount:      data.amount,
-        category:    data.category,
-        description: data.description,
-        date:        data.date,
-      });
-      showStatus("success", "Transaction updated.", 3000);
-    } else {
-      // Create new document
-      await addDoc(txnCol, {
-        type:        data.type,
-        amount:      data.amount,
-        category:    data.category,
-        description: data.description,
-        date:        data.date,
-        createdAt:   Timestamp.now(),
-      });
-      showStatus("success", "Transaction added.", 3000);
+    if (tx.date && typeof tx.date.toDate === "function") {
+      dateStr = tx.date.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } else if (tx.createdAt && typeof tx.createdAt.toDate === "function") {
+      dateStr = tx.createdAt.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
     }
 
-    bsModal.hide();
+    html += `
+      <tr>
+        <td>${escapeHtml(dateStr)}</td>
+        <td class="fw-semibold">${escapeHtml(tx.description || tx.category || "Transaction")}</td>
+        <td><span class="badge bg-light text-dark border">${escapeHtml(tx.category || "General")}</span></td>
+        <td class="text-end fw-bold ${isIncome ? 'text-success' : 'text-danger'}">
+          ${isIncome ? '+' : '-'}${amt.toLocaleString()} MMK
+        </td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-outline-danger border-0 py-0" onclick="deleteTxRecord('${tx.id}')">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+  });
 
-  } catch (err) {
-    console.error("handleFormSubmit error:", err);
-    showStatus("error", "Could not save transaction. Please try again.");
-  } finally {
-    setButtonLoading(txnSubmitBtn, false, txnEditId.value ? "Save Changes" : "Add Transaction");
-  }
+  tableBody.innerHTML = html;
 }
 
-// ---------------------------------------------------------------------------
-// Delete
-// ---------------------------------------------------------------------------
-
-async function handleDeleteConfirm() {
-  if (!pendingDeleteId) return;
-
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) {
-    showStatus("error", "You are not signed in. Please log in again.");
-    bsDeleteModal.hide();
-    return;
+window.deleteTxRecord = async (txId) => {
+  const user = auth.currentUser;
+  if (!user) return;
+  if (confirm("Are you sure you want to delete this transaction?")) {
+    try {
+      await deleteDoc(doc(db, "users", user.uid, "transactions", txId));
+    } catch (err) {
+      alert("Failed to delete transaction: " + err.message);
+    }
   }
+};
 
-  deleteConfirmBtn.disabled = true;
-  deleteConfirmBtn.textContent = "Deleting...";
+function setupAddTransactionForm(userId) {
+  const form = document.getElementById("addTxForm");
+  if (!form) return;
 
-  try {
-    const docRef = doc(db, "users", uid, "transactions", pendingDeleteId);
-    await deleteDoc(docRef);
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById("saveTxBtn");
+    if (saveBtn) saveBtn.disabled = true;
 
-    bsDeleteModal.hide();
-    showStatus("success", "Transaction deleted.", 3000);
+    const type = document.getElementById("txType").value;
+    const description = document.getElementById("txDescription").value.trim();
+    const category = document.getElementById("txCategory").value;
+    const amount = parseFloat(document.getElementById("txAmount").value) || 0;
 
-  } catch (err) {
-    console.error("handleDeleteConfirm error:", err);
-    bsDeleteModal.hide();
-    showStatus("error", "Could not delete transaction. Please try again.");
-  } finally {
-    pendingDeleteId = null;
-    deleteConfirmBtn.disabled = false;
-    deleteConfirmBtn.textContent = "Delete";
-  }
-}
+    if (!description || amount <= 0) {
+      if (saveBtn) saveBtn.disabled = false;
+      return;
+    }
 
-// ---------------------------------------------------------------------------
-// Public entry point
-// ---------------------------------------------------------------------------
-
-/**
- * Initialises the transactions panel.
- * Must be called once the authenticated user is confirmed.
- * @param {string} uid  Firebase Auth UID (from onAuthStateChanged callback)
- */
-export function initTransactions(uid) {
-  if (!uid) return;
-
-  // Initialise Bootstrap Modal instances
-  bsModal       = new bootstrap.Modal(txnModal);
-  bsDeleteModal = new bootstrap.Modal(deleteTxnModal);
-
-  // Button events
-  addTxnBtn.addEventListener("click", openAddModal);
-
-  // Filter tabs
-  filterBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      filterBtns.forEach((b) => {
-        b.classList.remove("is-active");
-        b.setAttribute("aria-selected", "false");
+    try {
+      await addDoc(collection(db, "users", userId, "transactions"), {
+        type,
+        description,
+        category,
+        amount,
+        date: Timestamp.now(),
+        createdAt: Timestamp.now()
       });
-      btn.classList.add("is-active");
-      btn.setAttribute("aria-selected", "true");
-      activeFilter = btn.dataset.filter;
-      renderTransactions();
-    });
+
+      form.reset();
+      const modalEl = document.getElementById("addTxModal");
+      if (modalEl) {
+        const modal = window.bootstrap?.Modal?.getInstance(modalEl);
+        if (modal) modal.hide();
+      }
+    } catch (err) {
+      alert("Error adding transaction: " + err.message);
+    } finally {
+      if (saveBtn) saveBtn.disabled = false;
+    }
   });
+}
 
-  // Form submit
-  txnForm.addEventListener("submit", handleFormSubmit);
+function setupSearchAndFilters() {
+  const searchInput = document.getElementById("searchTxInput");
+  const categoryFilter = document.getElementById("categoryFilter");
 
-  // Delete confirm
-  deleteConfirmBtn.addEventListener("click", handleDeleteConfirm);
+  const update = () => {
+    const user = auth.currentUser;
+    if (user) renderFilteredTable(user.uid);
+  };
 
-  // Reset pending delete when delete modal is closed without confirming
-  deleteTxnModal.addEventListener("hidden.bs.modal", () => {
-    pendingDeleteId = null;
-  });
+  searchInput?.addEventListener("input", update);
+  categoryFilter?.addEventListener("change", update);
+}
 
-  // Subscribe to real-time store updates
-  subscribeToStore((store) => {
-    currentTxns = store.transactions;
-    isLoading = store.loading.transactions;
-    isError = store.error.transactions;
-    renderTransactions();
-  });
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
