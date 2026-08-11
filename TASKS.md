@@ -4,21 +4,21 @@
 
 - [x] Create project foundation
 - [x] Add Firebase project configuration
-- [ ] Add Firebase Authentication
-- [ ] Define Firestore collections and security rules
-- [ ] Build dashboard shell
-- [ ] Add demo data state
+- [x] Add Firebase Authentication
+- [x] Define Firestore collections and security rules
+- [x] Build dashboard shell
+- [x] Add demo data state
 
 ## Phase 3 — Core features
 
-- [ ] Transaction CRUD
-- [ ] Budgets
-- [ ] Savings goals
-- [ ] (Postponed) Import and validation
-- [ ] Analytics
+- [x] Transaction CRUD
+- [x] Budgets
+- [x] Savings goals
+- [x] Analytics
 
-## Phase 4 — AI
+## Phase 4 — AI & Cleanup
 
-- [ ] Add protected Gemini Cloud Function
-- [ ] Add Smore Assistant
-- [ ] Add AI guardrails and error states
+- [x] Add protected Gemini VPS Gateway
+- [x] Add Smore Assistant (Sombo)
+- [x] Add AI guardrails and error states
+- [x] Frontend architecture cleanup and layout consolidation
