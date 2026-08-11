@@ -1,4 +1,4 @@
-﻿/* ==========================================================================
+/* ==========================================================================
    Sombo Companion & Smore Assistant Styles
    ========================================================================== */
 
@@ -246,6 +246,8 @@
 
 /* ── Chat Panel Window ──────────────────────────────────────────────────── */
 .sombo-chat-panel {
+  /* Position is fully controlled by JS (_positionPanel). Defaults are a */
+  /* safe fallback only — they are overridden immediately on openPanel().  */
   position: fixed;
   bottom: 120px;
   right: 24px;
@@ -260,7 +262,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 1050;
+  z-index: 1049; /* below widget container (1050) so bot avatar renders above panel */
   opacity: 0;
   transform: translateY(20px) scale(0.95);
   pointer-events: none;
@@ -621,15 +623,9 @@
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Friendly — warmer, rounder, larger avatar */
-[data-bot-style="friendly"] .sombo-chat-header {
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
-}
-[data-bot-style="friendly"] .sombo-chat-body { background: #fdf4ff; }
-[data-bot-style="friendly"] .sombo-msg-bubble { border-radius: 20px; }
-[data-bot-style="friendly"] .sombo-welcome-card {
-  background: #faf5ff;
-  border-color: #d8b4fe;
-}
+/* NOTE: Style presets intentionally only modify the BOT WIDGET appearance  */
+/* (avatar size, shadow, preview card). The chat interface header, body,    */
+/* and message colors remain consistent across all styles.                  */
 [data-bot-style="friendly"] .sombo-avatar-btn { width: 104px; height: 118px; }
 [data-bot-style="friendly"] .sombo-svg { width: 94px; height: 102px; }
 [data-bot-style="friendly"] .sombo-bot-preview {
@@ -639,23 +635,7 @@
 }
 [data-bot-style="friendly"] .sombo-bot-preview .sombo-preview-svg { transform: scale(1.08); }
 
-/* Minimal — clean white header, muted tones, thinner borders */
-[data-bot-style="minimal"] .sombo-chat-header {
-  background: #ffffff;
-  color: #1e293b;
-  border-bottom: 1px solid #e2e8f0;
-}
-[data-bot-style="minimal"] .sombo-header-title { color: #1e293b; }
-[data-bot-style="minimal"] .sombo-header-status { color: #64748b; }
-[data-bot-style="minimal"] .sombo-close-btn {
-  background: #f1f5f9;
-  color: #475569;
-}
-[data-bot-style="minimal"] .sombo-chat-panel {
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  border-radius: 14px;
-}
-[data-bot-style="minimal"] .sombo-msg-bubble { border-radius: 10px; }
+/* Minimal — thinner shadows, no float animation */
 [data-bot-style="minimal"] .sombo-svg { animation: none; }
 [data-bot-style="minimal"] .sombo-body-group { animation: none; }
 [data-bot-style="minimal"] .sombo-bot-preview {
@@ -666,19 +646,12 @@
 [data-bot-style="minimal"] .sombo-bot-preview .sombo-svg { animation: none; }
 [data-bot-style="minimal"] .sombo-bot-preview .sombo-shadow { opacity: 0.35; }
 
-/* Energetic — bolder gradients, stronger glow, faster float */
-[data-bot-style="energetic"] .sombo-chat-header {
-  background: linear-gradient(135deg, #dc2626, #f97316);
-}
+/* Energetic — faster float, stronger glow on bot */
 [data-bot-style="energetic"] .sombo-svg {
   animation-duration: 2s;
 }
 [data-bot-style="energetic"] .sombo-body-group {
   animation-duration: 2s;
-}
-[data-bot-style="energetic"] .sombo-chat-panel {
-  border-radius: 16px;
-  box-shadow: 0 24px 50px rgba(249,115,22,0.2), 0 4px 12px rgba(0,0,0,0.1);
 }
 [data-bot-style="energetic"] .sombo-bot-preview {
   background: linear-gradient(135deg, #fff7ed, #ffedd5);
@@ -688,16 +661,9 @@
 }
 [data-bot-style="energetic"] .sombo-bot-preview .sombo-svg { animation-duration: 2s; }
 
-/* Calm — muted slate tones, slower animations, softer shadows */
-[data-bot-style="calm"] .sombo-chat-header {
-  background: linear-gradient(135deg, #475569, #64748b);
-}
+/* Calm — slower animations on bot */
 [data-bot-style="calm"] .sombo-svg { animation-duration: 7s; }
 [data-bot-style="calm"] .sombo-body-group { animation-duration: 7s; }
-[data-bot-style="calm"] .sombo-chat-panel {
-  box-shadow: 0 8px 24px rgba(15,23,42,0.10);
-}
-[data-bot-style="calm"] .sombo-chat-body { background: #f1f5f9; }
 [data-bot-style="calm"] .sombo-bot-preview {
   background: #f1f5f9;
   border-color: #cbd5e1;
@@ -1030,10 +996,9 @@
   }
 
   .sombo-chat-panel {
-    right: 12px;
-    left: 12px;
-    bottom: 100px;
-    width: auto;
+    /* JS positions the panel dynamically even on mobile. */
+    /* Only constrain size so it doesn't overflow tiny screens. */
+    width: calc(100vw - 24px);
     max-width: none;
     height: calc(100vh - 120px);
     max-height: 520px;

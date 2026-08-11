@@ -5,7 +5,8 @@ import {
   updateProfile,
   GoogleAuthProvider,
   signInWithPopup,
-  signInWithRedirect
+  signInWithRedirect,
+  getRedirectResult
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import { auth } from "./firebase-config.js";
 
@@ -14,7 +15,8 @@ const registerForm = document.getElementById("register-form");
 const loginTab = document.getElementById("login-tab");
 const registerTab = document.getElementById("register-tab");
 const statusAlert = document.getElementById("auth-status");
-const authPanel = document.getElementById("auth-panel");
+const authShell = document.getElementById("auth-panel");
+const authPanel = document.querySelector(".auth-panel");
 const authLoading = document.getElementById("auth-loading");
 const googleSigninBtn = document.getElementById("google-signin-btn");
 
@@ -27,6 +29,11 @@ const registerConfirm = document.getElementById("register-confirm");
 
 const loginSubmit = document.getElementById("login-submit");
 const registerSubmit = document.getElementById("register-submit");
+const switchToRegister = document.getElementById("switch-to-register");
+const switchToLogin = document.getElementById("switch-to-login");
+
+let authCheckComplete = false;
+let authFallbackTimer = null;
 
 /**
  * Maps Firebase Auth error codes to friendly messages.
@@ -52,7 +59,7 @@ function getFriendlyAuthError(error) {
     "auth/cancelled-popup-request": "Sign-in was cancelled. Please try again.",
     "auth/popup-blocked": "Popup was blocked by your browser. Please allow popups for this site and try again.",
     "auth/account-exists-with-different-credential": "An account already exists with this email using a different sign-in method. Try logging in with email/password instead.",
-    "auth/unauthorized-domain": "This site is not authorised to use Google sign-in. Add this domain to the Firebase Console under Authentication → Settings → Authorised domains.",
+    "auth/unauthorized-domain": "This site is not authorized to use Google sign-in. Add this domain in Firebase Console > Authentication > Settings > Authorized domains.",
     "auth/internal-error": "An internal error occurred. Please try again.",
     "auth/user-cancelled": "Sign-in was cancelled. Please try again.",
   };
@@ -61,7 +68,6 @@ function getFriendlyAuthError(error) {
     return messages[code];
   }
 
-  // Return the raw code so it is visible in the UI if not mapped.
   const rawCode = typeof code === "string" && code ? ` (${code})` : "";
   return `Something went wrong. Please try again.${rawCode}`;
 }
@@ -79,7 +85,7 @@ function showStatus(type, message) {
 
 /**
  * Like showStatus but renders trusted HTML so an inline action link can be included.
- * Only call this with hard-coded markup — never with user-supplied strings.
+ * Only call this with hard-coded markup, never with user-supplied strings.
  * @param {"error" | "success" | "info"} type
  * @param {string} html
  */
@@ -93,6 +99,30 @@ function clearStatus() {
   statusAlert.textContent = "";
   statusAlert.className = "status-alert";
   statusAlert.removeAttribute("role");
+}
+
+function revealAuthPanel() {
+  authLoading.classList.add("hidden");
+  authShell.classList.remove("hidden");
+}
+
+function finishAuthCheck() {
+  authCheckComplete = true;
+  if (authFallbackTimer) {
+    window.clearTimeout(authFallbackTimer);
+    authFallbackTimer = null;
+  }
+}
+
+function startAuthCheckFallback() {
+  authFallbackTimer = window.setTimeout(() => {
+    if (authCheckComplete) {
+      return;
+    }
+
+    revealAuthPanel();
+    showStatus("info", "Session check is taking longer than expected. You can log in now.");
+  }, 4000);
 }
 
 /**
@@ -152,6 +182,10 @@ function switchMode(mode) {
 
   loginForm.classList.toggle("hidden", !isLogin);
   registerForm.classList.toggle("hidden", isLogin);
+  authShell.classList.toggle("is-register", !isLogin);
+  authPanel.classList.toggle("is-register", !isLogin);
+  document.getElementById("auth-switch-login")?.classList.toggle("hidden", !isLogin);
+  document.getElementById("auth-switch-register")?.classList.toggle("hidden", isLogin);
 
   clearStatus();
   clearFieldErrors(loginForm);
@@ -159,14 +193,20 @@ function switchMode(mode) {
 
   const title = document.getElementById("auth-title");
   const subtitle = document.getElementById("auth-subtitle");
+  const introHeading = document.getElementById("intro-heading");
+  const introSubtitle = document.getElementById("intro-subtitle");
 
   if (isLogin) {
-    title.textContent = "Welcome back";
-    subtitle.textContent = "Log in to track spending and savings in MMK.";
+    title.textContent = "Welcome Back!";
+    subtitle.textContent = "Secure your budget and check your savings progress.";
+    introHeading.textContent = "Save More, Stress Less";
+    introSubtitle.textContent = "Your all-in-one personal finance tracker built directly for smart daily budgets.";
     loginEmail.focus();
   } else {
-    title.textContent = "Create your account";
-    subtitle.textContent = "Register to start organizing your student finances.";
+    title.textContent = "Create Your Account";
+    subtitle.textContent = "Start tracking your expenses and saving money today.";
+    introHeading.textContent = "Start Your Savings Journey";
+    introSubtitle.textContent = "Join thousands of users building strong financial habits and crushing their savings goals.";
     registerName.focus();
   }
 }
@@ -253,6 +293,8 @@ function validateRegister() {
 
 loginTab.addEventListener("click", () => switchMode("login"));
 registerTab.addEventListener("click", () => switchMode("register"));
+switchToRegister?.addEventListener("click", () => switchMode("register"));
+switchToLogin?.addEventListener("click", () => switchMode("login"));
 
 loginForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -306,12 +348,10 @@ registerForm.addEventListener("submit", async (event) => {
     window.location.href = "./dashboard.html";
   } catch (error) {
     if (error && error.code === "auth/email-already-in-use") {
-      // Show a rich error with an inline action link to switch to login.
       showStatusHTML(
         "error",
-        `This email is already registered. <button type="button" id="switch-to-login-btn" class="status-link-btn">Log in instead →</button>`
+        `This email is already registered. <button type="button" id="switch-to-login-btn" class="status-link-btn">Log in instead &rarr;</button>`
       );
-      // Wire up the inline button every time it is rendered.
       document.getElementById("switch-to-login-btn").addEventListener("click", () => {
         switchMode("login");
       });
@@ -324,8 +364,7 @@ registerForm.addEventListener("submit", async (event) => {
 
 googleSigninBtn.addEventListener("click", async () => {
   clearStatus();
-  
-  // Basic loading state for the Google button
+
   const originalContent = googleSigninBtn.innerHTML;
   googleSigninBtn.disabled = true;
   googleSigninBtn.innerHTML = `
@@ -340,7 +379,6 @@ googleSigninBtn.addEventListener("click", async () => {
     showStatus("success", "Logged in with Google. Redirecting...");
     window.location.href = "./dashboard.html";
   } catch (error) {
-    // Always log the raw error so the real code is visible in the browser console.
     console.error("[Google sign-in error]", error?.code, error);
 
     // If popup is blocked fall back to redirect.
@@ -362,14 +400,34 @@ googleSigninBtn.addEventListener("click", async () => {
   }
 });
 
+getRedirectResult(auth).then((result) => {
+  if (result && result.user) {
+    window.location.href = "./dashboard.html";
+  }
+}).catch((error) => {
+  console.error("[Google redirect result error]", error?.code, error);
+  window.setTimeout(() => {
+    if (error?.code !== "auth/no-current-user") {
+      showStatus("error", getFriendlyAuthError(error));
+    }
+  }, 400);
+});
+
+startAuthCheckFallback();
+
 onAuthStateChanged(auth, (user) => {
+  finishAuthCheck();
+
   if (user) {
     window.location.replace("./dashboard.html");
     return;
   }
 
-  authLoading.classList.add("hidden");
-  authPanel.classList.remove("hidden");
+  revealAuthPanel();
+}, (error) => {
+  finishAuthCheck();
+  revealAuthPanel();
+  showStatus("error", getFriendlyAuthError(error));
 });
 
 const params = new URLSearchParams(window.location.search);

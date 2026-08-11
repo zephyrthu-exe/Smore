@@ -1,4 +1,4 @@
-﻿import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
@@ -10,7 +10,7 @@ onAuthStateChanged(auth, (user) => {
   if (!user) {
     cleanupStore();
     destroySomboAssistant();
-    window.location.replace("./auth.html");
+    window.location.replace("./index.html");
     return;
   }
 
@@ -57,7 +57,7 @@ function setupLogout() {
       cleanupStore();
       destroySomboAssistant();
       await signOut(auth);
-      window.location.href = "./auth.html";
+      window.location.href = "./index.html";
     } catch (err) {
       console.error("Logout error:", err);
       this.disabled = false;

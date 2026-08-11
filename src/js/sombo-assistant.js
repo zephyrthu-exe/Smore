@@ -1,4 +1,4 @@
-﻿/**
+/**
  * sombo-assistant.js — Per-User Customizable Smore Assistant Bot
  *
  * Features:
@@ -132,6 +132,8 @@ class SomboAssistantWidget {
     // Drag state
     this._dragStartX    = 0;
     this._dragStartY    = 0;
+    this._lastMoveX     = 0;
+    this._lastMoveY     = 0;
     this._originLeft    = 0;
     this._originBottom  = 0;
     this._isDragging    = false;
@@ -246,6 +248,7 @@ class SomboAssistantWidget {
     this._bindEvents();
     this._bindDrag();
     this._bindSidebarCustomizeLink();
+    this._bindBackdropClose();
   }
 
   // ── Welcome card ───────────────────────────────────────────────────────────
@@ -338,6 +341,17 @@ class SomboAssistantWidget {
     });
   }
 
+  // ── Click-outside backdrop to close panel ─────────────────────────────────
+  _bindBackdropClose() {
+    document.addEventListener("pointerdown", (e) => {
+      if (!this.isOpen) return;
+      // If the click target is inside the widget container or the panel, ignore
+      if (this.containerEl.contains(e.target)) return;
+      if (this.panelEl.contains(e.target)) return;
+      this.closePanel();
+    }, { capture: true });
+  }
+
   // ── Drag logic (Pointer Events — works for both mouse and touch) ───────────
   _bindDrag() {
     const btn = this.avatarBtnEl;
@@ -354,6 +368,8 @@ class SomboAssistantWidget {
       const rect = container.getBoundingClientRect();
       this._dragStartX   = e.clientX;
       this._dragStartY   = e.clientY;
+      this._lastMoveX    = e.clientX;
+      this._lastMoveY    = e.clientY;
       this._originLeft   = rect.left;
       this._originBottom = window.innerHeight - rect.bottom;
 
@@ -364,9 +380,13 @@ class SomboAssistantWidget {
     };
 
     const onPointerMove = (e) => {
-      const dx = e.clientX - this._dragStartX;
-      const dy = e.clientY - this._dragStartY;
-      this._totalTravel += Math.abs(dx) + Math.abs(dy);
+      // Accumulate travel using per-frame deltas (not cumulative from origin)
+      // This accurately detects tiny moves vs real drags.
+      const frameDx = e.clientX - this._lastMoveX;
+      const frameDy = e.clientY - this._lastMoveY;
+      this._totalTravel += Math.abs(frameDx) + Math.abs(frameDy);
+      this._lastMoveX = e.clientX;
+      this._lastMoveY = e.clientY;
 
       if (!this._isDragging && this._totalTravel > 6) {
         this._isDragging = true;
@@ -377,7 +397,9 @@ class SomboAssistantWidget {
 
       if (!this._isDragging) return;
 
-      // Compute new position (bottom/left based)
+      // Compute new position (bottom/left based) using cumulative offset from origin
+      const dx = e.clientX - this._dragStartX;
+      const dy = e.clientY - this._dragStartY;
       const newLeft   = this._originLeft   + dx;
       const newBottom = this._originBottom  - dy;
 
@@ -389,6 +411,9 @@ class SomboAssistantWidget {
 
       this._lastPosLeft   = clamped.left;
       this._lastPosBottom = clamped.bottom;
+
+      // Keep chat panel aligned to bot position
+      this._positionPanel();
     };
 
     const onPointerUp = () => {
@@ -414,6 +439,34 @@ class SomboAssistantWidget {
     };
 
     btn.addEventListener("pointerdown", onPointerDown);
+  }
+
+  // ── Position chat panel relative to bot container ─────────────────────────
+  _positionPanel() {
+    const panel = this.panelEl;
+    const container = this.containerEl;
+    if (!panel || !container) return;
+
+    const W = window.innerWidth;
+    const containerRect = container.getBoundingClientRect();
+    const panelWidth  = 380;
+    const panelHeight = Math.min(540, window.innerHeight - 140);
+    const gap = 12; // px gap between bot and panel
+
+    // Bot center X
+    const botCenterX = containerRect.left + containerRect.width / 2;
+
+    // Prefer placing panel to the left of bot center, but clamp to viewport
+    let panelLeft = botCenterX - panelWidth + containerRect.width / 2;
+    panelLeft = Math.max(8, Math.min(W - panelWidth - 8, panelLeft));
+
+    // Place panel above the bot
+    const botBottom = window.innerHeight - containerRect.top; // distance from bottom of viewport to top of bot
+    const panelBottom = botBottom + gap;
+
+    panel.style.left   = panelLeft + "px";
+    panel.style.right  = "auto";
+    panel.style.bottom = Math.min(panelBottom, window.innerHeight - panelHeight - 8) + "px";
   }
 
   _clampToViewport(left, bottom) {
@@ -442,6 +495,8 @@ class SomboAssistantWidget {
       this.containerEl.style.left   = clamped.left   + "px";
       this.containerEl.style.bottom = clamped.bottom + "px";
       this.containerEl.style.right  = "auto";
+      // Also update panel position so it aligns with restored bot location
+      this._positionPanel();
     } catch (_) { /* corrupted data — silently ignore */ }
   }
 
@@ -456,6 +511,20 @@ class SomboAssistantWidget {
         this.openCustomizeModal();
       });
     }
+  }
+
+  // ── Profile session cache (eliminates FOUC on page navigation) ────────────
+  _cacheProfile(profile) {
+    try {
+      sessionStorage.setItem("smore_bot_profile_cache", JSON.stringify(profile));
+    } catch (_) {}
+  }
+
+  _getCachedProfile() {
+    try {
+      const raw = sessionStorage.getItem("smore_bot_profile_cache");
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) { return null; }
   }
 
   // ── Onboarding modal ───────────────────────────────────────────────────────
@@ -649,7 +718,7 @@ class SomboAssistantWidget {
       previewName.textContent = nameInput.value || "Sombo";
     });
 
-    // Style selection + preview label
+    // Style selection + preview label (only updates the preview, NOT the live widget)
     const previewStyleLabel = overlay.querySelector("#preview-style-label");
     overlay.querySelectorAll(".sombo-style-btn").forEach(btn => {
       btn.addEventListener("click", () => {
@@ -658,7 +727,7 @@ class SomboAssistantWidget {
         selectedStyle = btn.dataset.style;
         previewStyleLabel.textContent = STYLE_PRESETS.find(p => p.id === selectedStyle)?.label || selectedStyle;
         overlay.querySelector("#customize-preview").setAttribute("data-bot-style", selectedStyle);
-        this.applyProfile({ ...this.profile, style: selectedStyle });
+        // Do NOT call applyProfile here — only update the preview panel, not the live bot
       });
     });
 
@@ -710,6 +779,7 @@ class SomboAssistantWidget {
     try {
       await saveBotProfile(this.currentUser.uid, data);
       this.applyProfile(data);
+      this._cacheProfile(data);
       return true;
     } catch (err) {
       console.warn("[SomboWidget] Could not save profile:", err.code || err.message, err.message);
@@ -728,6 +798,7 @@ class SomboAssistantWidget {
 
   openPanel() {
     this.isOpen = true;
+    this._positionPanel();
     this.panelEl.classList.add("is-open");
     this.avatarBtnEl.setAttribute("aria-expanded", "true");
     this.avatarBtnEl.classList.add("is-leaning", "is-waving");
@@ -926,7 +997,19 @@ let widgetInstance = null;
 export async function initSomboAssistant(user) {
   if (!widgetInstance) {
     widgetInstance = new SomboAssistantWidget();
+
+    // Apply cached profile immediately before mount to prevent FOUC
+    const cachedProfile = widgetInstance._getCachedProfile();
+    if (cachedProfile) {
+      widgetInstance.profile = { ...DEFAULT_BOT_PROFILE, ...cachedProfile };
+    }
+
     widgetInstance.mount();
+
+    // Apply cached profile to DOM right after mount (sets CSS vars, data-bot-style, etc.)
+    if (cachedProfile) {
+      widgetInstance.applyProfile(cachedProfile);
+    }
   }
   widgetInstance.setUser(user);
 
@@ -936,9 +1019,11 @@ export async function initSomboAssistant(user) {
 
     if (profile) {
       widgetInstance.applyProfile(profile);
+      widgetInstance._cacheProfile(profile);
     } else {
       // Apply defaults visually
       widgetInstance.applyProfile(DEFAULT_BOT_PROFILE);
+      widgetInstance._cacheProfile(DEFAULT_BOT_PROFILE);
       // Show onboarding if not already dismissed
       if (!widgetInstance._hasOnboarded()) {
         // Small delay so the page is settled
@@ -952,11 +1037,14 @@ export async function initSomboAssistant(user) {
 
 /**
  * Destroys/removes widget state on logout.
+ * Also clears the session profile cache so a different user
+ * logging in won't see the previous user's bot style.
  */
 export function destroySomboAssistant() {
   const root = document.getElementById("sombo-widget-root");
   if (root) root.remove();
   document.getElementById("sombo-onboard-overlay")?.remove();
   document.getElementById("sombo-customize-overlay")?.remove();
+  try { sessionStorage.removeItem("smore_bot_profile_cache"); } catch (_) {}
   widgetInstance = null;
 }
