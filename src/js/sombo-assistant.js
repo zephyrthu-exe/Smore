@@ -1,126 +1,105 @@
 /**
- * Sombo Companion & Smore Assistant Integration
+ * sombo-assistant.js — Per-User Customizable Smore Assistant Bot
  *
- * Provides an animated floating robotic companion (Sombo) and a responsive AI
- * financial assistant chat panel connected to the secure VPS Gemini gateway.
+ * Features:
+ *  - Floating draggable bot widget (mouse + touch via Pointer Events API)
+ *  - Per-user bot profiles stored in users/{uid}/assistantProfile/profile
+ *  - One-time onboarding modal for new users
+ *  - Sidebar "Customize my bot" panel
+ *  - CSS theming via --sombo-accent and data-bot-style attribute
+ *  - Rich interaction animations (hover, drag, chat open, happy, error)
+ *  - All existing VPS Gemini gateway functions preserved
+ *  - Reduced-motion respected via CSS
  */
 
-import { auth } from "./firebase-config.js";
+import {
+  loadBotProfile,
+  saveBotProfile,
+  resetBotProfile,
+  DEFAULT_BOT_PROFILE,
+} from "./bot-profile.js";
 
-// Endpoint for the Smore Assistant VPS Gateway.
-// IMPORTANT: To connect to the VPS (e.g. 172.237.84.171) from the HTTPS Firebase web app,
-// the VPS must be configured with a domain and SSL (HTTPS). Browsers will block
-// HTTP requests from an HTTPS site (Mixed Content).
-const GATEWAY_URL = window.SMORE_GATEWAY_URL || "http://172.237.84.171:8080/api/assistant";
+// ─── Gateway URL ─────────────────────────────────────────────────────────────
+const GATEWAY_URL =
+  window.SMORE_GATEWAY_URL || "http://172.237.84.171:8080/api/assistant";
 
-/**
- * Returns inline SVG representation of Sombo.
- * Designed with a friendly silhouette, dark navy body, warm orange and cream accents,
- * large expressive digital eyes, glowing antenna, and glowing "S" chest emblem.
- */
-function getSomboSVGMarkup() {
+// ─── Style preset metadata ────────────────────────────────────────────────────
+const STYLE_PRESETS = [
+  { id: "classic",   label: "Classic Sombo" },
+  { id: "friendly",  label: "Friendly" },
+  { id: "minimal",   label: "Minimal" },
+  { id: "energetic", label: "Energetic" },
+  { id: "calm",      label: "Calm" },
+];
+
+// ─── SVG markup (unchanged from original, accent-color-reactive via CSS var) ──
+function getSomboSVGMarkup(size = "full") {
+  const w = size === "small" ? 56 : 86;
+  const h = size === "small" ? 62 : 94;
   return `
-    <svg class="sombo-svg" viewBox="0 0 96 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Sombo the robot assistant avatar">
+    <svg class="sombo-svg" viewBox="0 0 96 100" fill="none"
+         width="${w}" height="${h}"
+         xmlns="http://www.w3.org/2000/svg"
+         aria-hidden="true">
       <defs>
-        <!-- Body Gradient -->
-        <linearGradient id="sombo-body-grad" x1="16" y1="20" x2="80" y2="90" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#334155"/>
-          <stop offset="45%" stop-color="#1E293B"/>
+        <linearGradient id="sbg${size}" x1="16" y1="20" x2="80" y2="90" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stop-color="#334155"/>
+          <stop offset="45%"  stop-color="#1E293B"/>
           <stop offset="100%" stop-color="#0F172A"/>
         </linearGradient>
-
-        <!-- Head Gradient -->
-        <linearGradient id="sombo-head-grad" x1="20" y1="10" x2="76" y2="55" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#475569"/>
-          <stop offset="50%" stop-color="#1E293B"/>
+        <linearGradient id="shg${size}" x1="20" y1="10" x2="76" y2="55" gradientUnits="userSpaceOnUse">
+          <stop offset="0%"   stop-color="#475569"/>
+          <stop offset="50%"  stop-color="#1E293B"/>
           <stop offset="100%" stop-color="#0F172A"/>
         </linearGradient>
-
-        <!-- Cream Accent Gradient -->
-        <linearGradient id="sombo-cream-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#FFF8F0"/>
-          <stop offset="100%" stop-color="#FEF3C7"/>
-        </linearGradient>
-
-        <!-- Orange Accent Gradient -->
-        <linearGradient id="sombo-orange-grad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#FF8C5A"/>
-          <stop offset="100%" stop-color="#FF6B35"/>
-        </linearGradient>
-
-        <!-- Eye Screen Gradient -->
-        <linearGradient id="sombo-screen-grad" x1="24" y1="20" x2="72" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#0B132B"/>
-          <stop offset="100%" stop-color="#1C2541"/>
-        </linearGradient>
-
-        <!-- Chest Badge Glow Filter -->
-        <filter id="sombo-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="2.5" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        <filter id="sglow${size}" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feComposite in="SourceGraphic" in2="blur" operator="over"/>
         </filter>
       </defs>
-
-      <!-- Antenna -->
       <g class="sombo-antenna-group">
-        <rect x="46" y="6" width="4" height="12" rx="2" fill="#94A3B8" />
-        <circle class="sombo-antenna-tip" cx="48" cy="6" r="5" fill="#FF6B35" filter="url(#sombo-glow)" />
+        <rect x="46" y="6" width="4" height="12" rx="2" fill="#94A3B8"/>
+        <circle class="sombo-antenna-tip" cx="48" cy="6" r="5"
+                fill="var(--sombo-accent)" filter="url(#sglow${size})"/>
       </g>
-
-      <!-- Body Base Group (for breathing animation) -->
       <g class="sombo-body-group">
-        <!-- Left Arm -->
         <g class="sombo-arm-left">
-          <rect x="12" y="52" width="10" height="20" rx="5" fill="#334155" />
-          <circle cx="17" cy="69" r="4.5" fill="url(#sombo-orange-grad)" />
+          <rect x="12" y="52" width="10" height="20" rx="5" fill="#334155"/>
+          <circle cx="17" cy="69" r="4.5" fill="var(--sombo-accent)"/>
         </g>
-
-        <!-- Right Arm -->
         <g class="sombo-arm-right">
-          <rect x="74" y="52" width="10" height="20" rx="5" fill="#334155" />
-          <circle cx="79" cy="69" r="4.5" fill="url(#sombo-orange-grad)" />
+          <rect x="74" y="52" width="10" height="20" rx="5" fill="#334155"/>
+          <circle cx="79" cy="69" r="4.5" fill="var(--sombo-accent)"/>
         </g>
-
-        <!-- Legs -->
-        <rect x="32" y="80" width="10" height="13" rx="4" fill="#1E293B" />
-        <rect x="54" y="80" width="10" height="13" rx="4" fill="#1E293B" />
-        <ellipse cx="37" cy="92" rx="6.5" ry="3.5" fill="#FF6B35" />
-        <ellipse cx="59" cy="92" rx="6.5" ry="3.5" fill="#FF6B35" />
-
-        <!-- Torso / Main Body -->
-        <rect x="22" y="46" width="52" height="38" rx="18" fill="url(#sombo-body-grad)" stroke="#475569" stroke-width="1.5" />
-
-        <!-- Cream Belly Accent -->
-        <rect x="28" y="50" width="40" height="28" rx="12" fill="url(#sombo-cream-grad)" opacity="0.9" />
-
-        <!-- Chest Glowing Emblem ("S") -->
+        <rect x="32" y="80" width="10" height="13" rx="4" fill="#1E293B"/>
+        <rect x="54" y="80" width="10" height="13" rx="4" fill="#1E293B"/>
+        <ellipse cx="37" cy="92" rx="6.5" ry="3.5" fill="var(--sombo-accent)"/>
+        <ellipse cx="59" cy="92" rx="6.5" ry="3.5" fill="var(--sombo-accent)"/>
+        <rect x="22" y="46" width="52" height="38" rx="18"
+              fill="url(#sbg${size})" stroke="#475569" stroke-width="1.5"/>
+        <rect x="28" y="50" width="40" height="28" rx="12"
+              fill="#FFF8F0" opacity="0.9"/>
         <g class="sombo-emblem-group" transform="translate(48, 64)">
-          <circle cx="0" cy="0" r="10" fill="#1E293B" />
-          <circle class="sombo-emblem-glow" cx="0" cy="0" r="8.5" fill="#FF6B35" opacity="0.9" filter="url(#sombo-glow)" />
-          <!-- "S" symbol -->
-          <path d="M 2.5 -4.5 C 2.5 -5.8 -0.5 -6.2 -2.5 -5 C -4 -4 -3.5 -1.5 -0.5 -0.5 C 2.5 0.5 3 3 1.5 4.5 C -0.5 6 -3.5 5.5 -3.5 4" 
-                fill="none" stroke="#FFF8F0" stroke-width="2.2" stroke-linecap="round" />
+          <circle cx="0" cy="0" r="10" fill="#1E293B"/>
+          <circle class="sombo-emblem-glow" cx="0" cy="0" r="8.5"
+                  fill="var(--sombo-accent)" opacity="0.9" filter="url(#sglow${size})"/>
+          <path d="M 2.5 -4.5 C 2.5 -5.8 -0.5 -6.2 -2.5 -5 C -4 -4 -3.5 -1.5 -0.5 -0.5
+                   C 2.5 0.5 3 3 1.5 4.5 C -0.5 6 -3.5 5.5 -3.5 4"
+                fill="none" stroke="#FFF8F0" stroke-width="2.2" stroke-linecap="round"/>
         </g>
-
-        <!-- Head Shell -->
-        <rect x="18" y="16" width="60" height="34" rx="16" fill="url(#sombo-head-grad)" stroke="#475569" stroke-width="1.5" />
-
-        <!-- Head Ears / Side Accent Rings -->
-        <rect x="14" y="27" width="5" height="12" rx="2.5" fill="#FF6B35" />
-        <rect x="77" y="27" width="5" height="12" rx="2.5" fill="#FF6B35" />
-
-        <!-- Digital Face Screen -->
-        <rect x="24" y="20" width="48" height="25" rx="11" fill="url(#sombo-screen-grad)" stroke="#334155" stroke-width="1" />
-
-        <!-- Expressive Digital Eyes -->
+        <rect x="18" y="16" width="60" height="34" rx="16"
+              fill="url(#shg${size})" stroke="#475569" stroke-width="1.5"/>
+        <rect x="14" y="27" width="5" height="12" rx="2.5" fill="var(--sombo-accent)"/>
+        <rect x="77" y="27" width="5" height="12" rx="2.5" fill="var(--sombo-accent)"/>
+        <rect x="24" y="20" width="48" height="25" rx="11"
+              fill="#0B132B" stroke="#334155" stroke-width="1"/>
         <g class="sombo-eyes-group">
-          <!-- Left Eye -->
-          <ellipse class="sombo-eye" cx="37" cy="32.5" rx="5.5" ry="6.5" fill="#38BDF8" filter="url(#sombo-glow)" />
-          <circle cx="38.5" cy="30.5" r="2" fill="#FFFFFF" />
-
-          <!-- Right Eye -->
-          <ellipse class="sombo-eye" cx="59" cy="32.5" rx="5.5" ry="6.5" fill="#38BDF8" filter="url(#sombo-glow)" />
-          <circle cx="60.5" cy="30.5" r="2" fill="#FFFFFF" />
+          <ellipse class="sombo-eye" cx="37" cy="32.5" rx="5.5" ry="6.5"
+                   fill="#38BDF8" filter="url(#sglow${size})"/>
+          <circle cx="38.5" cy="30.5" r="2" fill="#FFFFFF"/>
+          <ellipse class="sombo-eye" cx="59" cy="32.5" rx="5.5" ry="6.5"
+                   fill="#38BDF8" filter="url(#sglow${size})"/>
+          <circle cx="60.5" cy="30.5" r="2" fill="#FFFFFF"/>
         </g>
       </g>
     </svg>
@@ -128,29 +107,41 @@ function getSomboSVGMarkup() {
   `;
 }
 
+// ─── Main Widget Class ────────────────────────────────────────────────────────
 class SomboAssistantWidget {
   constructor() {
-    this.containerEl = null;
-    this.avatarBtnEl = null;
-    this.panelEl = null;
-    this.chatBodyEl = null;
-    this.inputEl = null;
-    this.sendBtnEl = null;
-    this.statusDotEl = null;
-    this.statusTextEl = null;
-    this.isOpen = false;
-    this.isThinking = false;
+    // DOM refs
+    this.containerEl   = null;
+    this.avatarBtnEl   = null;
+    this.panelEl       = null;
+    this.chatBodyEl    = null;
+    this.inputEl       = null;
+    this.sendBtnEl     = null;
+    this.statusDotEl   = null;
+    this.statusTextEl  = null;
+    this.badgeEl       = null;
+    this.panelTitleEl  = null;
+
+    // State
+    this.isOpen      = false;
+    this.isThinking  = false;
     this.currentUser = null;
-    this.messages = [];
+    this.profile     = { ...DEFAULT_BOT_PROFILE };
+
+    // Drag state
+    this._dragStartX    = 0;
+    this._dragStartY    = 0;
+    this._originLeft    = 0;
+    this._originBottom  = 0;
+    this._isDragging    = false;
+    this._totalTravel   = 0;
+    this._lastPosLeft   = null;
+    this._lastPosBottom = null;
   }
 
-  /**
-   * Builds and inserts the widget into the DOM.
-   */
+  // ── Mount ──────────────────────────────────────────────────────────────────
   mount() {
-    if (document.getElementById("sombo-widget-root")) {
-      return;
-    }
+    if (document.getElementById("sombo-widget-root")) return;
 
     const root = document.createElement("div");
     root.id = "sombo-widget-root";
@@ -158,24 +149,24 @@ class SomboAssistantWidget {
 
     root.innerHTML = `
       <!-- Sombo Floating Companion Button -->
-      <button 
-        id="sombo-avatar-btn" 
-        class="sombo-avatar-btn" 
+      <button
+        id="sombo-avatar-btn"
+        class="sombo-avatar-btn"
         type="button"
-        aria-label="Open Smore Assistant Chat with Sombo" 
+        aria-label="Open Smore Assistant Chat with ${this.escapeHTML(this.profile.name)}"
         aria-expanded="false"
         aria-controls="sombo-chat-panel"
       >
-        <span class="sombo-badge">Ask Sombo</span>
-        ${getSomboSVGMarkup()}
+        <span class="sombo-badge" id="sombo-badge">${this.escapeHTML(this.profile.name)}</span>
+        ${getSomboSVGMarkup("full")}
       </button>
 
       <!-- Sombo Chat Panel Window -->
-      <div 
-        id="sombo-chat-panel" 
-        class="sombo-chat-panel" 
-        role="dialog" 
-        aria-labelledby="sombo-panel-title" 
+      <div
+        id="sombo-chat-panel"
+        class="sombo-chat-panel"
+        role="dialog"
+        aria-labelledby="sombo-panel-title"
         aria-modal="false"
       >
         <!-- Header -->
@@ -183,84 +174,52 @@ class SomboAssistantWidget {
           <div class="sombo-header-info">
             <div class="sombo-header-avatar" aria-hidden="true">
               <svg viewBox="0 0 96 100" fill="none">
-                <rect x="22" y="46" width="52" height="38" rx="18" fill="#1E293B" />
-                <rect x="18" y="16" width="60" height="34" rx="16" fill="#1E293B" stroke="#FF6B35" stroke-width="2" />
-                <ellipse cx="37" cy="32.5" rx="5" ry="6" fill="#38BDF8" />
-                <ellipse cx="59" cy="32.5" rx="5" ry="6" fill="#38BDF8" />
+                <rect x="22" y="46" width="52" height="38" rx="18" fill="#1E293B"/>
+                <rect x="18" y="16" width="60" height="34" rx="16" fill="#1E293B" stroke="var(--sombo-accent)" stroke-width="2"/>
+                <ellipse cx="37" cy="32.5" rx="5" ry="6" fill="#38BDF8"/>
+                <ellipse cx="59" cy="32.5" rx="5" ry="6" fill="#38BDF8"/>
               </svg>
             </div>
             <div>
-              <h2 id="sombo-panel-title" class="sombo-header-title">Sombo</h2>
+              <h2 id="sombo-panel-title" class="sombo-header-title">${this.escapeHTML(this.profile.name)}</h2>
               <div class="sombo-header-status">
                 <span id="sombo-status-dot" class="sombo-status-dot"></span>
                 <span id="sombo-status-text">Smore Assistant</span>
               </div>
             </div>
           </div>
-          <button 
-            id="sombo-close-btn" 
-            class="sombo-close-btn" 
-            type="button" 
+          <button
+            id="sombo-close-btn"
+            class="sombo-close-btn"
+            type="button"
             aria-label="Close assistant panel"
-          >
-            ✕
-          </button>
+          >✕</button>
         </header>
 
         <!-- Message Body -->
         <div id="sombo-chat-body" class="sombo-chat-body" aria-live="polite" aria-relevant="additions">
-          <!-- Initial Welcome Card -->
-          <div class="sombo-welcome-card">
-            <div class="sombo-welcome-icon">
-              <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <circle cx="24" cy="24" r="22" fill="#FFF8F0" stroke="#FF6B35" stroke-width="2" />
-                <path d="M16 26C16 26 20 31 24 31C28 31 32 26 32 26" stroke="#FF6B35" stroke-width="2.5" stroke-linecap="round" />
-                <circle cx="17" cy="19" r="3" fill="#1E293B" />
-                <circle cx="31" cy="19" r="3" fill="#1E293B" />
-              </svg>
-            </div>
-            <h6>Hi! I'm Sombo 👋</h6>
-            <p>Your friendly Smore financial companion. Ask me about your spending, budgets, or savings goals!</p>
-            
-            <div class="sombo-prompts-title">Try asking me:</div>
-            <div class="sombo-prompts-list">
-              <button type="button" class="sombo-prompt-btn" data-prompt="What is my available balance?">
-                💰 What is my available balance?
-              </button>
-              <button type="button" class="sombo-prompt-btn" data-prompt="How much did I spend this month?">
-                📊 How much did I spend this month?
-              </button>
-              <button type="button" class="sombo-prompt-btn" data-prompt="What are my active budgets?">
-                🎯 What are my active budgets?
-              </button>
-              <button type="button" class="sombo-prompt-btn" data-prompt="How are my savings goals progressing?">
-                🌱 How are my savings goals doing?
-              </button>
-            </div>
-          </div>
+          <!-- Welcome Card injected by applyProfile() -->
         </div>
 
         <!-- Footer / Input Form -->
         <footer class="sombo-chat-footer">
           <form id="sombo-input-form" class="sombo-input-form" novalidate>
-            <input 
-              id="sombo-input-field" 
-              class="sombo-input-field" 
-              type="text" 
-              placeholder="Ask about your finances in MMK..." 
-              maxlength="500" 
+            <input
+              id="sombo-input-field"
+              class="sombo-input-field"
+              type="text"
+              placeholder="Ask about your finances in MMK..."
+              maxlength="500"
               autocomplete="off"
               aria-label="Type your financial question"
             />
-            <button 
-              id="sombo-send-btn" 
-              class="sombo-send-btn" 
-              type="submit" 
+            <button
+              id="sombo-send-btn"
+              class="sombo-send-btn"
+              type="submit"
               aria-label="Send question"
             >
-              <svg viewBox="0 0 24 24">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-              </svg>
+              <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
             </button>
           </form>
           <p class="sombo-disclaimer">Smore Assistant interprets your logged transactions deterministically.</p>
@@ -271,31 +230,107 @@ class SomboAssistantWidget {
     document.body.appendChild(root);
 
     // Cache elements
-    this.containerEl = root;
-    this.avatarBtnEl = document.getElementById("sombo-avatar-btn");
-    this.panelEl = document.getElementById("sombo-chat-panel");
-    this.chatBodyEl = document.getElementById("sombo-chat-body");
-    this.inputEl = document.getElementById("sombo-input-field");
-    this.sendBtnEl = document.getElementById("sombo-send-btn");
-    this.statusDotEl = document.getElementById("sombo-status-dot");
+    this.containerEl  = root;
+    this.avatarBtnEl  = document.getElementById("sombo-avatar-btn");
+    this.panelEl      = document.getElementById("sombo-chat-panel");
+    this.chatBodyEl   = document.getElementById("sombo-chat-body");
+    this.inputEl      = document.getElementById("sombo-input-field");
+    this.sendBtnEl    = document.getElementById("sombo-send-btn");
+    this.statusDotEl  = document.getElementById("sombo-status-dot");
     this.statusTextEl = document.getElementById("sombo-status-text");
+    this.badgeEl      = document.getElementById("sombo-badge");
+    this.panelTitleEl = document.getElementById("sombo-panel-title");
 
-    this.bindEvents();
+    this._buildWelcomeCard();
+    this._bindEvents();
+    this._bindDrag();
+    this._bindSidebarCustomizeLink();
   }
 
-  /**
-   * Attaches event listeners.
-   */
-  bindEvents() {
-    // Open / toggle chat on avatar click
-    this.avatarBtnEl.addEventListener("click", () => {
-      this.togglePanel();
-    });
+  // ── Welcome card ───────────────────────────────────────────────────────────
+  _buildWelcomeCard() {
+    const name = this.escapeHTML(this.profile.name);
+    this.chatBodyEl.innerHTML = `
+      <div class="sombo-welcome-card">
+        <div class="sombo-welcome-icon">
+          <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="24" cy="24" r="22" fill="#FFF8F0" stroke="var(--sombo-accent)" stroke-width="2"/>
+            <path d="M16 26C16 26 20 31 24 31C28 31 32 26 32 26"
+                  stroke="var(--sombo-accent)" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="17" cy="19" r="3" fill="#1E293B"/>
+            <circle cx="31" cy="19" r="3" fill="#1E293B"/>
+          </svg>
+        </div>
+        <h6>Hi! I'm ${name} 👋</h6>
+        <p>Your friendly Smore financial companion. Ask me about your spending, budgets, or savings goals!</p>
+        <div class="sombo-prompts-title">Try asking me:</div>
+        <div class="sombo-prompts-list">
+          <button type="button" class="sombo-prompt-btn" data-prompt="What is my available balance?">💰 What is my available balance?</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="How much did I spend this month?">📊 How much did I spend this month?</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="What are my active budgets?">🎯 What are my active budgets?</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="How are my savings goals progressing?">🌱 How are my savings goals doing?</button>
+        </div>
+      </div>
+    `;
+  }
 
+  // ── Apply profile to DOM ───────────────────────────────────────────────────
+  applyProfile(profile) {
+    this.profile = { ...DEFAULT_BOT_PROFILE, ...profile };
+
+    const root = this.containerEl;
+    if (!root) return;
+
+    this._applyProfileToElement(root, this.profile);
+    this._applyProfileToElement(this.panelEl, this.profile);
+
+    if (this.badgeEl)      this.badgeEl.textContent      = this.profile.name;
+    if (this.panelTitleEl) this.panelTitleEl.textContent  = this.profile.name;
+    if (this.avatarBtnEl)  this.avatarBtnEl.setAttribute("aria-label", `Open Smore Assistant Chat with ${this.profile.name}`);
+
+    this._buildWelcomeCard();
+  }
+
+  _applyProfileToElement(el, profile) {
+    if (!el) return;
+    el.style.setProperty("--sombo-accent", profile.accentColor);
+    el.style.setProperty("--sombo-accent-glow", profile.accentColor + "66");
+    el.style.setProperty("--sombo-accent-light", profile.accentColor + "20");
+    el.setAttribute("data-bot-style", profile.style);
+  }
+
+  _updateModalPreview(previewEl, { name, style, accentColor }) {
+    if (!previewEl) return;
+    this._applyProfileToElement(previewEl, { name, style, accentColor });
+    const nameEl = previewEl.querySelector(".sombo-preview-name");
+    const styleEl = previewEl.querySelector(".sombo-preview-style");
+    const dotEl = previewEl.querySelector(".sombo-preview-dot");
+    if (nameEl) nameEl.textContent = name || DEFAULT_BOT_PROFILE.name;
+    if (styleEl) styleEl.textContent = STYLE_PRESETS.find(p => p.id === style)?.label || style;
+    if (dotEl) dotEl.style.background = accentColor;
+  }
+
+  _showSaveError(containerEl, message) {
+    if (!containerEl) return;
+    let banner = containerEl.querySelector(".sombo-save-error");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.className = "sombo-save-error";
+      banner.setAttribute("role", "alert");
+      containerEl.insertBefore(banner, containerEl.firstChild);
+    }
+    banner.hidden = false;
+    banner.innerHTML = `<span aria-hidden="true">⚠️</span><span>${this.escapeHTML(message)}</span>`;
+  }
+
+  _clearSaveError(containerEl) {
+    containerEl?.querySelector(".sombo-save-error")?.remove();
+  }
+
+  // ── Events ─────────────────────────────────────────────────────────────────
+  _bindEvents() {
     // Close button
-    document.getElementById("sombo-close-btn").addEventListener("click", () => {
-      this.closePanel();
-    });
+    document.getElementById("sombo-close-btn").addEventListener("click", () => this.closePanel());
 
     // Form submission
     document.getElementById("sombo-input-form").addEventListener("submit", (e) => {
@@ -303,7 +338,7 @@ class SomboAssistantWidget {
       this.handleUserSubmit();
     });
 
-    // Quick prompt buttons
+    // Quick prompt buttons (delegated)
     this.chatBodyEl.addEventListener("click", (e) => {
       const btn = e.target.closest(".sombo-prompt-btn");
       if (btn && btn.dataset.prompt) {
@@ -312,16 +347,14 @@ class SomboAssistantWidget {
       }
     });
 
-    // Close on Escape key press
+    // Escape key
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && this.isOpen) {
-        this.closePanel();
-      }
+      if (e.key === "Escape" && this.isOpen) this.closePanel();
     });
 
-    // Playful hover waving trigger
+    // Hover wave
     this.avatarBtnEl.addEventListener("mouseenter", () => {
-      if (!this.isOpen && !this.isThinking) {
+      if (!this.isOpen && !this.isThinking && !this._isDragging) {
         this.avatarBtnEl.classList.add("is-waving");
       }
     });
@@ -330,29 +363,416 @@ class SomboAssistantWidget {
     });
   }
 
-  /**
-   * Sets current auth user context.
-   */
-  setUser(user) {
-    this.currentUser = user;
-    if (user) {
-      // Auth can resolve after the panel was opened. Remove any temporary
-      // unauthenticated banner that was rendered during that short window.
-      this.chatBodyEl?.querySelectorAll(".sombo-state-banner.is-unauth").forEach((banner) => banner.remove());
-    } else if (this.isOpen) {
-      this.renderUnauthenticatedState();
+  // ── Drag logic (Pointer Events — works for both mouse and touch) ───────────
+  _bindDrag() {
+    const btn = this.avatarBtnEl;
+    const container = this.containerEl;
+
+    const onPointerDown = (e) => {
+      // Only primary pointer (left mouse or first touch)
+      if (e.button !== undefined && e.button !== 0) return;
+
+      btn.setPointerCapture(e.pointerId);
+      this._isDragging    = false;
+      this._totalTravel   = 0;
+
+      const rect = container.getBoundingClientRect();
+      this._dragStartX   = e.clientX;
+      this._dragStartY   = e.clientY;
+      this._originLeft   = rect.left;
+      this._originBottom = window.innerHeight - rect.bottom;
+
+      btn.classList.remove("is-drag-released");
+      btn.addEventListener("pointermove", onPointerMove);
+      btn.addEventListener("pointerup",   onPointerUp);
+      btn.addEventListener("pointercancel", onPointerUp);
+    };
+
+    const onPointerMove = (e) => {
+      const dx = e.clientX - this._dragStartX;
+      const dy = e.clientY - this._dragStartY;
+      this._totalTravel += Math.abs(dx) + Math.abs(dy);
+
+      if (!this._isDragging && this._totalTravel > 6) {
+        this._isDragging = true;
+        btn.classList.add("is-dragging");
+        // Stop idle animations during drag
+        this.avatarBtnEl.classList.remove("is-waving");
+      }
+
+      if (!this._isDragging) return;
+
+      // Compute new position (bottom/left based)
+      const newLeft   = this._originLeft   + dx;
+      const newBottom = this._originBottom  - dy;
+
+      // Clamp to viewport
+      const clamped = this._clampToViewport(newLeft, newBottom);
+      container.style.left   = clamped.left   + "px";
+      container.style.bottom = clamped.bottom + "px";
+      container.style.right  = "auto";
+
+      this._lastPosLeft   = clamped.left;
+      this._lastPosBottom = clamped.bottom;
+    };
+
+    const onPointerUp = () => {
+      btn.removeEventListener("pointermove", onPointerMove);
+      btn.removeEventListener("pointerup",   onPointerUp);
+      btn.removeEventListener("pointercancel", onPointerUp);
+
+      if (this._isDragging) {
+        btn.classList.remove("is-dragging");
+        btn.classList.add("is-drag-released");
+        setTimeout(() => btn.classList.remove("is-drag-released"), 500);
+
+        // Save position to localStorage keyed by uid
+        if (this.currentUser && this._lastPosLeft !== null) {
+          this._savePosition(this.currentUser.uid, this._lastPosLeft, this._lastPosBottom);
+        }
+      } else {
+        // Short tap — toggle panel
+        this.togglePanel();
+      }
+
+      this._isDragging = false;
+    };
+
+    btn.addEventListener("pointerdown", onPointerDown);
+  }
+
+  _clampToViewport(left, bottom) {
+    const W = window.innerWidth;
+    const H = window.innerHeight;
+    const w = this.containerEl.offsetWidth  || 120;
+    const h = this.containerEl.offsetHeight || 140;
+    return {
+      left:   Math.min(Math.max(0, left),   W - w),
+      bottom: Math.min(Math.max(0, bottom), H - h),
+    };
+  }
+
+  _savePosition(uid, left, bottom) {
+    try {
+      localStorage.setItem(`smore_bot_pos_${uid}`, JSON.stringify({ left, bottom }));
+    } catch (_) { /* storage full / private mode — silently ignore */ }
+  }
+
+  _restorePosition(uid) {
+    try {
+      const raw = localStorage.getItem(`smore_bot_pos_${uid}`);
+      if (!raw) return;
+      const { left, bottom } = JSON.parse(raw);
+      const clamped = this._clampToViewport(Number(left), Number(bottom));
+      this.containerEl.style.left   = clamped.left   + "px";
+      this.containerEl.style.bottom = clamped.bottom + "px";
+      this.containerEl.style.right  = "auto";
+    } catch (_) { /* corrupted data — silently ignore */ }
+  }
+
+  // ── Sidebar "Customize my bot" link ───────────────────────────────────────
+  _bindSidebarCustomizeLink() {
+    // Runs after mount so DOM is ready.
+    // Bind any existing #customizeBotNavBtn on the page.
+    const link = document.getElementById("customizeBotNavBtn");
+    if (link) {
+      link.addEventListener("click", (e) => {
+        e.preventDefault();
+        this.openCustomizeModal();
+      });
     }
   }
 
-  /**
-   * Opens or closes the panel.
-   */
-  togglePanel() {
-    if (this.isOpen) {
-      this.closePanel();
-    } else {
-      this.openPanel();
+  // ── Onboarding modal ───────────────────────────────────────────────────────
+  showOnboardingModal() {
+    // Remove any stale overlay
+    document.getElementById("sombo-onboard-overlay")?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "sombo-onboard-overlay";
+    overlay.className = "sombo-onboard-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "sombo-onboard-title");
+
+    overlay.innerHTML = `
+      <div class="sombo-onboard-modal">
+        <div class="sombo-onboard-header">
+          <div class="sombo-onboard-avatar" id="onboard-preview" data-bot-style="${DEFAULT_BOT_PROFILE.style}">${getSomboSVGMarkup("small")}</div>
+          <h5 id="sombo-onboard-title">Meet Your Personal Finance Bot!</h5>
+          <p>Smore lets you create a customised assistant. Give it a name, pick a style, and choose an accent color — or just use the default Sombo.</p>
+        </div>
+
+        <div class="sombo-onboard-form-group">
+          <label class="sombo-onboard-label" for="onboard-bot-name">Bot name</label>
+          <input class="sombo-onboard-input" type="text" id="onboard-bot-name"
+                 maxlength="40" placeholder="Sombo" value="${this.escapeHTML(DEFAULT_BOT_PROFILE.name)}"/>
+        </div>
+
+        <div class="sombo-onboard-form-group">
+          <label class="sombo-onboard-label">Appearance style</label>
+          <div class="sombo-style-presets" id="onboard-style-presets">
+            ${STYLE_PRESETS.map(p => `
+              <button type="button" class="sombo-style-btn${p.id === DEFAULT_BOT_PROFILE.style ? " is-active" : ""}"
+                      data-style="${p.id}">${p.label}</button>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="sombo-onboard-form-group">
+          <label class="sombo-onboard-label" for="onboard-accent-color">Accent color</label>
+          <div class="sombo-color-row">
+            <input type="color" class="sombo-color-input" id="onboard-accent-color"
+                   value="${DEFAULT_BOT_PROFILE.accentColor}"/>
+            <span class="sombo-color-preview" id="onboard-color-preview">${DEFAULT_BOT_PROFILE.accentColor}</span>
+          </div>
+        </div>
+
+        <div class="sombo-onboard-actions">
+          <button type="button" class="sombo-btn-primary" id="onboard-create-btn">🎨 Create My Bot</button>
+          <button type="button" class="sombo-btn-secondary" id="onboard-default-btn">Use Default Sombo</button>
+          <button type="button" class="sombo-btn-ghost" id="onboard-later-btn">Remind me later</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const modalEl = overlay.querySelector(".sombo-onboard-modal");
+    const previewEl = overlay.querySelector("#onboard-preview");
+    const nameInput = overlay.querySelector("#onboard-bot-name");
+    const colorInput = overlay.querySelector("#onboard-accent-color");
+    const colorPreview = overlay.querySelector("#onboard-color-preview");
+    const savedSnapshot = { ...this.profile };
+    let selectedStyle = DEFAULT_BOT_PROFILE.style;
+
+    const syncPreview = () => {
+      const draft = {
+        name: nameInput.value.trim() || DEFAULT_BOT_PROFILE.name,
+        style: selectedStyle,
+        accentColor: colorInput.value || DEFAULT_BOT_PROFILE.accentColor,
+      };
+      this._applyProfileToElement(previewEl, draft);
+      this.applyProfile(draft);
+    };
+
+    overlay.querySelectorAll(".sombo-style-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        overlay.querySelectorAll(".sombo-style-btn").forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        selectedStyle = btn.dataset.style;
+        syncPreview();
+      });
+    });
+
+    nameInput.addEventListener("input", syncPreview);
+    colorInput.addEventListener("input", () => {
+      colorPreview.textContent = colorInput.value;
+      syncPreview();
+    });
+
+    overlay.querySelector("#onboard-create-btn").addEventListener("click", async () => {
+      const name  = nameInput.value.trim() || DEFAULT_BOT_PROFILE.name;
+      const color = colorInput.value || DEFAULT_BOT_PROFILE.accentColor;
+      const saved = await this._saveAndApplyProfile({ name, style: selectedStyle, accentColor: color }, modalEl);
+      if (saved) {
+        this._markOnboarded();
+        overlay.remove();
+      }
+    });
+
+    overlay.querySelector("#onboard-default-btn").addEventListener("click", async () => {
+      const saved = await this._saveAndApplyProfile(DEFAULT_BOT_PROFILE, modalEl);
+      if (saved) {
+        this._markOnboarded();
+        overlay.remove();
+      }
+    });
+
+    overlay.querySelector("#onboard-later-btn").addEventListener("click", () => {
+      this.applyProfile(savedSnapshot);
+      overlay.remove();
+    });
+
+    syncPreview();
+    setTimeout(() => nameInput?.focus(), 100);
+  }
+
+  _markOnboarded() {
+    if (this.currentUser) {
+      try {
+        localStorage.setItem(`smore_bot_onboarded_${this.currentUser.uid}`, "1");
+      } catch (_) {}
     }
+  }
+
+  _hasOnboarded() {
+    if (!this.currentUser) return true; // don't show for unauthenticated
+    try {
+      return !!localStorage.getItem(`smore_bot_onboarded_${this.currentUser.uid}`);
+    } catch (_) { return true; }
+  }
+
+  // ── Customize modal ───────────────────────────────────────────────────────
+  openCustomizeModal() {
+    document.getElementById("sombo-customize-overlay")?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "sombo-customize-overlay";
+    overlay.className = "sombo-customize-overlay";
+    overlay.setAttribute("role", "dialog");
+    overlay.setAttribute("aria-modal", "true");
+    overlay.setAttribute("aria-labelledby", "sombo-customize-title");
+
+    const currentName  = this.profile.name;
+    const currentStyle = this.profile.style;
+    const currentColor = this.profile.accentColor;
+
+    overlay.innerHTML = `
+      <div class="sombo-customize-modal">
+        <div class="sombo-customize-header">
+          <h5 id="sombo-customize-title">Customize My Bot</h5>
+          <button type="button" class="sombo-customize-close" id="customize-close-btn"
+                  aria-label="Close customize panel">✕</button>
+        </div>
+
+        <!-- Live preview -->
+        <div class="sombo-bot-preview" id="customize-preview" data-bot-style="${currentStyle}"
+             style="--sombo-accent:${currentColor};--sombo-accent-glow:${currentColor}66;--sombo-accent-light:${currentColor}20">
+          <div class="sombo-preview-svg">${getSomboSVGMarkup("small")}</div>
+          <div class="sombo-preview-info">
+            <div class="sombo-preview-name" id="preview-name">${this.escapeHTML(currentName)}</div>
+            <div class="sombo-preview-style" id="preview-style-label">${STYLE_PRESETS.find(p => p.id === currentStyle)?.label || "Classic Sombo"}</div>
+          </div>
+          <div class="sombo-preview-dot" id="preview-dot" style="background:${currentColor}"></div>
+        </div>
+
+        <div class="sombo-onboard-form-group">
+          <label class="sombo-onboard-label" for="customize-bot-name">Bot name</label>
+          <input class="sombo-onboard-input" type="text" id="customize-bot-name"
+                 maxlength="40" placeholder="Sombo" value="${this.escapeHTML(currentName)}"/>
+        </div>
+
+        <div class="sombo-onboard-form-group">
+          <label class="sombo-onboard-label">Appearance style</label>
+          <div class="sombo-style-presets" id="customize-style-presets">
+            ${STYLE_PRESETS.map(p => `
+              <button type="button" class="sombo-style-btn${p.id === currentStyle ? " is-active" : ""}"
+                      data-style="${p.id}">${p.label}</button>
+            `).join("")}
+          </div>
+        </div>
+
+        <div class="sombo-onboard-form-group">
+          <label class="sombo-onboard-label" for="customize-accent-color">Accent color</label>
+          <div class="sombo-color-row">
+            <input type="color" class="sombo-color-input" id="customize-accent-color"
+                   value="${currentColor}"/>
+            <span class="sombo-color-preview" id="customize-color-preview">${currentColor}</span>
+          </div>
+        </div>
+
+        <div class="sombo-customize-actions">
+          <button type="button" class="sombo-btn-primary" id="customize-save-btn">Save Changes</button>
+          <button type="button" class="sombo-btn-secondary" id="customize-reset-btn">Reset to Sombo</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const modalEl = overlay.querySelector(".sombo-customize-modal");
+    const previewEl = overlay.querySelector("#customize-preview");
+    const savedSnapshot = { ...this.profile };
+    let selectedStyle = currentStyle;
+
+    const nameInput    = overlay.querySelector("#customize-bot-name");
+    const colorInput   = overlay.querySelector("#customize-accent-color");
+    const colorPreview = overlay.querySelector("#customize-color-preview");
+
+    const syncPreview = () => {
+      const draft = {
+        name: nameInput.value.trim() || DEFAULT_BOT_PROFILE.name,
+        style: selectedStyle,
+        accentColor: colorInput.value || DEFAULT_BOT_PROFILE.accentColor,
+      };
+      this._updateModalPreview(previewEl, draft);
+      this.applyProfile(draft);
+    };
+
+    nameInput.addEventListener("input", syncPreview);
+
+    overlay.querySelectorAll(".sombo-style-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        overlay.querySelectorAll(".sombo-style-btn").forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+        selectedStyle = btn.dataset.style;
+        syncPreview();
+      });
+    });
+
+    colorInput.addEventListener("input", () => {
+      colorPreview.textContent = colorInput.value;
+      syncPreview();
+    });
+
+    const closeModal = (revert) => {
+      if (revert) this.applyProfile(savedSnapshot);
+      overlay.remove();
+    };
+
+    overlay.querySelector("#customize-close-btn").addEventListener("click", () => closeModal(true));
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(true); });
+
+    overlay.querySelector("#customize-save-btn").addEventListener("click", async () => {
+      const name  = nameInput.value.trim() || DEFAULT_BOT_PROFILE.name;
+      const color = colorInput.value || DEFAULT_BOT_PROFILE.accentColor;
+      const saved = await this._saveAndApplyProfile({ name, style: selectedStyle, accentColor: color }, modalEl);
+      if (saved) closeModal(false);
+    });
+
+    overlay.querySelector("#customize-reset-btn").addEventListener("click", async () => {
+      if (!this.currentUser) return;
+      this._clearSaveError(modalEl);
+      try {
+        await resetBotProfile();
+        this.applyProfile(DEFAULT_BOT_PROFILE);
+        closeModal(false);
+      } catch (err) {
+        console.warn("[SomboWidget] Could not reset profile:", err.code || err.message, err.message);
+        this._showSaveError(modalEl, "Your bot profile could not be reset. Please try again.");
+      }
+    });
+
+    setTimeout(() => nameInput?.focus(), 100);
+  }
+
+  async _saveAndApplyProfile(data, errorContainerEl) {
+    if (!this.currentUser) return false;
+    this._clearSaveError(errorContainerEl);
+    try {
+      await saveBotProfile(data);
+      this.applyProfile(data);
+      return true;
+    } catch (err) {
+      const code = err.code || "";
+      console.warn("[SomboWidget] Could not save profile:", code, err.message);
+      let message = "Your bot profile could not be saved. Please check your connection and try again.";
+      if (code === "permission-denied") {
+        message = "Your bot profile could not be saved because Firestore denied the write. Deploy the latest firestore.rules with: firebase deploy --only firestore:rules";
+      }
+      this._showSaveError(
+        errorContainerEl || this.chatBodyEl,
+        message
+      );
+      return false;
+    }
+  }
+
+  // ── Panel open/close ───────────────────────────────────────────────────────
+  togglePanel() {
+    if (this.isOpen) this.closePanel();
+    else this.openPanel();
   }
 
   openPanel() {
@@ -360,20 +780,9 @@ class SomboAssistantWidget {
     this.panelEl.classList.add("is-open");
     this.avatarBtnEl.setAttribute("aria-expanded", "true");
     this.avatarBtnEl.classList.add("is-leaning", "is-waving");
-
-    // Remove waving class after gesture finishes
-    setTimeout(() => {
-      this.avatarBtnEl.classList.remove("is-waving");
-    }, 1200);
-
-    // Focus input field
-    setTimeout(() => {
-      this.inputEl.focus();
-    }, 200);
-
-    if (!this.currentUser) {
-      this.renderUnauthenticatedState();
-    }
+    setTimeout(() => this.avatarBtnEl.classList.remove("is-waving"), 1200);
+    setTimeout(() => this.inputEl?.focus(), 200);
+    if (!this.currentUser) this.renderUnauthenticatedState();
   }
 
   closePanel() {
@@ -383,9 +792,18 @@ class SomboAssistantWidget {
     this.avatarBtnEl.classList.remove("is-leaning");
   }
 
-  /**
-   * Handles user question submission.
-   */
+  // ── Auth state ────────────────────────────────────────────────────────────
+  setUser(user) {
+    this.currentUser = user;
+    if (user) {
+      this.chatBodyEl?.querySelectorAll(".sombo-state-banner.is-unauth").forEach(b => b.remove());
+      this._restorePosition(user.uid);
+    } else if (this.isOpen) {
+      this.renderUnauthenticatedState();
+    }
+  }
+
+  // ── Submit question ────────────────────────────────────────────────────────
   async handleUserSubmit() {
     const questionText = this.inputEl.value.trim();
     if (!questionText || this.isThinking) return;
@@ -395,19 +813,12 @@ class SomboAssistantWidget {
       return;
     }
 
-    // 1) Add user message bubble
     this.appendUserMessage(questionText);
     this.inputEl.value = "";
-
-    // 2) Set Sombo state to thinking
     this.setThinkingState(true);
 
     try {
-      // 3) Get Firebase Auth ID token (force refresh)
-      const user = this.currentUser;
-      const token = await user.getIdToken(true);
-
-      // 4) POST to VPS Gateway
+      const token = await this.currentUser.getIdToken(true);
       const res = await fetch(GATEWAY_URL, {
         method: "POST",
         headers: {
@@ -420,14 +831,11 @@ class SomboAssistantWidget {
       const data = await res.json();
 
       if (res.ok && data.answer) {
-        // Success response
         this.appendBotMessage(data.answer);
         this.triggerHappyAnimation();
       } else {
-        // Handle API errors cleanly
-        const errorCode = data && data.error && data.error.code;
-        const errorMsg = data && data.error && data.error.message;
-
+        const errorCode = data?.error?.code;
+        const errorMsg  = data?.error?.message;
         if (res.status === 422 && errorCode === "out_of_scope") {
           this.renderBlockedTopicState(errorMsg || "I can only help with your personal finance data on Smore.");
         } else if (res.status === 401) {
@@ -444,13 +852,11 @@ class SomboAssistantWidget {
     }
   }
 
-  /**
-   * Updates state to thinking or idle.
-   */
+  // ── Thinking state ────────────────────────────────────────────────────────
   setThinkingState(isThinking) {
     this.isThinking = isThinking;
     this.sendBtnEl.disabled = isThinking;
-    this.inputEl.disabled = isThinking;
+    this.inputEl.disabled   = isThinking;
 
     if (isThinking) {
       this.avatarBtnEl.classList.add("is-thinking");
@@ -465,117 +871,80 @@ class SomboAssistantWidget {
     }
   }
 
-  /**
-   * Happy animation trigger on good response.
-   */
   triggerHappyAnimation() {
     this.avatarBtnEl.classList.add("is-happy");
-    setTimeout(() => {
-      this.avatarBtnEl.classList.remove("is-happy");
-    }, 1200);
+    setTimeout(() => this.avatarBtnEl.classList.remove("is-happy"), 1200);
   }
 
-  /**
-   * Appends user message bubble.
-   */
+  // ── Messages ──────────────────────────────────────────────────────────────
   appendUserMessage(text) {
     const msgEl = document.createElement("div");
     msgEl.className = "sombo-msg sombo-msg-user";
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
+    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     msgEl.innerHTML = `
       <div class="sombo-msg-bubble">${this.escapeHTML(text)}</div>
       <div class="sombo-msg-time">${timeStr}</div>
     `;
-
     this.chatBodyEl.appendChild(msgEl);
     this.scrollToBottom();
   }
 
-  /**
-   * Appends assistant bot response.
-   */
   appendBotMessage(text) {
     const msgEl = document.createElement("div");
     msgEl.className = "sombo-msg sombo-msg-bot";
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    // Format paragraphs & bullet lists simply
-    const formattedText = this.formatMarkdown(text);
-
+    const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     msgEl.innerHTML = `
-      <div class="sombo-msg-bubble">${formattedText}</div>
-      <div class="sombo-msg-time">Sombo • ${timeStr}</div>
+      <div class="sombo-msg-bubble">${this.formatMarkdown(text)}</div>
+      <div class="sombo-msg-time">${this.escapeHTML(this.profile.name)} • ${timeStr}</div>
     `;
-
     this.chatBodyEl.appendChild(msgEl);
     this.scrollToBottom();
   }
 
-  /**
-   * Displays loading typing indicator.
-   */
   showTypingIndicator() {
-    this.hideTypingIndicator(); // Ensure no duplicates
-    const typingEl = document.createElement("div");
-    typingEl.id = "sombo-typing-indicator";
-    typingEl.className = "sombo-typing-indicator";
-    typingEl.innerHTML = `
+    this.hideTypingIndicator();
+    const el = document.createElement("div");
+    el.id = "sombo-typing-indicator";
+    el.className = "sombo-typing-indicator";
+    el.innerHTML = `
       <span class="sombo-typing-dot"></span>
       <span class="sombo-typing-dot"></span>
       <span class="sombo-typing-dot"></span>
     `;
-    this.chatBodyEl.appendChild(typingEl);
+    this.chatBodyEl.appendChild(el);
     this.scrollToBottom();
   }
 
   hideTypingIndicator() {
-    const el = document.getElementById("sombo-typing-indicator");
-    if (el) el.remove();
+    document.getElementById("sombo-typing-indicator")?.remove();
   }
 
-  /**
-   * Render state banners.
-   */
+  // ── State banners ─────────────────────────────────────────────────────────
   renderErrorState(message) {
-    const banner = document.createElement("div");
-    banner.className = "sombo-state-banner is-error";
-    banner.innerHTML = `
-      <span aria-hidden="true">⚠️</span>
-      <div>
-        <strong>Assistant error:</strong> ${this.escapeHTML(message)}
-      </div>
-    `;
-    this.chatBodyEl.appendChild(banner);
+    const b = document.createElement("div");
+    b.className = "sombo-state-banner is-error";
+    b.innerHTML = `<span aria-hidden="true">⚠️</span><div><strong>Assistant error:</strong> ${this.escapeHTML(message)}</div>`;
+    this.chatBodyEl.appendChild(b);
     this.scrollToBottom();
   }
 
   renderBlockedTopicState(message) {
-    const banner = document.createElement("div");
-    banner.className = "sombo-state-banner is-blocked";
-    banner.innerHTML = `
-      <span aria-hidden="true">🛡️</span>
-      <div>
-        <strong>Out of scope question:</strong> ${this.escapeHTML(message)}
-      </div>
-    `;
-    this.chatBodyEl.appendChild(banner);
+    const b = document.createElement("div");
+    b.className = "sombo-state-banner is-blocked";
+    b.innerHTML = `<span aria-hidden="true">🛡️</span><div><strong>Out of scope question:</strong> ${this.escapeHTML(message)}</div>`;
+    this.chatBodyEl.appendChild(b);
     this.scrollToBottom();
   }
 
   renderUnauthenticatedState() {
-    const banner = document.createElement("div");
-    banner.className = "sombo-state-banner is-unauth";
-    banner.innerHTML = `
-      <span aria-hidden="true">🔒</span>
-      <div>
-        <strong>Session expired:</strong> Please sign in to ask Sombo about your financial data.
-      </div>
-    `;
-    this.chatBodyEl.appendChild(banner);
+    const b = document.createElement("div");
+    b.className = "sombo-state-banner is-unauth";
+    b.innerHTML = `<span aria-hidden="true">🔒</span><div><strong>Session expired:</strong> Please sign in to ask ${this.escapeHTML(this.profile.name)} about your financial data.</div>`;
+    this.chatBodyEl.appendChild(b);
     this.scrollToBottom();
   }
 
+  // ── Utilities ─────────────────────────────────────────────────────────────
   scrollToBottom() {
     this.chatBodyEl.scrollTop = this.chatBodyEl.scrollHeight;
   }
@@ -590,27 +959,42 @@ class SomboAssistantWidget {
   }
 
   formatMarkdown(str) {
-    const escaped = this.escapeHTML(str);
-    // Convert bold **text** to <strong>text</strong>
-    let formatted = escaped.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    // Convert newlines to <br>
-    formatted = formatted.replace(/\n/g, '<br>');
-    return formatted;
+    return this.escapeHTML(str)
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\n/g, "<br>");
   }
 }
 
-// Singleton widget instance
+// ─── Singleton ────────────────────────────────────────────────────────────────
 let widgetInstance = null;
 
 /**
  * Initializes Sombo assistant on authenticated pages.
+ * Loads the user's bot profile from Firestore, shows onboarding if needed.
  */
-export function initSomboAssistant(user) {
+export async function initSomboAssistant(user) {
   if (!widgetInstance) {
     widgetInstance = new SomboAssistantWidget();
     widgetInstance.mount();
   }
   widgetInstance.setUser(user);
+
+  if (user) {
+    const profile = await loadBotProfile();
+
+    if (profile) {
+      widgetInstance.applyProfile(profile);
+    } else {
+      // Apply defaults visually
+      widgetInstance.applyProfile(DEFAULT_BOT_PROFILE);
+      // Show onboarding if not already dismissed
+      if (!widgetInstance._hasOnboarded()) {
+        // Small delay so the page is settled
+        setTimeout(() => widgetInstance.showOnboardingModal(), 800);
+      }
+    }
+  }
+
   return widgetInstance;
 }
 
@@ -619,8 +1003,8 @@ export function initSomboAssistant(user) {
  */
 export function destroySomboAssistant() {
   const root = document.getElementById("sombo-widget-root");
-  if (root) {
-    root.remove();
-  }
+  if (root) root.remove();
+  document.getElementById("sombo-onboard-overlay")?.remove();
+  document.getElementById("sombo-customize-overlay")?.remove();
   widgetInstance = null;
 }

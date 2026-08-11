@@ -9,7 +9,7 @@ rules_version = '2';
 //      so isolation is enforced by the document path itself, not by a stored
 //      owner field. A user can only ever reach their own subtree.
 //   3. Users must never read or write another user's transactions, budgets,
-//      or savings goals — the path guard guarantees this.
+//      savings goals, or assistant profiles — the path guard guarantees this.
 //   4. Server time is trusted for timestamps; a user may not forge a date
 //      field by reading from a request field.
 //   5. Data shape is validated at write time (required fields + types), so
@@ -49,6 +49,18 @@ service cloud.firestore {
         allow create: if isOwner(uid) && validGoal(request.resource.data);
         allow update: if isOwner(uid) && validGoal(request.resource.data);
         allow delete: if isOwner(uid);
+      }
+
+      // ---- Assistant bot profile: one subcollection per user ----------
+      // Stores the user's personalised bot name, style preset, and accent color.
+      // Security: only the owner can read or write their own profile.
+      // No API keys, tokens, or credentials may be stored here.
+      // Delete is disallowed; reset goes through an update to defaults.
+      match /assistantProfile/{docId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validAssistantProfile(request.resource.data);
+        allow update: if isOwner(uid) && validAssistantProfile(request.resource.data);
+        allow delete: if false;
       }
     }
 
@@ -151,5 +163,24 @@ service cloud.firestore {
         && isNonNegativeAmount(data.savedAmount)
         && isTimestamp(data.deadline)
         && isTimestamp(data.createdAt);
+  }
+
+  // --------------------------------------------------------------------
+  // users/{uid}/assistantProfile/{docId}
+  // Stores personalised bot name, style preset, and accent color only.
+  // No credentials, tokens, API keys, or private data permitted.
+  // --------------------------------------------------------------------
+  function validAssistantProfile(data) {
+    return requiredFields(data, ['name', 'style', 'accentColor', 'createdAt', 'updatedAt'])
+        && isString(data.name)
+        && data.name.size() >= 1
+        && data.name.size() <= 40
+        && isString(data.style)
+        && data.style in ['classic', 'friendly', 'minimal', 'energetic', 'calm']
+        && isString(data.accentColor)
+        && data.accentColor.size() >= 4
+        && data.accentColor.size() <= 9
+        && isTimestamp(data.createdAt)
+        && isTimestamp(data.updatedAt);
   }
 }
