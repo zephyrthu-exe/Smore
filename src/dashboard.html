@@ -162,64 +162,172 @@
         <span class="fs-5 fw-bold text-white">Smore</span>
       </div>
 
-      <nav class="nav flex-column gap-1">
-        <a href="dashboard.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
-        <a href="transaction.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
-        <a href="budget.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
-        <a href="goals.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
-        <a href="analytics.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
-      </nav>
-    </div>
+      <div id="dash-content" class="hidden">
+        <header class="dash-header">
+          <div>
+            <p class="auth-kicker mb-2">Your dashboard</p>
+            <h1 id="user-greeting" class="h2 mb-1">Hello</h1>
+            <p class="text-secondary mb-0">
+              Signed in as
+              <span id="user-email" class="fw-semibold text-dark"></span>
+            </p>
+          </div>
+          <div class="user-pill" aria-label="Signed-in account">
+            <span aria-hidden="true">●</span>
+            <span>Active session</span>
+          </div>
+        </header>
 
-    
-        <div class="profile-wrap" id="profileWrap">
-          <button class="profile-chip" type="button" aria-haspopup="true" aria-expanded="false">
-            <span class="avatar">Z</span>
-            <span class="flex-grow-1 min-w-0">
-              <span class="d-block small fw-semibold text-truncate">zenx19759</span>
-              <span class="d-block text-white-50" style="font-size: 0.75rem">Free plan</span>
-            </span>
-            <i class="bi bi-chevron-right text-white-50"></i>
-          </button>
+        <div id="dash-status" class="status-alert" aria-live="polite"></div>
 
-          <div class="profile-card" role="menu">
-            <div class="text-center px-4 pt-4 pb-3">
-              <div class="avatar mx-auto mb-2" style="width: 62px; height: 62px; font-size: 1.25rem">
-                Z
-              </div>
-              <div class="fw-semibold">zenx19759</div>
-              <div class="text-secondary" style="font-size: 0.8rem">
-                <div><i class="bi bi-envelope"></i> zenx19759@gmail.com</div>
-                <div><i class="bi bi-telephone"></i> +95 9 584 548 5254</div>
-              </div>
+        <!-- ── Overview stats ────────────────────────────── -->
+        <section aria-labelledby="overview-heading">
+          <h2 id="overview-heading" class="h5 mb-3">Overview (MMK)</h2>
+          <div class="dash-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <article class="stat-tile">
+              <p class="label mb-0">Available balance</p>
+              <p id="stat-balance" class="value mb-0">—</p>
+            </article>
+            <article class="stat-tile">
+              <p class="label mb-0">Spent this month</p>
+              <p id="stat-spent" class="value mb-0">—</p>
+            </article>
+            <article class="stat-tile">
+              <p class="label mb-0">Total income</p>
+              <p id="stat-income" class="value mb-0">—</p>
+            </article>
+            <article class="stat-tile">
+              <p class="label mb-0">Total expenses</p>
+              <p id="stat-total-expenses" class="value mb-0">—</p>
+            </article>
+          </div>
+        </section>
+
+        <!-- ── Analytics panel ──────────────────────────────── -->
+        <section class="dash-panel mt-4" aria-labelledby="analytics-heading">
+          <div class="txn-panel-header">
+            <h2 id="analytics-heading" class="h5 mb-0">Analytics</h2>
+            <div class="txn-actions">
+            </div>
+          </div>
+
+          <!-- Loading -->
+          <div id="analytics-loading" class="txn-list-loading" role="status" aria-live="polite">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <p class="mb-0 text-secondary">Loading analytics...</p>
+          </div>
+
+          <!-- Empty state -->
+          <div id="analytics-empty" class="txn-empty hidden" aria-live="polite">
+            <div class="txn-empty-icon" aria-hidden="true">📈</div>
+            <p class="txn-empty-title">No data yet</p>
+            <p class="txn-empty-sub text-secondary">
+              Add transactions, budgets, or goals to see your analytics.
+            </p>
+          </div>
+
+          <!-- Error state -->
+          <div id="analytics-error" class="status-alert is-visible is-error hidden" role="alert" aria-live="polite">
+            Could not load analytics. Please refresh.
+          </div>
+
+          <!-- Content -->
+          <div id="analytics-content" class="hidden">
+
+            <!-- Spending by category -->
+            <div class="analytics-subsection">
+              <p class="analytics-section-title">Spending by category</p>
+              <div id="analytics-category-list"></div>
             </div>
 
-            <div class="list-group list-group-flush border-top">
-              <div class="list-group-item">
-                <span class="icon-pill"><i class="bi bi-person"></i></span>
-                <span class="flex-grow-1 small">Edit Profile</span>
-                <i class="bi bi-chevron-right text-secondary small"></i>
-              </div>
-              <div class="list-group-item">
-                <span class="icon-pill"><i class="bi bi-key"></i></span>
-                <span class="flex-grow-1 small">Change Password</span>
-                <i class="bi bi-chevron-right text-secondary small"></i>
-              </div>
-              <div class="list-group-item">
-                <span class="icon-pill"><i class="bi bi-geo-alt"></i></span>
-                <span class="flex-grow-1 small">Change Location</span>
-                <i class="bi bi-chevron-right text-secondary small"></i>
-              </div>
-              <div class="list-group-item">
-                <span class="icon-pill"><i class="bi bi-info-circle"></i></span>
-                <span class="flex-grow-1 small">App Information</span>
-                <i class="bi bi-chevron-right text-secondary small"></i>
-              </div>
+            <hr class="my-3" style="border-color: var(--smore-border);">
+
+            <!-- Budget usage -->
+            <div class="analytics-subsection">
+              <p class="analytics-section-title">Budget usage (current period)</p>
+              <div id="analytics-budget-list"></div>
             </div>
 
-            <div class="border-top p-3">
-              <button class="btn btn-danger w-100 rounded-3">
-                <i class="bi bi-box-arrow-right"></i> Log Out
+            <hr class="my-3" style="border-color: var(--smore-border);">
+
+            <!-- Savings-goal progress -->
+            <div class="analytics-subsection">
+              <p class="analytics-section-title">Savings-goal progress</p>
+              <div id="analytics-goal-list"></div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- ── Transactions panel ────────────────────────── -->
+        <section class="dash-panel mt-4" aria-labelledby="txn-heading">
+          <div class="txn-panel-header">
+            <h2 id="txn-heading" class="h5 mb-0">Transactions</h2>
+            <div class="txn-actions">
+              <button
+                id="add-txn-btn"
+                class="btn btn-sm btn-primary"
+                type="button"
+              >
+                + Add Transaction
+              </button>
+            </div>
+
+          <!-- Loading spinner -->
+          <div id="txn-loading" class="txn-list-loading" role="status" aria-live="polite">
+            <div class="spinner-border text-primary" aria-hidden="true"></div>
+            <p class="mb-0 text-secondary">Loading transactions...</p>
+          </div>
+
+          <!-- Empty state -->
+          <div id="txn-empty" class="txn-empty hidden" aria-live="polite">
+            <div class="txn-empty-icon" aria-hidden="true">💸</div>
+            <p class="txn-empty-title">No transactions yet</p>
+            <p class="txn-empty-sub text-secondary">
+              Add your first income or expense to get started.
+            </p>
+          </div>
+
+          <!-- Transaction list -->
+          <div id="txn-list" class="txn-list hidden" aria-label="Transaction list"></div>
+        </section>
+
+        <!-- ── Budgets panel ────────────────────────────── -->
+        <section class="dash-panel mt-4" aria-labelledby="budget-heading">
+          <div class="txn-panel-header">
+            <h2 id="budget-heading" class="h5 mb-0">Budgets</h2>
+            <div class="txn-actions">
+              <button
+                id="add-budget-btn"
+                class="btn btn-sm btn-primary"
+                type="button"
+              >
+                + Add Budget
+              </button>
+            </div>
+
+          <div id="budget-empty" class="txn-empty hidden" aria-live="polite">
+            <div class="txn-empty-icon" aria-hidden="true">📊</div>
+            <p class="txn-empty-title">No budgets yet</p>
+            <p class="txn-empty-sub text-secondary">
+              Set spending limits for your categories.
+            </p>
+          </div>
+
+          <div id="budget-list" class="txn-list hidden" aria-label="Budget list"></div>
+        </section>
+
+        <!-- ── Goals panel ──────────────────────────────── -->
+        <section class="dash-panel mt-4" aria-labelledby="goal-heading">
+          <div class="txn-panel-header">
+            <h2 id="goal-heading" class="h5 mb-0">Savings Goals</h2>
+            <div class="txn-actions">
+              <button
+                id="add-goal-btn"
+                class="btn btn-sm btn-primary"
+                type="button"
+              >
+                + Add Goal
               </button>
             </div>
           </div>
@@ -240,49 +348,118 @@
       </button>
     </div>
 
-    <!-- Top Summary Cards -->
-    <div class="row g-3 mb-4">
-      <div class="col-12 col-md-4">
-        <div class="card card-dark-balance p-3 h-100 position-relative">
-          <div class="text-white-50 small mb-2">Total Balance</div>
-          <div class="h3 fw-bold mb-0" id="totalBalanceText">0 MMK</div>
-          <div class="text-white-50 small mt-1">Available Funds</div>
-          <i class="bi bi-wallet2 position-absolute top-0 end-0 m-3 text-white-50 fs-4"></i>
-        </div>
-      </div>
 
-      <div class="col-12 col-md-4">
-        <div class="card p-3 h-100 position-relative">
-          <div class="text-muted small mb-2">Monthly Income</div>
-          <div class="h3 fw-bold mb-0 text-success" id="monthlyIncomeText">0 MMK</div>
-          <div class="text-muted small mt-1">Total Inflow</div>
-        </div>
-      </div>
 
-      <div class="col-12 col-md-4">
-        <div class="card p-3 h-100 position-relative">
-          <div class="text-muted small mb-2">Monthly Expenses</div>
-          <div class="h3 fw-bold mb-0 text-danger" id="monthlyExpenseText">0 MMK</div>
-          <div class="text-muted small mt-1">Total Outflow</div>
-        </div>
       </div>
-    </div>
+    </main>
 
-    <!-- MIDDLE ROW: Spending Overview (Chart) + Monthly Budget Limits -->
-    <div class="row g-3 mb-4">
-      <!-- Spending Overview Chart -->
-      <div class="col-12 col-lg-6">
-        <div class="card p-3 h-100">
-          <h2 class="h6 fw-bold mb-3">Spending Overview</h2>
-          <div class="row align-items-center">
-            <div class="col-6 position-relative d-flex justify-content-center">
-              <div style="width: 150px; height: 150px;">
-                <canvas id="spendingChart"></canvas>
+    <!-- ── Add / Edit Transaction Modal ─────────────────── -->
+    <div
+      class="modal fade"
+      id="txnModal"
+      tabindex="-1"
+      aria-labelledby="txnModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content smore-modal">
+          <div class="modal-header">
+            <h3 class="modal-title h5" id="txnModalLabel">Add Transaction</h3>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+
+          <div class="modal-body">
+            <form id="txn-form" novalidate>
+              <!-- Hidden edit ID -->
+              <input type="hidden" id="txn-edit-id" />
+
+              <!-- Type -->
+              <div class="mb-3">
+                <label class="form-label" for="txn-type">Type</label>
+                <select class="form-control" id="txn-type" required>
+                  <option value="expense">Expense</option>
+                  <option value="income">Income</option>
+                </select>
+                <div class="invalid-feedback">Please select income or expense.</div>
               </div>
-            </div>
-            <div class="col-6 small" id="chartLegend">
-              <div class="text-muted">No expense data yet</div>
-            </div>
+
+              <!-- Amount -->
+              <div class="mb-3">
+                <label class="form-label" for="txn-amount">Amount (MMK)</label>
+                <input
+                  class="form-control"
+                  type="number"
+                  id="txn-amount"
+                  min="0"
+                  max="9999999999"
+                  step="1"
+                  placeholder="e.g. 25000"
+                  required
+                />
+                <div class="invalid-feedback">Enter a whole MMK amount (0 – 9,999,999,999).</div>
+              </div>
+
+              <!-- Category -->
+              <div class="mb-3">
+                <label class="form-label" for="txn-category">Category</label>
+                <input
+                  class="form-control"
+                  type="text"
+                  id="txn-category"
+                  maxlength="50"
+                  placeholder="e.g. Food, Rent, Salary"
+                  required
+                />
+                <div class="invalid-feedback">Category is required (max 50 chars).</div>
+              </div>
+
+              <!-- Date -->
+              <div class="mb-3">
+                <label class="form-label" for="txn-date">Date</label>
+                <input
+                  class="form-control"
+                  type="date"
+                  id="txn-date"
+                  required
+                />
+                <div class="invalid-feedback">Date is required.</div>
+              </div>
+
+              <!-- Description -->
+              <div class="mb-3">
+                <label class="form-label" for="txn-description">
+                  Description
+                  <span class="field-hint ms-1">(optional)</span>
+                </label>
+                <textarea
+                  class="form-control"
+                  id="txn-description"
+                  rows="2"
+                  maxlength="300"
+                  placeholder="Short note about this transaction"
+                ></textarea>
+                <div class="invalid-feedback">Max 300 characters.</div>
+              </div>
+            </form>
+          </div>
+
+          <div class="modal-footer">
+            <button
+              type="button"
+              class="btn btn-outline-secondary"
+              data-bs-dismiss="modal"
+            >Cancel</button>
+            <button
+              type="submit"
+              form="txn-form"
+              id="txn-submit-btn"
+              class="btn btn-primary"
+            >Add Transaction</button>
           </div>
         </div>
       </div>

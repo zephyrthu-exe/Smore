@@ -14,7 +14,7 @@
 - [ ] Transaction CRUD
 - [ ] Budgets
 - [ ] Savings goals
-- [ ] Import and validation
+- [ ] (Postponed) Import and validation
 - [ ] Analytics
 
 ## Phase 4 — AI

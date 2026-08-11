@@ -1,28 +1,82 @@
+/**
+ * transactions.js — Smore transaction CRUD
+ *
+ * All Firestore reads/writes use the authenticated user's own UID, sourced
+ * from auth.currentUser.uid. No user-supplied UID is ever interpolated into a
+ * document path; the Firestore security rules enforce the same constraint.
+ */
+
+import {
+  collection,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  Timestamp,
+} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
-import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-  collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, updateDoc, increment 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { subscribeToStore } from "./store.js";
 
-let allTransactions = [];
+// ---------------------------------------------------------------------------
+// DOM references (all exist in dashboard.html)
+// ---------------------------------------------------------------------------
+const txnList       = document.getElementById("txn-list");
+const txnLoading    = document.getElementById("txn-loading");
+const txnEmpty      = document.getElementById("txn-empty");
+const txnStatus     = document.getElementById("txn-status");
 
-document.addEventListener("DOMContentLoaded", () => {
-  onAuthStateChanged(auth, (user) => {
-    if (user) {
-      bindSidebarUser(user);
-      listenToTransactions(user.uid);
-      setupAddTransactionForm(user.uid);
-      setupSearchAndFilters();
-    } else {
-      window.location.href = "auth.html";
-    }
-  });
-});
+const addTxnBtn     = document.getElementById("add-txn-btn");
+const filterBtns    = document.querySelectorAll(".txn-filter-btn");
 
-import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-import { updateProfile, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+// Modal form elements
+const txnModal      = document.getElementById("txnModal");
+const txnForm       = document.getElementById("txn-form");
+const txnEditId     = document.getElementById("txn-edit-id");
+const txnModalTitle = document.getElementById("txnModalLabel");
+const txnSubmitBtn  = document.getElementById("txn-submit-btn");
+
+const fldType        = document.getElementById("txn-type");
+const fldAmount      = document.getElementById("txn-amount");
+const fldCategory    = document.getElementById("txn-category");
+const fldDescription = document.getElementById("txn-description");
+const fldDate        = document.getElementById("txn-date");
+
+// Delete confirm modal
+const deleteTxnModal    = document.getElementById("deleteTxnModal");
+const deleteConfirmBtn  = document.getElementById("delete-confirm-btn");
+
+// Summary stat elements (live)
+const statBalance  = document.getElementById("stat-balance");
+const statSpent    = document.getElementById("stat-spent");
+const statIncome   = document.getElementById("stat-income");
+
+// Bootstrap Modal instances (initialised after DOM ready)
+let bsModal       = null;
+let bsDeleteModal = null;
+
+// Active filter state: "all" | "income" | "expense"
+let activeFilter = "all";
+
+// Local store state
+let currentTxns = [];
+let isLoading = true;
+let isError = false;
+
+// ID queued for deletion
+let pendingDeleteId = null;
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Formats a whole-number MMK amount with thousands separators.
+ * @param {number} n
+ * @returns {string}
+ */
+function formatMMK(n) {
+  return Number(n).toLocaleString("en-US") + " MMK";
+}
 
 // 1. Profile Data bind လုပ်ခြင်း နှင့် Edit Mode Toggle ပြုလုပ်ခြင်း
 async function bindSidebarUser(user) {
@@ -162,55 +216,53 @@ function listenToTransactions(userId) {
   });
 }
 
-// 3. Table Rendering Function
-function renderTable(data, userId) {
-  const tbody = document.getElementById("txTableBody");
-  const emptyCol = document.getElementById("emptyStateCol");
-  const tableCol = document.getElementById("tableColumn");
+// ---------------------------------------------------------------------------
+// Load transactions
+// ---------------------------------------------------------------------------
 
-  if (data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-4">No matching records found.</td></tr>`;
-    
-    if (allTransactions.length === 0) {
-      emptyCol.classList.remove("d-none");
-      tableCol.className = "col-12 col-lg-8";
-    }
+/**
+ * Renders the transaction list from local state.
+ */
+function renderTransactions() {
+  clearStatus();
+
+  if (isLoading) {
+    txnLoading.classList.remove("hidden");
+    txnList.classList.add("hidden");
+    txnEmpty.classList.add("hidden");
     return;
   }
 
-  emptyCol.classList.add("d-none");
-  tableCol.className = "col-12";
+  txnLoading.classList.add("hidden");
 
-  let html = "";
-  data.forEach((item) => {
-    const isIncome = item.type === "income";
-    const dateStr = item.createdAt ? new Date(item.createdAt.seconds * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent";
-    
-    // Category Badge Colors
-    let badgeClass = "bg-light text-dark";
-    if (item.category === "Food & Dining") badgeClass = "bg-info-subtle text-info-emphasis";
-    else if (item.category === "Education") badgeClass = "bg-primary-subtle text-primary";
-    else if (item.category === "Transportation") badgeClass = "bg-warning-subtle text-warning-emphasis";
-    else if (item.category === "Entertainment") badgeClass = "bg-secondary-subtle text-secondary";
-    else if (isIncome) badgeClass = "bg-success-subtle text-success";
+  if (isError) {
+    txnList.classList.add("hidden");
+    txnEmpty.classList.add("hidden");
+    showStatus("error", "Could not load transactions. Please check your connection.");
+    return;
+  }
 
-    html += `
-      <tr>
-        <td class="text-muted">${dateStr}</td>
-        <td class="fw-semibold">${escapeHtml(item.description)}</td>
-        <td><span class="badge ${badgeClass} fw-normal px-2 py-1">${escapeHtml(item.category)}</span></td>
-        <td class="text-end fw-bold ${isIncome ? 'text-success' : 'text-danger'}">
-          ${isIncome ? '+' : '-'}${item.amount.toLocaleString()} MMK
-        </td>
-        <td class="text-center">
-          <button class="btn btn-sm text-danger p-0 border-0 ms-2" onclick="deleteTransaction('${userId}', '${item.id}', ${item.amount}, '${item.type}')">
-            <i class="bi bi-trash"></i>
-          </button>
-        </td>
-      </tr>`;
+  // Always calculate stats from the full list
+  renderStats(currentTxns);
+
+  // Clear existing cards
+  txnList.innerHTML = "";
+
+  // Apply filter
+  const filtered = currentTxns.filter(t => activeFilter === "all" || t.type === activeFilter);
+
+  if (filtered.length === 0) {
+    txnEmpty.classList.remove("hidden");
+    txnList.classList.add("hidden");
+    return;
+  }
+
+  filtered.forEach((data) => {
+    txnList.appendChild(buildCard(data.id, data));
   });
 
-  tbody.innerHTML = html;
+  txnEmpty.classList.add("hidden");
+  txnList.classList.remove("hidden");
 }
 
 // 4. Add Transaction + Auto Update User Balance
@@ -294,8 +346,7 @@ function setupSearchAndFilters() {
       return matchesSearch && matchesCategory;
     });
 
-    renderTable(filtered, auth.currentUser?.uid);
-  };
+    bsModal.hide();
 
   searchInput?.addEventListener("input", filterAction);
   categoryFilter?.addEventListener("change", filterAction);
@@ -308,11 +359,64 @@ function escapeHtml(str) {
 
 document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async () => {
   try {
-    await signOut(auth);
-    window.location.href = "auth.html";
+    const docRef = doc(db, "users", uid, "transactions", pendingDeleteId);
+    await deleteDoc(docRef);
+
+    bsDeleteModal.hide();
+    showStatus("success", "Transaction deleted.", 3000);
+
   } catch (err) {
     console.error("Logout error:", err);
   }
-});
+}
+
+// ---------------------------------------------------------------------------
+// Public entry point
+// ---------------------------------------------------------------------------
+
+/**
+ * Initialises the transactions panel.
+ * Must be called once the authenticated user is confirmed.
+ * @param {string} uid  Firebase Auth UID (from onAuthStateChanged callback)
+ */
+export function initTransactions(uid) {
+  if (!uid) return;
+
+  // Initialise Bootstrap Modal instances
+  bsModal       = new bootstrap.Modal(txnModal);
+  bsDeleteModal = new bootstrap.Modal(deleteTxnModal);
+
+  // Button events
+  addTxnBtn.addEventListener("click", openAddModal);
+
+  // Filter tabs
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      filterBtns.forEach((b) => {
+        b.classList.remove("is-active");
+        b.setAttribute("aria-selected", "false");
+      });
+      btn.classList.add("is-active");
+      btn.setAttribute("aria-selected", "true");
+      activeFilter = btn.dataset.filter;
+      renderTransactions();
+    });
+  });
+
+  // Form submit
+  txnForm.addEventListener("submit", handleFormSubmit);
 
 
+  // Reset pending delete when delete modal is closed without confirming
+  deleteTxnModal.addEventListener("hidden.bs.modal", () => {
+    pendingDeleteId = null;
+  });
+
+  // Subscribe to real-time store updates
+  subscribeToStore((store) => {
+    currentTxns = store.transactions;
+    isLoading = store.loading.transactions;
+    isError = store.error.transactions;
+    renderTransactions();
+  });
+}

@@ -9,13 +9,8 @@
  * ever interpolated — the security rules enforce the same constraint.
  */
 
-import {
-  collection,
-  getDocs,
-  query,
-  orderBy,
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
+import { subscribeToStore } from "./store.js";
 
 // ---------------------------------------------------------------------------
 // DOM references (elements added to dashboard.html)
@@ -36,6 +31,15 @@ const budgetUsageList = document.getElementById("analytics-budget-list");
 
 // Goal progress
 const goalProgressList = document.getElementById("analytics-goal-list");
+
+// ---------------------------------------------------------------------------
+// State
+// ---------------------------------------------------------------------------
+let currentTxns = [];
+let currentBudgets = [];
+let currentGoals = [];
+let isLoading = true;
+let isError = false;
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -321,91 +325,71 @@ function renderGoalProgress(goals) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Main load function
-// ---------------------------------------------------------------------------
-
 /**
- * Fetches all data and renders the analytics panel.
- * Called on page load and wired to the Refresh button.
+ * Calculates all data and renders the analytics panel from local state.
  */
-export async function loadAnalytics() {
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) return;
-
-  showLoading();
-
-  try {
-    const txnCol    = collection(db, "users", uid, "transactions");
-    const budgetCol = collection(db, "users", uid, "budgets");
-    const goalCol   = collection(db, "users", uid, "goals");
-
-    // Fetch all three collections in parallel.
-    const [txnSnap, budgetSnap, goalSnap] = await Promise.all([
-      getDocs(query(txnCol, orderBy("date", "desc"))),
-      getDocs(query(budgetCol, orderBy("createdAt", "desc"))),
-      getDocs(query(goalCol, orderBy("deadline", "asc"))),
-    ]);
-
-    const txns   = txnSnap.docs.map((d) => d.data());
-    const budgets = budgetSnap.docs.map((d) => d.data());
-    const goals   = goalSnap.docs.map((d) => d.data());
-
-    // If no data at all, show the empty state.
-    if (txns.length === 0 && budgets.length === 0 && goals.length === 0) {
-      showEmpty();
-      return;
-    }
-
-    // ── Aggregate transaction totals ────────────────────────
-    let totalIncome  = 0;
-    let totalExpense = 0;
-
-    for (const t of txns) {
-      if (t.type === "income")  totalIncome  += t.amount || 0;
-      if (t.type === "expense") totalExpense += t.amount || 0;
-    }
-
-    const balance = totalIncome - totalExpense;
-
-    // Update the existing Overview stat tiles (managed by transactions.js)
-    // plus the new "Total expenses" tile added to dashboard.html.
-    if (statTotalExpenses) statTotalExpenses.textContent = formatMMK(totalExpense);
-
-    // ── Category breakdown ──────────────────────────────────
-    const breakdown = calcCategoryBreakdown(txns);
-    renderCategoryBreakdown(breakdown, totalExpense);
-
-    // ── Budget usage ────────────────────────────────────────
-    renderBudgetUsage(budgets, txns);
-
-    // ── Goal progress ────────────────────────────────────────
-    renderGoalProgress(goals);
-
-    showContent();
-
-  } catch (err) {
-    console.error("loadAnalytics error:", err);
-    showError();
+function renderAnalytics() {
+  if (isLoading) {
+    showLoading();
+    return;
   }
+
+  if (isError) {
+    showError();
+    return;
+  }
+
+  const txns = currentTxns;
+  const budgets = currentBudgets;
+  const goals = currentGoals;
+
+  // If no data at all, show the empty state.
+  if (txns.length === 0 && budgets.length === 0 && goals.length === 0) {
+    showEmpty();
+    return;
+  }
+
+  // ── Aggregate transaction totals ────────────────────────
+  let totalIncome  = 0;
+  let totalExpense = 0;
+
+  for (const t of txns) {
+    if (t.type === "income")  totalIncome  += t.amount || 0;
+    if (t.type === "expense") totalExpense += t.amount || 0;
+  }
+
+  const balance = totalIncome - totalExpense;
+
+  // Update the existing Overview stat tiles (managed by transactions.js)
+  // plus the new "Total expenses" tile added to dashboard.html.
+  if (statTotalExpenses) statTotalExpenses.textContent = formatMMK(totalExpense);
+
+  // ── Category breakdown ──────────────────────────────────
+  const breakdown = calcCategoryBreakdown(txns);
+  renderCategoryBreakdown(breakdown, totalExpense);
+
+  // ── Budget usage ────────────────────────────────────────
+  renderBudgetUsage(budgets, txns);
+
+  // ── Goal progress ────────────────────────────────────────
+  renderGoalProgress(goals);
+
+  showContent();
 }
 
 // ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
-/**
- * Initialises the analytics panel.
- * Must be called once the authenticated user is confirmed.
- * @param {string} uid  Firebase Auth UID
- */
 export function initAnalytics(uid) {
   if (!uid) return;
 
-  const refreshBtn = document.getElementById("analytics-refresh-btn");
-  if (refreshBtn) {
-    refreshBtn.addEventListener("click", loadAnalytics);
-  }
-
-  loadAnalytics();
+  subscribeToStore((store) => {
+    currentTxns = store.transactions;
+    currentBudgets = store.budgets;
+    currentGoals = store.goals;
+    isLoading = store.loading.transactions || store.loading.budgets || store.loading.goals;
+    isError = store.error.transactions || store.error.budgets || store.error.goals;
+    renderAnalytics();
+  });
 }

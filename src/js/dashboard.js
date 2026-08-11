@@ -1,42 +1,27 @@
-import { auth, db } from "./firebase-config.js";
-import { signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-import { 
-  doc, getDoc, setDoc, addDoc, collection, onSnapshot, query, orderBy, limit 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import { auth } from "./firebase-config.js";
+import { initTransactions } from "./transactions.js";
+import { initBudgets } from "./budgets.js";
+import { initGoals } from "./goals.js";
+import { initAnalytics } from "./analytics.js";
+import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
+import { initStore, cleanupStore } from "./store.js";
 
-let spendingChartInstance = null;
+const loadingScreen = document.getElementById("dash-loading");
+const dashContent   = document.getElementById("dash-content");
+const userEmailEl   = document.getElementById("user-email");
+const userGreeting  = document.getElementById("user-greeting");
+const logoutBtn     = document.getElementById("logout-btn");
+const statusAlert   = document.getElementById("dash-status");
 
-document.addEventListener("DOMContentLoaded", () => {
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      await initializeUserDocIfNeeded(user);
-      bindUserData(user);
-      listenToTransactionsAndUpdateDashboard(user.uid);
-      listenToGoals(user.uid);
-      listenToBudgets(user.uid);
-    } else {
-      window.location.href = "auth.html";
-    }
-  });
-
-  const logoutBtn = document.getElementById("logoutBtn");
-  if (logoutBtn) logoutBtn.addEventListener("click", () => signOut(auth));
-
-  setupGoalForm();
-  setupBudgetForm();
-});
-
-async function initializeUserDocIfNeeded(user) {
-  const userRef = doc(db, "users", user.uid);
-  const snap = await getDoc(userRef);
-
-  if (!snap.exists()) {
-    await setDoc(userRef, {
-      name: user.displayName || user.email.split("@")[0] || "User",
-      email: user.email,
-      createdAt: new Date()
-    });
-  }
+/**
+ * @param {"error" | "success" | "info"} type
+ * @param {string} message
+ */
+function showStatus(type, message) {
+  statusAlert.textContent = message;
+  statusAlert.className = `status-alert is-visible is-${type}`;
+  statusAlert.setAttribute("role", type === "error" ? "alert" : "status");
 }
 
 // Sidebar Profile Binding
@@ -48,6 +33,22 @@ async function bindSidebarUser(user) {
   if (avatarEl) avatarEl.textContent = fullName.charAt(0).toUpperCase();
 }
 
+logoutBtn.addEventListener("click", async () => {
+  clearStatus();
+  logoutBtn.disabled = true;
+  logoutBtn.textContent = "Signing out...";
+
+  try {
+    cleanupStore();
+    await signOut(auth);
+    destroySomboAssistant();
+    window.location.href = "./auth.html";
+  } catch (error) {
+    showStatus("error", "Could not log out. Please try again.");
+    logoutBtn.disabled = false;
+    logoutBtn.textContent = "Log out";
+  }
+});
 
 // // User Profile Binding
 // function bindUserData(user) {
@@ -301,3 +302,11 @@ function escapeHtml(str) {
   return str.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
+  // Initialise each panel with the verified UID.
+  initStore(user.uid);
+  initTransactions(user.uid);
+  initBudgets(user.uid);
+  initGoals(user.uid);
+  initAnalytics(user.uid);
+  initSomboAssistant(user);
+});
