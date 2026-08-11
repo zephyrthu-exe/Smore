@@ -170,8 +170,15 @@ function buildCard(id, data) {
     pendingDeleteId = id;
     bsDeleteModal.show();
   });
+});
 
-  return card;
+// Sidebar Profile Binding
+async function bindSidebarUser(user) {
+  const nameEl = document.getElementById("userNameDisplay");
+  const avatarEl = document.getElementById("userAvatarDisplay");
+  let fullName = user.displayName || user.email.split("@")[0];
+  if (nameEl) nameEl.textContent = fullName;
+  if (avatarEl) avatarEl.textContent = fullName.charAt(0).toUpperCase();
 }
 
 function renderGoals() {
@@ -221,57 +228,27 @@ function openAddModal() {
   const dd    = String(today.getDate()).padStart(2, "0");
   fldDeadline.value = `${yyyy}-${mm}-${dd}`;
 
-  bsModal.show();
+  } catch (err) {
+    console.error("Error loading goals:", err);
+  }
 }
 
-function openEditModal(id, data) {
-  goalForm.reset();
-  clearFieldErrors();
-  goalEditId.value = id;
-  goalModalTitle.textContent = "Edit Goal";
-  goalSubmitBtn.textContent = "Save Changes";
-  
-  fldTitle.value = data.title || "";
-  fldTarget.value = String(data.targetAmount || 0);
-  fldSaved.value = String(data.savedAmount || 0);
+// 📌 2. Save Goal Form Handler (Firestore ထဲသို့ သိမ်းမည်)
+function setupAddGoalForm(user) {
+  const form = document.getElementById("addGoalForm");
+  if (!form) return;
 
-  if (data.deadline && typeof data.deadline.toDate === "function") {
-    const d    = data.deadline.toDate();
-    const yyyy = d.getUTCFullYear();
-    const mm   = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const dd2  = String(d.getUTCDate()).padStart(2, "0");
-    fldDeadline.value = `${yyyy}-${mm}-${dd2}`;
-  }
-  
-  bsModal.show();
-}
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const titleInput = document.getElementById("goalTitle");
+    const amountInput = document.getElementById("goalAmount");
+    const initialInput = document.getElementById("goalInitial");
+    const saveBtn = document.getElementById("saveGoalBtn");
 
-async function handleFormSubmit(event) {
-  event.preventDefault();
-  const { valid, data } = validateForm();
-  if (!valid) {
-    showStatus("error", "Please fix the highlighted fields.");
-    return;
-  }
-
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) return;
-
-  setButtonLoading(goalSubmitBtn, true, goalEditId.value ? "Save Changes" : "Add Goal");
-
-  try {
-    const colRef = collection(db, "users", uid, "goals");
-    const editId = goalEditId.value;
-
-    if (editId) {
-      await updateDoc(doc(db, "users", uid, "goals", editId), data);
-      showStatus("success", "Goal updated.", 3000);
-    } else {
-      await addDoc(colRef, {
-        ...data,
-        createdAt: Timestamp.now(),
-      });
-      showStatus("success", "Goal added.", 3000);
+    if (saveBtn) {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "Saving...";
     }
 
     bsModal.hide();

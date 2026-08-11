@@ -78,268 +78,142 @@ function formatMMK(n) {
   return Number(n).toLocaleString("en-US") + " MMK";
 }
 
-/**
- * Converts a Firestore Timestamp or ISO string to a short human date.
- * @param {import("firebase/firestore").Timestamp | string} ts
- * @returns {string}
- */
-function formatDate(ts) {
-  let d;
-  if (ts && typeof ts.toDate === "function") {
-    d = ts.toDate();
-  } else if (typeof ts === "string") {
-    d = new Date(ts);
-  } else {
-    return "Unknown date";
+// 1. Profile Data bind လုပ်ခြင်း နှင့် Edit Mode Toggle ပြုလုပ်ခြင်း
+async function bindSidebarUser(user) {
+  const nameEl = document.getElementById("userNameDisplay");
+  const emailEl = document.getElementById("userEmailDisplay");
+  const avatarEl = document.getElementById("userAvatarDisplay");
+
+  const dropdownNameEl = document.getElementById("dropdownNameDisplay");
+  const dropdownEmailEl = document.getElementById("dropdownEmailDisplay");
+  const dropdownAvatarEl = document.getElementById("dropdownAvatarDisplay");
+  const dropdownUsernameEl = document.getElementById("dropdownUsernameDisplay");
+
+  const inlineEditName = document.getElementById("inlineEditName");
+  const inlineEditUsername = document.getElementById("inlineEditUsername");
+
+  let fullName = user.displayName;
+  let username = "";
+
+  try {
+    const userDocRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userDocRef);
+    if (userSnap.exists()) {
+      const data = userSnap.data();
+      fullName = fullName || data.name || "";
+      username = data.username || "";
+    }
+  } catch (err) {
+    console.error("Error fetching user data:", err);
   }
-  return d.toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" });
+
+  const finalName = fullName || user.email.split("@")[0] || "User";
+  const userEmail = user.email || "";
+  const finalUsername = username || userEmail.split("@")[0];
+  const firstLetter = finalName.charAt(0).toUpperCase();
+
+  // Sidebar Bottom & Popup View Update
+  if (nameEl) nameEl.textContent = finalName;
+  if (emailEl) emailEl.textContent = userEmail;
+  if (avatarEl) avatarEl.textContent = firstLetter;
+
+  if (dropdownNameEl) dropdownNameEl.textContent = finalName;
+  if (dropdownEmailEl) dropdownEmailEl.textContent = userEmail;
+  if (dropdownUsernameEl) dropdownUsernameEl.textContent = `@${finalUsername}`;
+  if (dropdownAvatarEl) dropdownAvatarEl.textContent = firstLetter;
+
+  if (inlineEditName) inlineEditName.value = finalName;
+  if (inlineEditUsername) inlineEditUsername.value = finalUsername;
 }
 
-/**
- * Shows a status message in the transactions area.
- * @param {"error" | "success" | "info"} type
- * @param {string} message
- * @param {number} [autoDismiss] ms before auto-hide; 0 = never
- */
-function showStatus(type, message, autoDismiss = 0) {
-  txnStatus.textContent = message;
-  txnStatus.className = `status-alert is-visible is-${type}`;
-  txnStatus.setAttribute("role", type === "error" ? "alert" : "status");
-  if (autoDismiss > 0) {
-    setTimeout(clearStatus, autoDismiss);
-  }
-}
+// 2. Toggle between View Mode and Edit Mode inside Popup
+document.addEventListener("click", (e) => {
+  const viewMode = document.getElementById("profileViewMode");
+  const editMode = document.getElementById("profileEditMode");
+  const toggleBtn = document.getElementById("toggleEditModeBtn");
+  const cancelBtn = document.getElementById("cancelEditBtn");
 
-function clearStatus() {
-  txnStatus.textContent = "";
-  txnStatus.className = "status-alert";
-  txnStatus.removeAttribute("role");
-}
-
-/**
- * Puts a submit button into loading / idle state.
- * @param {HTMLButtonElement} btn
- * @param {boolean} isLoading
- * @param {string} idleLabel
- */
-function setButtonLoading(btn, isLoading, idleLabel) {
-  btn.disabled = isLoading;
-  btn.classList.toggle("btn-loading", isLoading);
-  if (isLoading) {
-    btn.innerHTML = `
-      <span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>
-      <span>Saving...</span>
-    `;
-  } else {
-    btn.textContent = idleLabel;
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-const MAX_AMOUNT   = 9_999_999_999;
-const MAX_CAT      = 50;
-const MAX_DESC     = 300;
-
-/**
- * Marks a form field invalid and shows a message.
- * @param {HTMLElement} el
- * @param {string} msg
- */
-function setFieldError(el, msg) {
-  el.classList.add("is-invalid");
-  const fb = el.nextElementSibling;
-  if (fb && fb.classList.contains("invalid-feedback")) {
-    fb.textContent = msg;
-  }
-}
-
-function clearFieldErrors() {
-  txnForm.querySelectorAll(".is-invalid").forEach((el) => el.classList.remove("is-invalid"));
-  txnForm.querySelectorAll(".invalid-feedback").forEach((el) => { el.textContent = ""; });
-}
-
-/**
- * Validates the transaction form.
- * @returns {{ valid: boolean, data?: object }}
- */
-function validateForm() {
-  clearFieldErrors();
-  let valid = true;
-
-  const type = fldType.value;
-  if (type !== "income" && type !== "expense") {
-    setFieldError(fldType, "Please select income or expense.");
-    valid = false;
+  if (e.target && e.target.id === "toggleEditModeBtn") {
+    viewMode?.classList.add("d-none");
+    editMode?.classList.remove("d-none");
+    toggleBtn?.classList.add("d-none");
   }
 
-  const rawAmount = fldAmount.value.trim();
-  const amount = parseInt(rawAmount, 10);
-  if (!rawAmount || isNaN(amount) || amount < 0 || amount > MAX_AMOUNT || String(amount) !== rawAmount) {
-    setFieldError(fldAmount, `Enter a whole number between 0 and ${MAX_AMOUNT.toLocaleString("en-US")}.`);
-    valid = false;
+  if (e.target && e.target.id === "cancelEditBtn") {
+    editMode?.classList.add("d-none");
+    viewMode?.classList.remove("d-none");
+    toggleBtn?.classList.remove("d-none");
   }
+});
 
-  const category = fldCategory.value.trim();
-  if (!category) {
-    setFieldError(fldCategory, "Category is required.");
-    valid = false;
-  } else if (category.length > MAX_CAT) {
-    setFieldError(fldCategory, `Category must be ${MAX_CAT} characters or fewer.`);
-    valid = false;
-  }
+// 3. Inline Form Submit (Save Changes)
+document.addEventListener("submit", async (e) => {
+  if (e.target && e.target.id === "inlineSettingsForm") {
+    e.preventDefault();
+    const user = auth.currentUser;
+    if (!user) return;
 
-  const description = fldDescription.value.trim();
-  if (description.length > MAX_DESC) {
-    setFieldError(fldDescription, `Description must be ${MAX_DESC} characters or fewer.`);
-    valid = false;
-  }
+    const newName = document.getElementById("inlineEditName").value.trim();
+    const newUsername = document.getElementById("inlineEditUsername").value.trim().replace(/^@/, "");
 
-  const dateVal = fldDate.value; // "YYYY-MM-DD"
-  if (!dateVal) {
-    setFieldError(fldDate, "Date is required.");
-    valid = false;
-  }
+    try {
+      const userDocRef = doc(db, "users", user.uid);
 
-  if (!valid) return { valid: false };
+      // Auth Profile & Firestore update
+      await updateProfile(user, { displayName: newName });
+      await updateDoc(userDocRef, {
+        name: newName,
+        username: newUsername
+      });
 
-  // Convert local date string to a Firestore Timestamp (midnight UTC of that date).
-  const [y, m, d] = dateVal.split("-").map(Number);
-  const dateObj = new Date(Date.UTC(y, m - 1, d));
-  const dateTimestamp = Timestamp.fromDate(dateObj);
-
-  return {
-    valid: true,
-    data: {
-      type,
-      amount,
-      category,
-      description,
-      date: dateTimestamp,
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Summary stats
-// ---------------------------------------------------------------------------
-
-/**
- * Recomputes and renders balance / spent / income tiles from a snapshot array.
- * @param {Array<{type: string, amount: number}>} items
- */
-function renderStats(items) {
-  let totalIncome  = 0;
-  let totalExpense = 0;
-
-  // Only count current month for "spent this month"
-  const now    = new Date();
-  const curYear  = now.getFullYear();
-  const curMonth = now.getMonth();
-
-  let spentThisMonth = 0;
-
-  for (const item of items) {
-    const amt = item.amount || 0;
-    if (item.type === "income") {
-      totalIncome += amt;
-    } else if (item.type === "expense") {
-      totalExpense += amt;
-      // Check if the date falls in the current month
-      let d;
-      if (item.date && typeof item.date.toDate === "function") {
-        d = item.date.toDate();
-      } else if (typeof item.date === "string") {
-        d = new Date(item.date);
-      }
-      if (d && d.getFullYear() === curYear && d.getMonth() === curMonth) {
-        spentThisMonth += amt;
-      }
+      alert("Profile updated successfully!");
+      window.location.reload();
+    } catch (err) {
+      alert("Failed to update: " + err.message);
     }
   }
+});
 
-  const balance = totalIncome - totalExpense;
+// 4. Sidebar Logout Handler
+document.addEventListener("click", async (e) => {
+  if (e.target && e.target.id === "sidebarLogoutBtn") {
+    try {
+      await signOut(auth);
+      window.location.href = "auth.html";
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  }
+});
 
-  statBalance.textContent = formatMMK(balance);
-  statSpent.textContent   = formatMMK(spentThisMonth);
-  statIncome.textContent  = formatMMK(totalIncome);
-}
+// 2. Realtime Listener for Transactions Table
+function listenToTransactions(userId) {
+  const q = query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc"));
 
-// ---------------------------------------------------------------------------
-// Rendering
-// ---------------------------------------------------------------------------
+  onSnapshot(q, (snapshot) => {
+    allTransactions = [];
+    let totalSpent = 0;
+    let totalReceived = 0;
 
-/**
- * Builds an article card element for a transaction document.
- * @param {string} id  Firestore document ID
- * @param {object} data  Document fields
- * @returns {HTMLElement}
- */
-function buildCard(id, data) {
-  const isIncome = data.type === "income";
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      allTransactions.push({ id: docSnap.id, ...data });
 
-  const card = document.createElement("article");
-  card.className = `txn-card txn-card--${data.type}`;
-  card.dataset.id = id;
+      if (data.type === "expense") {
+        totalSpent += data.amount || 0;
+      } else {
+        totalReceived += data.amount || 0;
+      }
+    });
 
-  const dateStr = formatDate(data.date);
-  const amountStr = formatMMK(data.amount);
-  const desc = data.description ? data.description : "";
+    // Stats Calculation
+    document.getElementById("statTotalCount").textContent = allTransactions.length;
+    document.getElementById("statTotalSpent").textContent = `${totalSpent.toLocaleString()} MMK`;
+    document.getElementById("statTotalReceived").textContent = `${totalReceived.toLocaleString()} MMK`;
 
-  card.innerHTML = `
-    <div class="txn-card-body">
-      <div class="txn-card-left">
-        <span class="txn-badge txn-badge--${data.type}">${isIncome ? "Income" : "Expense"}</span>
-        <span class="txn-category">${escapeHtml(data.category)}</span>
-      </div>
-      <div class="txn-card-right">
-        <span class="txn-amount txn-amount--${data.type}">${isIncome ? "+" : "−"}${amountStr}</span>
-        <span class="txn-date">${dateStr}</span>
-      </div>
-    </div>
-    ${desc ? `<p class="txn-desc">${escapeHtml(desc)}</p>` : ""}
-    <div class="txn-card-actions">
-      <button
-        class="btn btn-sm btn-outline-secondary txn-edit-btn"
-        data-id="${id}"
-        aria-label="Edit transaction: ${escapeHtml(data.category)}"
-      >Edit</button>
-      <button
-        class="btn btn-sm btn-outline-danger txn-delete-btn"
-        data-id="${id}"
-        aria-label="Delete transaction: ${escapeHtml(data.category)}"
-      >Delete</button>
-    </div>
-  `;
-
-  // Wire edit button
-  card.querySelector(".txn-edit-btn").addEventListener("click", () => {
-    openEditModal(id, data);
+    // Render Table
+    renderTable(allTransactions, userId);
   });
-
-  // Wire delete button
-  card.querySelector(".txn-delete-btn").addEventListener("click", () => {
-    pendingDeleteId = id;
-    bsDeleteModal.show();
-  });
-
-  return card;
-}
-
-/**
- * Minimal HTML escape to prevent XSS in card content.
- * @param {string} str
- * @returns {string}
- */
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 // ---------------------------------------------------------------------------
@@ -391,133 +265,99 @@ function renderTransactions() {
   txnList.classList.remove("hidden");
 }
 
-// ---------------------------------------------------------------------------
-// Modal helpers
-// ---------------------------------------------------------------------------
+// 4. Add Transaction + Auto Update User Balance
+function setupAddTransactionForm(userId) {
+  const form = document.getElementById("addTxForm");
+  if (!form) return;
 
-/** Resets the form to a blank "Add" state. */
-function openAddModal() {
-  txnForm.reset();
-  clearFieldErrors();
-  txnEditId.value = "";
-  txnModalTitle.textContent = "Add Transaction";
-  txnSubmitBtn.textContent = "Add Transaction";
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const saveBtn = document.getElementById("saveTxBtn");
+    saveBtn.disabled = true;
 
-  // Default date to today (local)
-  const today = new Date();
-  const yyyy  = today.getFullYear();
-  const mm    = String(today.getMonth() + 1).padStart(2, "0");
-  const dd    = String(today.getDate()).padStart(2, "0");
-  fldDate.value = `${yyyy}-${mm}-${dd}`;
+    const type = document.getElementById("txType").value;
+    const description = document.getElementById("txDescription").value.trim();
+    const category = document.getElementById("txCategory").value;
+    const amount = parseFloat(document.getElementById("txAmount").value) || 0;
 
-  bsModal.show();
-}
-
-/**
- * Populates the form for editing an existing transaction.
- * @param {string} id  Firestore document ID
- * @param {object} data  Document fields
- */
-function openEditModal(id, data) {
-  txnForm.reset();
-  clearFieldErrors();
-  txnEditId.value = id;
-  txnModalTitle.textContent = "Edit Transaction";
-  txnSubmitBtn.textContent = "Save Changes";
-
-  fldType.value        = data.type || "expense";
-  fldAmount.value      = String(data.amount || 0);
-  fldCategory.value    = data.category || "";
-  fldDescription.value = data.description || "";
-
-  // Restore date field from Firestore Timestamp
-  if (data.date && typeof data.date.toDate === "function") {
-    const d    = data.date.toDate();
-    const yyyy = d.getUTCFullYear();
-    const mm   = String(d.getUTCMonth() + 1).padStart(2, "0");
-    const dd2  = String(d.getUTCDate()).padStart(2, "0");
-    fldDate.value = `${yyyy}-${mm}-${dd2}`;
-  }
-
-  bsModal.show();
-}
-
-// ---------------------------------------------------------------------------
-// Form submit — Add or Edit
-// ---------------------------------------------------------------------------
-
-async function handleFormSubmit(event) {
-  event.preventDefault();
-
-  const { valid, data } = validateForm();
-  if (!valid) {
-    showStatus("error", "Please fix the highlighted fields.");
-    return;
-  }
-
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) {
-    showStatus("error", "You are not signed in. Please log in again.");
-    return;
-  }
-
-  setButtonLoading(txnSubmitBtn, true, txnEditId.value ? "Save Changes" : "Add Transaction");
-
-  try {
-    const txnCol = collection(db, "users", uid, "transactions");
-    const editId = txnEditId.value;
-
-    if (editId) {
-      // Update existing document
-      const docRef = doc(db, "users", uid, "transactions", editId);
-      await updateDoc(docRef, {
-        type:        data.type,
-        amount:      data.amount,
-        category:    data.category,
-        description: data.description,
-        date:        data.date,
+    try {
+      // 1. Add Transaction Record
+      await addDoc(collection(db, "users", userId, "transactions"), {
+        type, description, category, amount, createdAt: new Date()
       });
-      showStatus("success", "Transaction updated.", 3000);
-    } else {
-      // Create new document
-      await addDoc(txnCol, {
-        type:        data.type,
-        amount:      data.amount,
-        category:    data.category,
-        description: data.description,
-        date:        data.date,
-        createdAt:   Timestamp.now(),
-      });
-      showStatus("success", "Transaction added.", 3000);
+
+      // 2. Update Main Balance & Income/Expense Stats in User Doc
+      const userRef = doc(db, "users", userId);
+      if (type === "income") {
+        await updateDoc(userRef, {
+          balance: increment(amount),
+          totalIncome: increment(amount)
+        });
+      } else {
+        await updateDoc(userRef, {
+          balance: increment(-amount),
+          totalSpent: increment(amount)
+        });
+      }
+
+      form.reset();
+      const modalEl = document.getElementById("addTxModal");
+      const modal = bootstrap.Modal.getInstance(modalEl);
+      if (modal) modal.hide();
+    } catch (err) {
+      alert("Error adding transaction: " + err.message);
+    } finally {
+      saveBtn.disabled = false;
     }
+  });
+}
+
+// 5. Delete Transaction Handler
+window.deleteTransaction = async (userId, txId, amount, type) => {
+  if (confirm("Delete this transaction?")) {
+    try {
+      await deleteDoc(doc(db, "users", userId, "transactions", txId));
+      
+      // Revert Main Balance
+      const userRef = doc(db, "users", userId);
+      if (type === "income") {
+        await updateDoc(userRef, { balance: increment(-amount), totalIncome: increment(-amount) });
+      } else {
+        await updateDoc(userRef, { balance: increment(amount), totalSpent: increment(-amount) });
+      }
+    } catch (err) {
+      alert("Failed to delete transaction: " + err.message);
+    }
+  }
+};
+
+// 6. Search & Category Filters
+function setupSearchAndFilters() {
+  const searchInput = document.getElementById("searchTxInput");
+  const categoryFilter = document.getElementById("categoryFilter");
+
+  const filterAction = () => {
+    const query = searchInput.value.toLowerCase();
+    const category = categoryFilter.value;
+
+    const filtered = allTransactions.filter((tx) => {
+      const matchesSearch = tx.description.toLowerCase().includes(query) || tx.category.toLowerCase().includes(query);
+      const matchesCategory = category === "All" || tx.category === category || (category === "Income" && tx.type === "income");
+      return matchesSearch && matchesCategory;
+    });
 
     bsModal.hide();
 
-  } catch (err) {
-    console.error("handleFormSubmit error:", err);
-    showStatus("error", "Could not save transaction. Please try again.");
-  } finally {
-    setButtonLoading(txnSubmitBtn, false, txnEditId.value ? "Save Changes" : "Add Transaction");
-  }
+  searchInput?.addEventListener("input", filterAction);
+  categoryFilter?.addEventListener("change", filterAction);
 }
 
-// ---------------------------------------------------------------------------
-// Delete
-// ---------------------------------------------------------------------------
+function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
 
-async function handleDeleteConfirm() {
-  if (!pendingDeleteId) return;
 
-  const uid = auth.currentUser && auth.currentUser.uid;
-  if (!uid) {
-    showStatus("error", "You are not signed in. Please log in again.");
-    bsDeleteModal.hide();
-    return;
-  }
-
-  deleteConfirmBtn.disabled = true;
-  deleteConfirmBtn.textContent = "Deleting...";
-
+document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async () => {
   try {
     const docRef = doc(db, "users", uid, "transactions", pendingDeleteId);
     await deleteDoc(docRef);
@@ -526,13 +366,7 @@ async function handleDeleteConfirm() {
     showStatus("success", "Transaction deleted.", 3000);
 
   } catch (err) {
-    console.error("handleDeleteConfirm error:", err);
-    bsDeleteModal.hide();
-    showStatus("error", "Could not delete transaction. Please try again.");
-  } finally {
-    pendingDeleteId = null;
-    deleteConfirmBtn.disabled = false;
-    deleteConfirmBtn.textContent = "Delete";
+    console.error("Logout error:", err);
   }
 }
 
@@ -572,8 +406,6 @@ export function initTransactions(uid) {
   // Form submit
   txnForm.addEventListener("submit", handleFormSubmit);
 
-  // Delete confirm
-  deleteConfirmBtn.addEventListener("click", handleDeleteConfirm);
 
   // Reset pending delete when delete modal is closed without confirming
   deleteTxnModal.addEventListener("hidden.bs.modal", () => {
