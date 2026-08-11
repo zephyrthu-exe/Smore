@@ -18,7 +18,7 @@
   --sombo-panel-border: #e2e8f0;
 }
 
-/* â”€â”€ Floating Container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Floating Container ─────────────────────────────────────────────────── */
 .sombo-widget-container {
   position: fixed;
   bottom: 24px;
@@ -31,7 +31,7 @@
   /* position is overridden by JS drag logic */
 }
 
-/* â”€â”€ Sombo Avatar Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Sombo Avatar Button ────────────────────────────────────────────────── */
 .sombo-avatar-btn {
   background: none;
   border: none;
@@ -79,7 +79,7 @@
   text-overflow: ellipsis;
 }
 
-/* â”€â”€ SVG Animations (Idle State) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── SVG Animations (Idle State) ────────────────────────────────────────── */
 .sombo-svg {
   width: 86px;
   height: 94px;
@@ -131,7 +131,7 @@
   animation: sombo-breathing 4s ease-in-out infinite;
 }
 
-/* â”€â”€ Interactive Animation Classes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Interactive Animation Classes ─────────────────────────────────────── */
 /* Waving state */
 .sombo-avatar-btn.is-waving .sombo-arm-left,
 .sombo-avatar-btn:hover .sombo-arm-left {
@@ -175,7 +175,7 @@
   animation: sombo-land 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
-/* â”€â”€ Keyframe Animations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Keyframe Animations ────────────────────────────────────────────────── */
 @keyframes sombo-float {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
   50%       { transform: translateY(-8px) rotate(1.5deg); }
@@ -244,7 +244,7 @@
   100% { transform: scale(1);   opacity: 1; }
 }
 
-/* â”€â”€ Chat Panel Window â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Chat Panel Window ──────────────────────────────────────────────────── */
 .sombo-chat-panel {
   position: fixed;
   bottom: 120px;
@@ -616,11 +616,11 @@
   margin-bottom: 0;
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   STYLE PRESETS â€” applied via [data-bot-style="..."] on #sombo-widget-root
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════════════════
+   STYLE PRESETS — applied via [data-bot-style="..."] on #sombo-widget-root
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Friendly â€” warmer, rounder, larger avatar */
+/* Friendly — warmer, rounder, larger avatar */
 [data-bot-style="friendly"] .sombo-chat-header {
   background: linear-gradient(135deg, #7c3aed, #a855f7);
 }
@@ -632,8 +632,14 @@
 }
 [data-bot-style="friendly"] .sombo-avatar-btn { width: 104px; height: 118px; }
 [data-bot-style="friendly"] .sombo-svg { width: 94px; height: 102px; }
+[data-bot-style="friendly"] .sombo-bot-preview {
+  background: #faf5ff;
+  border-color: #d8b4fe;
+  border-radius: 20px;
+}
+[data-bot-style="friendly"] .sombo-bot-preview .sombo-preview-svg { transform: scale(1.08); }
 
-/* Minimal â€” clean white header, muted tones, thinner borders */
+/* Minimal — clean white header, muted tones, thinner borders */
 [data-bot-style="minimal"] .sombo-chat-header {
   background: #ffffff;
   color: #1e293b;
@@ -652,8 +658,15 @@
 [data-bot-style="minimal"] .sombo-msg-bubble { border-radius: 10px; }
 [data-bot-style="minimal"] .sombo-svg { animation: none; }
 [data-bot-style="minimal"] .sombo-body-group { animation: none; }
+[data-bot-style="minimal"] .sombo-bot-preview {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  border-radius: 10px;
+}
+[data-bot-style="minimal"] .sombo-bot-preview .sombo-svg { animation: none; }
+[data-bot-style="minimal"] .sombo-bot-preview .sombo-shadow { opacity: 0.35; }
 
-/* Energetic â€” bolder gradients, stronger glow, faster float */
+/* Energetic — bolder gradients, stronger glow, faster float */
 [data-bot-style="energetic"] .sombo-chat-header {
   background: linear-gradient(135deg, #dc2626, #f97316);
 }
@@ -667,8 +680,15 @@
   border-radius: 16px;
   box-shadow: 0 24px 50px rgba(249,115,22,0.2), 0 4px 12px rgba(0,0,0,0.1);
 }
+[data-bot-style="energetic"] .sombo-bot-preview {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border-color: #fb923c;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(249,115,22,0.2);
+}
+[data-bot-style="energetic"] .sombo-bot-preview .sombo-svg { animation-duration: 2s; }
 
-/* Calm â€” muted slate tones, slower animations, softer shadows */
+/* Calm — muted slate tones, slower animations, softer shadows */
 [data-bot-style="calm"] .sombo-chat-header {
   background: linear-gradient(135deg, #475569, #64748b);
 }
@@ -678,10 +698,17 @@
   box-shadow: 0 8px 24px rgba(15,23,42,0.10);
 }
 [data-bot-style="calm"] .sombo-chat-body { background: #f1f5f9; }
+[data-bot-style="calm"] .sombo-bot-preview {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(71,85,105,0.12);
+}
+[data-bot-style="calm"] .sombo-bot-preview .sombo-svg { animation-duration: 7s; }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   ONBOARDING MODAL â€” one-time setup modal
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════════════════
+   ONBOARDING MODAL — one-time setup modal
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .sombo-onboard-overlay {
   position: fixed;
@@ -866,9 +893,9 @@
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   CUSTOMIZE MODAL â€” accessible from sidebar link
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUSTOMIZE MODAL — accessible from sidebar link
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .sombo-customize-overlay {
   position: fixed;
@@ -980,7 +1007,7 @@
   width: auto;
 }
 
-/* â”€â”€ Mobile Layout Adjustments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Mobile Layout Adjustments ───────────────────────────────────────────── */
 @media (max-width: 576px) {
   .sombo-widget-container {
     bottom: 16px;
@@ -1020,7 +1047,7 @@
   }
 }
 
-/* â”€â”€ Reduced Motion Respect â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Reduced Motion Respect ──────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .sombo-svg,
   .sombo-shadow,

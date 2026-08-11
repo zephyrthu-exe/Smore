@@ -187,7 +187,7 @@ function renderBudgetsView() {
   if (highestUsageWarning) {
     warningBanner?.classList.remove("d-none");
     if (warningText) {
-      warningText.textContent = `${highestUsageWarning.category} budget is at ${highestUsageWarning.pct}% â€” consider reducing spending`;
+      warningText.textContent = `${highestUsageWarning.category} budget is at ${highestUsageWarning.pct}% — consider reducing spending`;
     }
   } else {
     warningBanner?.classList.add("d-none");

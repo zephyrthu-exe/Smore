@@ -1,12 +1,12 @@
 ﻿/**
- * bot-profile.js â€” Firestore CRUD for users/{uid}/assistantProfile/profile
+ * bot-profile.js — Firestore CRUD for users/{uid}/assistantProfile/profile
  *
  * Exposes three functions:
- *   loadBotProfile(uid)        â†’ Promise<profile | null>
- *   saveBotProfile(uid, data)  â†’ Promise<void>
- *   resetBotProfile(uid)       â†’ Promise<void>
+ *   loadBotProfile(uid)        → Promise<profile | null>
+ *   saveBotProfile(uid, data)  → Promise<void>
+ *   resetBotProfile(uid)       → Promise<void>
  *
- * Security: uid MUST always be auth.currentUser.uid â€” never a client-supplied value.
+ * Security: uid MUST always be auth.currentUser.uid — never a client-supplied value.
  * No API keys, tokens, or credentials are stored here.
  */
 
