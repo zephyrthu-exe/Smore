@@ -3,18 +3,18 @@
    ========================================================================== */
 
 :root {
-  --sombo-navy-dark: #0f172a;
-  --sombo-navy-main: #1e293b;
-  --sombo-navy-light: #334155;
-  --sombo-orange-main: #ff6b35;
-  --sombo-orange-glow: #ff8c5a;
-  --sombo-orange-light: #fff0eb;
-  --sombo-cream-main: #fff8f0;
+  --sombo-navy-dark:    #0f172a;
+  --sombo-navy-main:    #1e293b;
+  --sombo-navy-light:   #334155;
+  --sombo-accent:       #ff6b35;          /* overridden per user */
+  --sombo-accent-glow:  rgba(255,107,53,0.4);
+  --sombo-accent-light: rgba(255,107,53,0.12);
+  --sombo-cream-main:   #fff8f0;
   --sombo-cream-accent: #fef3c7;
-  --sombo-eye-blue: #38bdf8;
-  --sombo-eye-glow: rgba(56, 189, 248, 0.4);
-  --sombo-shadow: rgba(15, 23, 42, 0.25);
-  --sombo-panel-bg: #ffffff;
+  --sombo-eye-blue:     #38bdf8;
+  --sombo-eye-glow:     rgba(56, 189, 248, 0.4);
+  --sombo-shadow:       rgba(15, 23, 42, 0.25);
+  --sombo-panel-bg:     #ffffff;
   --sombo-panel-border: #e2e8f0;
 }
 
@@ -28,6 +28,7 @@
   flex-direction: column;
   align-items: flex-end;
   font-family: var(--bs-body-font-family, system-ui, -apple-system, sans-serif);
+  /* position is overridden by JS drag logic */
 }
 
 /* ── Sombo Avatar Button ────────────────────────────────────────────────── */
@@ -46,10 +47,12 @@
   justify-content: flex-end;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-tap-highlight-color: transparent;
+  touch-action: none; /* prevent page scroll during drag */
+  user-select: none;
 }
 
 .sombo-avatar-btn:focus-visible .sombo-svg {
-  filter: drop-shadow(0 0 12px var(--sombo-orange-glow));
+  filter: drop-shadow(0 0 12px var(--sombo-accent));
 }
 
 .sombo-avatar-btn:hover {
@@ -61,16 +64,19 @@
   position: absolute;
   top: -8px;
   right: -4px;
-  background: linear-gradient(135deg, var(--sombo-orange-main), #e85d04);
+  background: linear-gradient(135deg, var(--sombo-accent), color-mix(in srgb, var(--sombo-accent) 80%, #000));
   color: #ffffff;
   font-size: 0.72rem;
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(255, 107, 53, 0.35);
+  box-shadow: 0 4px 10px var(--sombo-accent-glow);
   pointer-events: none;
   white-space: nowrap;
   animation: sombo-badge-pop 0.4s ease-out;
+  max-width: 110px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── SVG Animations (Idle State) ────────────────────────────────────────── */
@@ -150,133 +156,98 @@
   animation: sombo-bounce 0.6s ease-in-out 2;
 }
 
+/* Dragging state */
+.sombo-avatar-btn.is-dragging {
+  cursor: grabbing !important;
+  opacity: 0.82;
+  transform: scale(1.08);
+}
+.sombo-avatar-btn.is-dragging .sombo-svg {
+  animation: none;
+  filter: drop-shadow(0 8px 18px var(--sombo-accent-glow));
+}
+.sombo-avatar-btn.is-dragging .sombo-body-group {
+  animation: none;
+}
+
+/* Drag-released land bounce */
+.sombo-avatar-btn.is-drag-released .sombo-svg {
+  animation: sombo-land 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 /* ── Keyframe Animations ────────────────────────────────────────────────── */
 @keyframes sombo-float {
-  0%, 100% {
-    transform: translateY(0px) rotate(0deg);
-  }
-  50% {
-    transform: translateY(-8px) rotate(1.5deg);
-  }
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50%       { transform: translateY(-8px) rotate(1.5deg); }
 }
 
 @keyframes sombo-shadow-scale {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0.6;
-  }
-  50% {
-    transform: scale(0.75);
-    opacity: 0.3;
-  }
+  0%, 100% { transform: scale(1);    opacity: 0.6; }
+  50%       { transform: scale(0.75); opacity: 0.3; }
 }
 
 @keyframes sombo-breathing {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.02);
-  }
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.02); }
 }
 
 @keyframes sombo-antenna-pulse {
-  0% {
-    fill: #ff6b35;
-    filter: drop-shadow(0 0 2px #ff6b35);
-  }
-  100% {
-    fill: #ffaa00;
-    filter: drop-shadow(0 0 9px #ffaa00);
-  }
+  0%   { fill: var(--sombo-accent); filter: drop-shadow(0 0 2px var(--sombo-accent)); }
+  100% { fill: #ffaa00;             filter: drop-shadow(0 0 9px #ffaa00); }
 }
 
 @keyframes sombo-antenna-fast {
-  0% {
-    fill: #38bdf8;
-    filter: drop-shadow(0 0 3px #38bdf8);
-  }
-  100% {
-    fill: #38bdf8;
-    filter: drop-shadow(0 0 12px #38bdf8);
-  }
+  0%   { fill: #38bdf8; filter: drop-shadow(0 0 3px #38bdf8); }
+  100% { fill: #38bdf8; filter: drop-shadow(0 0 12px #38bdf8); }
 }
 
 @keyframes sombo-blink {
-  0%, 46%, 48%, 100% {
-    transform: scaleY(1);
-  }
-  47% {
-    transform: scaleY(0.1);
-  }
+  0%, 46%, 48%, 100% { transform: scaleY(1); }
+  47%                 { transform: scaleY(0.1); }
 }
 
 @keyframes sombo-eye-think {
-  0% {
-    fill: #38bdf8;
-  }
-  100% {
-    fill: #fb923c;
-  }
+  0%   { fill: #38bdf8; }
+  100% { fill: #fb923c; }
 }
 
 @keyframes sombo-emblem-pulse {
-  0% {
-    opacity: 0.85;
-    filter: drop-shadow(0 0 3px rgba(255, 107, 53, 0.6));
-  }
-  100% {
-    opacity: 1;
-    filter: drop-shadow(0 0 10px rgba(255, 107, 53, 0.95));
-  }
+  0%   { opacity: 0.85; filter: drop-shadow(0 0 3px var(--sombo-accent-glow)); }
+  100% { opacity: 1;    filter: drop-shadow(0 0 10px var(--sombo-accent)); }
 }
 
 @keyframes sombo-wave {
-  0%, 100% {
-    transform: rotate(0deg);
-  }
-  25% {
-    transform: rotate(-28deg);
-  }
-  75% {
-    transform: rotate(18deg);
-  }
+  0%, 100% { transform: rotate(0deg); }
+  25%       { transform: rotate(-28deg); }
+  75%       { transform: rotate(18deg); }
 }
 
 @keyframes sombo-lean {
-  0% {
-    transform: translateY(0) rotate(0deg);
-  }
-  100% {
-    transform: translateY(-4px) rotate(-5deg) scale(1.05);
-  }
+  0%   { transform: translateY(0) rotate(0deg); }
+  100% { transform: translateY(-4px) rotate(-5deg) scale(1.05); }
 }
 
 @keyframes sombo-bounce {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-12px);
-  }
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+
+@keyframes sombo-land {
+  0%   { transform: translateY(-6px) scaleY(1.04); }
+  60%  { transform: translateY(2px) scaleY(0.96); }
+  100% { transform: translateY(0) scaleY(1); }
 }
 
 @keyframes sombo-badge-pop {
-  0% {
-    transform: scale(0);
-    opacity: 0;
-  }
-  80% {
-    transform: scale(1.15);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
+  0%   { transform: scale(0); opacity: 0; }
+  80%  { transform: scale(1.15); }
+  100% { transform: scale(1);   opacity: 1; }
 }
 
-/* ── Chat Panel Window ────────────────────────────────────────────────==== */
+/* ── Chat Panel Window ──────────────────────────────────────────────────── */
 .sombo-chat-panel {
+  /* Position is fully controlled by JS (_positionPanel). Defaults are a */
+  /* safe fallback only — they are overridden immediately on openPanel().  */
   position: fixed;
   bottom: 120px;
   right: 24px;
@@ -291,7 +262,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 1050;
+  z-index: 1049; /* below widget container (1050) so bot avatar renders above panel */
   opacity: 0;
   transform: translateY(20px) scale(0.95);
   pointer-events: none;
@@ -329,7 +300,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid var(--sombo-orange-main);
+  border: 1.5px solid var(--sombo-accent);
   padding: 2px;
 }
 
@@ -363,13 +334,13 @@
 }
 
 .sombo-status-dot.is-thinking {
-  background-color: var(--sombo-orange-main);
-  box-shadow: 0 0 6px var(--sombo-orange-main);
+  background-color: var(--sombo-accent);
+  box-shadow: 0 0 6px var(--sombo-accent);
   animation: sombo-status-pulse 1s infinite alternate;
 }
 
 @keyframes sombo-status-pulse {
-  0% { opacity: 0.4; }
+  0%   { opacity: 0.4; }
   100% { opacity: 1; }
 }
 
@@ -465,9 +436,9 @@
 }
 
 .sombo-prompt-btn:hover {
-  background: var(--sombo-orange-light);
-  border-color: var(--sombo-orange-main);
-  color: var(--sombo-orange-main);
+  background: var(--sombo-accent-light);
+  border-color: var(--sombo-accent);
+  color: var(--sombo-accent);
   transform: translateY(-1px);
 }
 
@@ -479,13 +450,8 @@
   animation: sombo-msg-fade 0.3s ease-out;
 }
 
-.sombo-msg-user {
-  align-self: flex-end;
-}
-
-.sombo-msg-bot {
-  align-self: flex-start;
-}
+.sombo-msg-user { align-self: flex-end; }
+.sombo-msg-bot  { align-self: flex-start; }
 
 .sombo-msg-bubble {
   padding: 10px 14px;
@@ -497,7 +463,7 @@
 }
 
 .sombo-msg-user .sombo-msg-bubble {
-  background: linear-gradient(135deg, var(--sombo-orange-main), #ea580c);
+  background: linear-gradient(135deg, var(--sombo-accent), color-mix(in srgb, var(--sombo-accent) 75%, #000));
   color: #ffffff;
   border-bottom-right-radius: 4px;
 }
@@ -516,19 +482,11 @@
   padding: 0 4px;
 }
 
-.sombo-msg-user .sombo-msg-time {
-  text-align: right;
-}
+.sombo-msg-user .sombo-msg-time { text-align: right; }
 
 @keyframes sombo-msg-fade {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* State Banners inside chat */
@@ -576,7 +534,7 @@
 .sombo-typing-dot {
   width: 7px;
   height: 7px;
-  background: var(--sombo-orange-main);
+  background: var(--sombo-accent);
   border-radius: 50%;
   animation: sombo-dot-bounce 1.4s infinite ease-in-out both;
 }
@@ -587,7 +545,7 @@
 
 @keyframes sombo-dot-bounce {
   0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-  40% { transform: scale(1); opacity: 1; }
+  40%           { transform: scale(1);   opacity: 1; }
 }
 
 /* Chat Input Footer */
@@ -617,12 +575,12 @@
 
 .sombo-input-field:focus {
   background: #ffffff;
-  border-color: var(--sombo-orange-main);
-  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15);
+  border-color: var(--sombo-accent);
+  box-shadow: 0 0 0 3px var(--sombo-accent-light);
 }
 
 .sombo-send-btn {
-  background: linear-gradient(135deg, var(--sombo-orange-main), #e85d04);
+  background: linear-gradient(135deg, var(--sombo-accent), color-mix(in srgb, var(--sombo-accent) 75%, #000));
   border: none;
   color: #ffffff;
   width: 38px;
@@ -634,12 +592,10 @@
   cursor: pointer;
   transition: transform 0.2s ease, opacity 0.2s ease;
   flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.35);
+  box-shadow: 0 2px 8px var(--sombo-accent-glow);
 }
 
-.sombo-send-btn:hover:not(:disabled) {
-  transform: scale(1.06);
-}
+.sombo-send-btn:hover:not(:disabled) { transform: scale(1.06); }
 
 .sombo-send-btn:disabled {
   opacity: 0.5;
@@ -660,6 +616,361 @@
   text-align: center;
   margin-top: 6px;
   margin-bottom: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   STYLE PRESETS — applied via [data-bot-style="..."] on #sombo-widget-root
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Friendly — warmer, rounder, larger avatar */
+/* NOTE: Style presets intentionally only modify the BOT WIDGET appearance  */
+/* (avatar size, shadow, preview card). The chat interface header, body,    */
+/* and message colors remain consistent across all styles.                  */
+[data-bot-style="friendly"] .sombo-avatar-btn { width: 104px; height: 118px; }
+[data-bot-style="friendly"] .sombo-svg { width: 94px; height: 102px; }
+[data-bot-style="friendly"] .sombo-bot-preview {
+  background: #faf5ff;
+  border-color: #d8b4fe;
+  border-radius: 20px;
+}
+[data-bot-style="friendly"] .sombo-bot-preview .sombo-preview-svg { transform: scale(1.08); }
+
+/* Minimal — thinner shadows, no float animation */
+[data-bot-style="minimal"] .sombo-svg { animation: none; }
+[data-bot-style="minimal"] .sombo-body-group { animation: none; }
+[data-bot-style="minimal"] .sombo-bot-preview {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  border-radius: 10px;
+}
+[data-bot-style="minimal"] .sombo-bot-preview .sombo-svg { animation: none; }
+[data-bot-style="minimal"] .sombo-bot-preview .sombo-shadow { opacity: 0.35; }
+
+/* Energetic — faster float, stronger glow on bot */
+[data-bot-style="energetic"] .sombo-svg {
+  animation-duration: 2s;
+}
+[data-bot-style="energetic"] .sombo-body-group {
+  animation-duration: 2s;
+}
+[data-bot-style="energetic"] .sombo-bot-preview {
+  background: linear-gradient(135deg, #fff7ed, #ffedd5);
+  border-color: #fb923c;
+  border-radius: 16px;
+  box-shadow: 0 8px 20px rgba(249,115,22,0.2);
+}
+[data-bot-style="energetic"] .sombo-bot-preview .sombo-svg { animation-duration: 2s; }
+
+/* Calm — slower animations on bot */
+[data-bot-style="calm"] .sombo-svg { animation-duration: 7s; }
+[data-bot-style="calm"] .sombo-body-group { animation-duration: 7s; }
+[data-bot-style="calm"] .sombo-bot-preview {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(71,85,105,0.12);
+}
+[data-bot-style="calm"] .sombo-bot-preview .sombo-svg { animation-duration: 7s; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ONBOARDING MODAL — one-time setup modal
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sombo-onboard-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: sombo-fade-in 0.3s ease;
+}
+
+.sombo-onboard-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 28px 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  position: relative;
+}
+
+.sombo-onboard-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.sombo-onboard-avatar {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 12px;
+}
+
+.sombo-onboard-modal h5 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sombo-navy-main);
+  margin-bottom: 6px;
+}
+
+.sombo-onboard-modal p {
+  font-size: 0.86rem;
+  color: #64748b;
+  margin-bottom: 0;
+}
+
+.sombo-onboard-form-group {
+  margin-bottom: 16px;
+}
+
+.sombo-onboard-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.sombo-onboard-input {
+  width: 100%;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 9px 14px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  color: var(--sombo-navy-dark);
+}
+
+.sombo-onboard-input:focus {
+  border-color: var(--sombo-accent);
+  box-shadow: 0 0 0 3px var(--sombo-accent-light);
+}
+
+/* Style Preset Buttons */
+.sombo-style-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.sombo-style-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1.5px solid #cbd5e1;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.sombo-style-btn:hover {
+  border-color: var(--sombo-accent);
+  background: var(--sombo-accent-light);
+  color: var(--sombo-accent);
+}
+
+.sombo-style-btn.is-active {
+  border-color: var(--sombo-accent);
+  background: var(--sombo-accent);
+  color: #ffffff;
+}
+
+/* Color picker row */
+.sombo-color-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sombo-color-input {
+  width: 44px;
+  height: 36px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 2px;
+  cursor: pointer;
+  background: none;
+}
+
+.sombo-color-preview {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Onboarding actions */
+.sombo-onboard-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.sombo-btn-primary {
+  background: linear-gradient(135deg, var(--sombo-accent), color-mix(in srgb, var(--sombo-accent) 75%, #000));
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 11px 18px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  width: 100%;
+}
+
+.sombo-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.sombo-btn-secondary {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-weight: 600;
+  font-size: 0.86rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  width: 100%;
+}
+
+.sombo-btn-secondary:hover { background: #e2e8f0; }
+
+.sombo-btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: none;
+  padding: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  text-align: center;
+  width: 100%;
+}
+
+.sombo-btn-ghost:hover { color: #64748b; }
+
+@keyframes sombo-fade-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CUSTOMIZE MODAL — accessible from sidebar link
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.sombo-customize-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: sombo-fade-in 0.25s ease;
+}
+
+.sombo-customize-modal {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  position: relative;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+}
+
+.sombo-customize-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+.sombo-customize-header h5 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--sombo-navy-main);
+  margin: 0;
+}
+
+.sombo-customize-close {
+  background: #f1f5f9;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  font-size: 1rem;
+  color: #64748b;
+  transition: background 0.2s;
+}
+
+.sombo-customize-close:hover { background: #e2e8f0; }
+
+/* Bot preview inside customize modal */
+.sombo-bot-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border: 1px solid #e2e8f0;
+}
+
+.sombo-preview-svg {
+  width: 56px;
+  height: 62px;
+  flex-shrink: 0;
+}
+
+.sombo-preview-info { flex: 1; }
+
+.sombo-preview-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--sombo-navy-main);
+  margin-bottom: 2px;
+}
+
+.sombo-preview-style {
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.sombo-preview-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 2px #e2e8f0;
+}
+
+/* Customize action row */
+.sombo-customize-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.sombo-customize-actions .sombo-btn-primary {
+  flex: 1;
+}
+
+.sombo-customize-actions .sombo-btn-secondary {
+  flex: 0 0 auto;
+  width: auto;
 }
 
 /* ── Mobile Layout Adjustments ───────────────────────────────────────────── */
@@ -685,14 +996,19 @@
   }
 
   .sombo-chat-panel {
-    right: 12px;
-    left: 12px;
-    bottom: 100px;
-    width: auto;
+    /* JS positions the panel dynamically even on mobile. */
+    /* Only constrain size so it doesn't overflow tiny screens. */
+    width: calc(100vw - 24px);
     max-width: none;
     height: calc(100vh - 120px);
     max-height: 520px;
     border-radius: 16px;
+  }
+
+  .sombo-onboard-modal,
+  .sombo-customize-modal {
+    border-radius: 16px;
+    padding: 20px 18px;
   }
 }
 
@@ -709,8 +1025,13 @@
   .sombo-avatar-btn.is-thinking .sombo-antenna-tip,
   .sombo-avatar-btn.is-thinking .sombo-eye,
   .sombo-avatar-btn.is-happy .sombo-svg,
+  .sombo-avatar-btn.is-drag-released .sombo-svg,
   .sombo-status-dot.is-thinking,
-  .sombo-typing-dot {
+  .sombo-typing-dot,
+  [data-bot-style="energetic"] .sombo-svg,
+  [data-bot-style="energetic"] .sombo-body-group,
+  [data-bot-style="calm"] .sombo-svg,
+  [data-bot-style="calm"] .sombo-body-group {
     animation: none !important;
     transition: none !important;
   }
@@ -718,5 +1039,14 @@
   .sombo-chat-panel {
     transition: opacity 0.15s linear !important;
     transform: none !important;
+  }
+
+  .sombo-onboard-overlay,
+  .sombo-customize-overlay {
+    animation: none !important;
+  }
+
+  .sombo-avatar-btn.is-dragging {
+    transition: none !important;
   }
 }

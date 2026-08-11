@@ -349,118 +349,70 @@
     </div>
 
 
+    <!-- User Account -->
+    <div class="profile-wrap" id="profileWrap">
+      <button class="profile-chip" type="button" aria-haspopup="true" aria-expanded="false">
+        <span class="avatar" id="sidebarAvatar">U</span>
+        <span class="flex-grow-1 min-w-0">
+          <span class="d-block small fw-semibold text-truncate" id="userNameDisplay">User</span>
+          <span class="d-block text-white-50" style="font-size: 0.75rem">Smore Account</span>
+        </span>
+        <i class="bi bi-chevron-right text-white-50"></i>
+      </button>
 
+      <div class="profile-card" role="menu">
+        <div class="text-center px-4 pt-4 pb-3">
+          <div class="avatar mx-auto mb-2" style="width: 62px; height: 62px; font-size: 1.25rem" id="dropdownAvatar">
+            U
+          </div>
+          <div class="fw-semibold" id="userEmailDisplay">user@example.com</div>
+        </div>
+
+        <div class="border-top p-3">
+          <button class="btn btn-danger w-100 rounded-3" id="sidebarLogoutBtn">
+            <i class="bi bi-box-arrow-right"></i> Log Out
+          </button>
+        </div>
       </div>
-    </main>
+    </div>
+  </aside>
 
-    <!-- ── Add / Edit Transaction Modal ─────────────────── -->
-    <div
-      class="modal fade"
-      id="txnModal"
-      tabindex="-1"
-      aria-labelledby="txnModalLabel"
-      aria-hidden="true"
-    >
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content smore-modal">
-          <div class="modal-header">
-            <h3 class="modal-title h5" id="txnModalLabel">Add Transaction</h3>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
+  <!-- Main Content Area -->
+  <main class="flex-grow-1 p-3 p-lg-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <div>
+        <h1 class="h4 fw-bold mb-1">Welcome, <span id="welcomeName">User</span>!</h1>
+        <p class="text-muted small mb-0">Track your finances and start setting up your budget!</p>
+      </div>
+      <button class="btn btn-sm btn-outline-dark d-flex align-items-center gap-1" id="logoutBtn">
+        <i class="bi bi-box-arrow-right"></i> Logout
+      </button>
+    </div>
 
-          <div class="modal-body">
-            <form id="txn-form" novalidate>
-              <!-- Hidden edit ID -->
-              <input type="hidden" id="txn-edit-id" />
+    <!-- TOP OVERVIEW STATS ROW -->
+    <div class="row g-3 mb-4">
+      <div class="col-12 col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+          <div class="text-muted small mb-1">Available Balance</div>
+          <div class="h3 fw-bold mb-0 text-dark" id="totalBalanceText">0 MMK</div>
+          <div class="text-muted style-small" style="font-size: 0.75rem;">Net available</div>
+        </div>
+      </div>
 
-              <!-- Type -->
-              <div class="mb-3">
-                <label class="form-label" for="txn-type">Type</label>
-                <select class="form-control" id="txn-type" required>
-                  <option value="expense">Expense</option>
-                  <option value="income">Income</option>
-                </select>
-                <div class="invalid-feedback">Please select income or expense.</div>
-              </div>
+      <div class="col-12 col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+          <div class="text-muted small mb-1">Monthly Income</div>
+          <div class="h3 fw-bold mb-0 text-success" id="monthlyIncomeText">0 MMK</div>
+          <div class="text-muted style-small" style="font-size: 0.75rem;">Total received</div>
+        </div>
+      </div>
 
-              <!-- Amount -->
-              <div class="mb-3">
-                <label class="form-label" for="txn-amount">Amount (MMK)</label>
-                <input
-                  class="form-control"
-                  type="number"
-                  id="txn-amount"
-                  min="0"
-                  max="9999999999"
-                  step="1"
-                  placeholder="e.g. 25000"
-                  required
-                />
-                <div class="invalid-feedback">Enter a whole MMK amount (0 – 9,999,999,999).</div>
-              </div>
-
-              <!-- Category -->
-              <div class="mb-3">
-                <label class="form-label" for="txn-category">Category</label>
-                <input
-                  class="form-control"
-                  type="text"
-                  id="txn-category"
-                  maxlength="50"
-                  placeholder="e.g. Food, Rent, Salary"
-                  required
-                />
-                <div class="invalid-feedback">Category is required (max 50 chars).</div>
-              </div>
-
-              <!-- Date -->
-              <div class="mb-3">
-                <label class="form-label" for="txn-date">Date</label>
-                <input
-                  class="form-control"
-                  type="date"
-                  id="txn-date"
-                  required
-                />
-                <div class="invalid-feedback">Date is required.</div>
-              </div>
-
-              <!-- Description -->
-              <div class="mb-3">
-                <label class="form-label" for="txn-description">
-                  Description
-                  <span class="field-hint ms-1">(optional)</span>
-                </label>
-                <textarea
-                  class="form-control"
-                  id="txn-description"
-                  rows="2"
-                  maxlength="300"
-                  placeholder="Short note about this transaction"
-                ></textarea>
-                <div class="invalid-feedback">Max 300 characters.</div>
-              </div>
-            </form>
-          </div>
-
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-outline-secondary"
-              data-bs-dismiss="modal"
-            >Cancel</button>
-            <button
-              type="submit"
-              form="txn-form"
-              id="txn-submit-btn"
-              class="btn btn-primary"
-            >Add Transaction</button>
-          </div>
+      <div class="col-12 col-md-4">
+        <div class="card p-3 h-100 border-0 shadow-sm">
+          <div class="text-muted small mb-1">Monthly Expense</div>
+          <div class="h3 fw-bold mb-0 text-danger" id="monthlyExpenseText">0 MMK</div>
+          <div class="text-muted style-small" style="font-size: 0.75rem;">Total spent</div>
         </div>
       </div>
 
@@ -474,9 +426,9 @@
           <div id="budgetsContainer" class="d-flex flex-column gap-2">
             <!-- Dynamic Budgets -->
           </div>
+          <div id="chartLegend" class="mt-3 small"></div>
         </div>
       </div>
-    </div>
 
     <!-- BOTTOM ROW: Savings Goals + Recent Transactions -->
     <div class="row g-3">

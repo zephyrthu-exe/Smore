@@ -1,19 +1,5 @@
-/**
- * transactions.js — Smore transaction CRUD
- *
- * All Firestore reads/writes use the authenticated user's own UID, sourced
- * from auth.currentUser.uid. No user-supplied UID is ever interpolated into a
- * document path; the Firestore security rules enforce the same constraint.
- */
-
-import {
-  collection,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  Timestamp,
-} from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { subscribeToStore } from "./store.js";
 
@@ -216,53 +202,62 @@ function listenToTransactions(userId) {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Load transactions
-// ---------------------------------------------------------------------------
+function renderFilteredTable(userId) {
+  const searchInput = document.getElementById("searchTxInput");
+  const categoryFilter = document.getElementById("categoryFilter");
+  const tableBody = document.getElementById("txTableBody");
+  const emptyState = document.getElementById("emptyStateCol");
 
-/**
- * Renders the transaction list from local state.
- */
-function renderTransactions() {
-  clearStatus();
+  if (!tableBody) return;
 
-  if (isLoading) {
-    txnLoading.classList.remove("hidden");
-    txnList.classList.add("hidden");
-    txnEmpty.classList.add("hidden");
-    return;
-  }
+  const searchQuery = (searchInput?.value || "").toLowerCase().trim();
+  const categoryVal = categoryFilter?.value || "All";
 
-  txnLoading.classList.add("hidden");
-
-  if (isError) {
-    txnList.classList.add("hidden");
-    txnEmpty.classList.add("hidden");
-    showStatus("error", "Could not load transactions. Please check your connection.");
-    return;
-  }
-
-  // Always calculate stats from the full list
-  renderStats(currentTxns);
-
-  // Clear existing cards
-  txnList.innerHTML = "";
-
-  // Apply filter
-  const filtered = currentTxns.filter(t => activeFilter === "all" || t.type === activeFilter);
-
-  if (filtered.length === 0) {
-    txnEmpty.classList.remove("hidden");
-    txnList.classList.add("hidden");
-    return;
-  }
-
-  filtered.forEach((data) => {
-    txnList.appendChild(buildCard(data.id, data));
+  const filtered = allTransactions.filter((tx) => {
+    const desc = (tx.description || "").toLowerCase();
+    const cat = (tx.category || "").toLowerCase();
+    const matchesSearch = !searchQuery || desc.includes(searchQuery) || cat.includes(searchQuery);
+    const matchesCategory = categoryVal === "All" || tx.category === categoryVal || (categoryVal === "Income" && tx.type === "income");
+    return matchesSearch && matchesCategory;
   });
 
-  txnEmpty.classList.add("hidden");
-  txnList.classList.remove("hidden");
+  if (filtered.length === 0) {
+    tableBody.innerHTML = "";
+    emptyState?.classList.remove("d-none");
+    return;
+  }
+
+  emptyState?.classList.add("d-none");
+
+  let html = "";
+  filtered.forEach((tx) => {
+    const amt = parseFloat(tx.amount) || 0;
+    const isIncome = tx.type === "income";
+    let dateStr = "Recent";
+
+    if (tx.date && typeof tx.date.toDate === "function") {
+      dateStr = tx.date.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } else if (tx.createdAt && typeof tx.createdAt.toDate === "function") {
+      dateStr = tx.createdAt.toDate().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    }
+
+    html += `
+      <tr>
+        <td>${escapeHtml(dateStr)}</td>
+        <td class="fw-semibold">${escapeHtml(tx.description || tx.category || "Transaction")}</td>
+        <td><span class="badge bg-light text-dark border">${escapeHtml(tx.category || "General")}</span></td>
+        <td class="text-end fw-bold ${isIncome ? 'text-success' : 'text-danger'}">
+          ${isIncome ? '+' : '-'}${amt.toLocaleString()} MMK
+        </td>
+        <td class="text-center">
+          <button class="btn btn-sm btn-outline-danger border-0 py-0" onclick="deleteTxRecord('${tx.id}')">
+            <i class="bi bi-trash"></i>
+          </button>
+        </td>
+      </tr>`;
+  });
+
+  tableBody.innerHTML = html;
 }
 
 // 4. Add Transaction + Auto Update User Balance
@@ -346,7 +341,15 @@ function setupSearchAndFilters() {
       return matchesSearch && matchesCategory;
     });
 
-    bsModal.hide();
+    try {
+      await addDoc(collection(db, "users", userId, "transactions"), {
+        type,
+        description,
+        category,
+        amount,
+        date: Timestamp.now(),
+        createdAt: Timestamp.now()
+      });
 
   searchInput?.addEventListener("input", filterAction);
   categoryFilter?.addEventListener("change", filterAction);
@@ -362,8 +365,10 @@ document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async () 
     const docRef = doc(db, "users", uid, "transactions", pendingDeleteId);
     await deleteDoc(docRef);
 
-    bsDeleteModal.hide();
-    showStatus("success", "Transaction deleted.", 3000);
+  const update = () => {
+    const user = auth.currentUser;
+    if (user) renderFilteredTable(user.uid);
+  };
 
   } catch (err) {
     console.error("Logout error:", err);
