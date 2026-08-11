@@ -1,187 +1,24 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
-import { initStore, cleanupStore } from "./store.js";
+import { cleanupStore, initStore } from "./store.js";
 
-let trendChartInstance = null;
-let categoryChartInstance = null;
+let transactions = []; let selectedRange = "month"; let trendChart; let categoryChart;
+onAuthStateChanged(auth, (user) => { if (!user) { cleanupStore(); destroySomboAssistant(); window.location.replace("./index.html"); return; } bindUser(user); initStore(user.uid); listen(user.uid); bindRangeButtons(); setupLogout(); initSomboAssistant(user); });
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    cleanupStore();
-    destroySomboAssistant();
-    window.location.replace("./index.html");
-    return;
-  }
-
-  // 1. Bind User Info
-  bindUserData(user);
-
-  // 2. Setup Logout
-  setupLogout();
-
-  // 3. Initialize Realtime Listeners
-  initStore(user.uid);
-  listenToAnalyticsData(user.uid);
-
-  // 4. Initialize Sombo Assistant Widget
-  initSomboAssistant(user);
-});
-
-function bindUserData(user) {
-  const name = user.displayName || user.email.split("@")[0] || "User";
-  const email = user.email || "";
-  const firstLetter = name.charAt(0).toUpperCase();
-
-  const nameDisplay = document.getElementById("userNameDisplay");
-  const emailDisplay = document.getElementById("userEmailDisplay");
-  const sidebarAvatar = document.getElementById("sidebarAvatar");
-  const dropdownAvatar = document.getElementById("dropdownAvatar");
-  const avatarDisplay = document.getElementById("userAvatarDisplay");
-
-  if (nameDisplay) nameDisplay.textContent = name;
-  if (emailDisplay) emailDisplay.textContent = email;
-  if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
-  if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
-  if (avatarDisplay) avatarDisplay.textContent = firstLetter;
+function bindUser(user) { const name = user.displayName || user.email?.split("@")[0] || "User"; const initial = name.charAt(0).toUpperCase(); setText("userNameDisplay", name); setText("userEmailDisplay", user.email || ""); setText("sidebarAvatar", initial); setText("dropdownAvatar", initial); }
+function listen(userId) { onSnapshot(query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc")), (snapshot) => { transactions = snapshot.docs.map((entry) => entry.data()); render(); }, (error) => console.error("Could not load analytics:", error)); }
+function bindRangeButtons() { document.querySelectorAll(".analytics-range-option").forEach((button) => button.addEventListener("click", () => { selectedRange = button.dataset.range; setText("analyticsRangeButton", button.textContent); render(); })); }
+function render() {
+  const filtered = transactions.filter(inRange); let income = 0; let expenses = 0; const categories = {};
+  filtered.forEach((item) => { const amount = Number(item.amount) || 0; if (item.type === "income") income += amount; else { expenses += amount; const category = item.category || "General"; categories[category] = (categories[category] || 0) + amount; } });
+  const savings = income - expenses; const rate = income ? Math.max(0, Math.round(savings / income * 100)) : 0;
+  setText("analyticsIncomeText", `${income.toLocaleString()} MMK`); setText("analyticsExpenseText", `${expenses.toLocaleString()} MMK`); setText("analyticsNetSavingsText", `${savings.toLocaleString()} MMK`); document.getElementById("analyticsSavingsRateText").innerHTML = `<i class="bi bi-wallet2"></i> ${rate}% savings rate`;
+  renderTrend(income, expenses); renderCategories(categories);
 }
-
-function setupLogout() {
-  document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async function() {
-    this.disabled = true;
-    this.textContent = "Signing out...";
-    try {
-      cleanupStore();
-      destroySomboAssistant();
-      await signOut(auth);
-      window.location.href = "./index.html";
-    } catch (err) {
-      console.error("Logout error:", err);
-      this.disabled = false;
-      this.textContent = "Log Out";
-    }
-  });
-}
-
-function listenToAnalyticsData(userId) {
-  const q = query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc"));
-
-  onSnapshot(q, (snapshot) => {
-    let totalIncome = 0;
-    let totalExpenses = 0;
-    const categoryMap = {};
-
-    snapshot.forEach((docSnap) => {
-      const tx = docSnap.data();
-      const amt = parseFloat(tx.amount) || 0;
-      if (tx.type === "income") {
-        totalIncome += amt;
-      } else {
-        totalExpenses += amt;
-        const cat = tx.category || "General";
-        categoryMap[cat] = (categoryMap[cat] || 0) + amt;
-      }
-    });
-
-    const netSavings = totalIncome - totalExpenses;
-    const savingsRate = totalIncome > 0 ? Math.max(0, Math.round((netSavings / totalIncome) * 100)) : 0;
-
-    // Update Summary Cards
-    const incomeEl = document.getElementById("analyticsIncomeText");
-    const expenseEl = document.getElementById("analyticsExpenseText");
-    const netSavingsEl = document.getElementById("analyticsNetSavingsText");
-    const rateEl = document.getElementById("analyticsSavingsRateText");
-
-    if (incomeEl) incomeEl.textContent = `${totalIncome.toLocaleString()} MMK`;
-    if (expenseEl) expenseEl.textContent = `${totalExpenses.toLocaleString()} MMK`;
-    if (netSavingsEl) netSavingsEl.textContent = `${netSavings.toLocaleString()} MMK`;
-    if (rateEl) rateEl.innerHTML = `<i class="bi bi-wallet2"></i> ${savingsRate}% savings rate`;
-
-    // Render Charts
-    renderTrendChart(totalIncome, totalExpenses);
-    renderCategoryChart(categoryMap, totalExpenses);
-  });
-}
-
-function renderTrendChart(income, expenses) {
-  const ctx = document.getElementById("trendChart")?.getContext("2d");
-  if (!ctx) return;
-
-  if (trendChartInstance) trendChartInstance.destroy();
-
-  trendChartInstance = new Chart(ctx, {
-    type: "bar",
-    data: {
-      labels: ["Total Income", "Total Expenses"],
-      datasets: [
-        {
-          label: "MMK",
-          data: [income, expenses],
-          backgroundColor: ["#16a34a", "#dc2626"],
-          borderRadius: 6
-        }
-      ]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            callback: (val) => `${val.toLocaleString()} MMK`
-          }
-        }
-      }
-    }
-  });
-}
-
-function renderCategoryChart(categoryMap, totalExpenses) {
-  const ctx = document.getElementById("categoryChart")?.getContext("2d");
-  if (!ctx) return;
-
-  if (categoryChartInstance) categoryChartInstance.destroy();
-
-  const categories = Object.keys(categoryMap);
-  const values = Object.values(categoryMap);
-
-  if (categories.length === 0 || totalExpenses === 0) {
-    categoryChartInstance = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: ["No Expenses"],
-        datasets: [{ data: [1], backgroundColor: ["#e4e4e7"] }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "70%",
-        plugins: { legend: { position: "bottom" } }
-      }
-    });
-    return;
-  }
-
-  const colors = ["#18181b", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#e4e4e7"];
-
-  categoryChartInstance = new Chart(ctx, {
-    type: "doughnut",
-    data: {
-      labels: categories,
-      datasets: [{ data: values, backgroundColor: colors }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: "70%",
-      plugins: {
-        legend: { position: "bottom" }
-      }
-    }
-  });
-}
+function inRange(item) { const date = item.createdAt?.toDate?.() || item.date?.toDate?.(); if (!date) return selectedRange === "year"; const now = new Date(); if (selectedRange === "year") return date.getFullYear() === now.getFullYear(); const month = selectedRange === "last-month" ? (now.getMonth() + 11) % 12 : now.getMonth(); const year = selectedRange === "last-month" && now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear(); return date.getFullYear() === year && date.getMonth() === month; }
+function renderTrend(income, expenses) { const canvas = document.getElementById("trendChart"); if (!canvas || !window.Chart) return; trendChart?.destroy(); trendChart = new Chart(canvas, { type: "bar", data: { labels: ["Income", "Expenses"], datasets: [{ data: [income, expenses], backgroundColor: ["#16a34a", "#dc2626"], borderRadius: 6 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } } }); }
+function renderCategories(categories) { const canvas = document.getElementById("categoryChart"); if (!canvas || !window.Chart) return; categoryChart?.destroy(); const labels = Object.keys(categories); categoryChart = new Chart(canvas, { type: "doughnut", data: { labels: labels.length ? labels : ["No expenses"], datasets: [{ data: labels.length ? Object.values(categories) : [1], backgroundColor: labels.length ? ["#18181b", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8"] : ["#e4e4e7"] }] }, options: { responsive: true, maintainAspectRatio: false, cutout: "70%" } }); }
+function setupLogout() { document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async function () { this.disabled = true; cleanupStore(); destroySomboAssistant(); await signOut(auth); window.location.replace("./index.html"); }); }
+function setText(id, value) { document.getElementById(id)?.replaceChildren(String(value)); }

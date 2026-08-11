@@ -11,6 +11,7 @@
 
   <!-- External Stylesheet -->
   <link rel="stylesheet" href="./css/styles.css">
+  <link rel="stylesheet" href="./css/sombo.css">
       <style>
       body {
         background: #f8fafc;
@@ -159,6 +160,8 @@
         <a href="budget.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
         <a href="goals.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
         <a href="analytics.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <hr style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
+        <a href="#" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="customizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
       </nav>
     </div>
 
@@ -208,7 +211,7 @@
             </div>
 
             <div class="border-top p-3">
-              <button class="btn btn-danger w-100 rounded-3">
+              <button class="btn btn-danger w-100 rounded-3" id="sidebarLogoutBtn">
                 <i class="bi bi-box-arrow-right"></i> Log Out
               </button>
             </div>
@@ -227,13 +230,13 @@
 
       <!-- Filter / Date Range -->
       <div class="dropdown">
-        <button class="btn btn-sm btn-outline-dark dropdown-toggle fw-semibold" type="button" data-bs-toggle="dropdown">
+        <button class="btn btn-sm btn-outline-dark dropdown-toggle fw-semibold" id="analyticsRangeButton" type="button" data-bs-toggle="dropdown">
           This Month
         </button>
         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
-          <li><a class="dropdown-item small" href="#">This Month</a></li>
-          <li><a class="dropdown-item small" href="#">Last Month</a></li>
-          <li><a class="dropdown-item small" href="#">This Year</a></li>
+          <li><button class="dropdown-item small analytics-range-option" type="button" data-range="month">This Month</button></li>
+          <li><button class="dropdown-item small analytics-range-option" type="button" data-range="last-month">Last Month</button></li>
+          <li><button class="dropdown-item small analytics-range-option" type="button" data-range="year">This Year</button></li>
         </ul>
       </div>
     </div>
@@ -243,22 +246,22 @@
       <div class="col-12 col-md-4">
         <div class="card border-0 shadow-sm p-3 h-100">
           <span class="text-muted small mb-1">Total Income</span>
-          <h3 class="h5 fw-bold text-dark mb-0">500,000 MMK</h3>
+          <h3 class="h5 fw-bold text-dark mb-0" id="analyticsIncomeText">0 MMK</h3>
           <span class="text-success small mt-2"><i class="bi bi-arrow-up-right"></i> +12% from last month</span>
         </div>
       </div>
       <div class="col-12 col-md-4">
         <div class="card border-0 shadow-sm p-3 h-100">
           <span class="text-muted small mb-1">Total Expenses</span>
-          <h3 class="h5 fw-bold text-dark mb-0">170,000 MMK</h3>
+          <h3 class="h5 fw-bold text-dark mb-0" id="analyticsExpenseText">0 MMK</h3>
           <span class="text-danger small mt-2"><i class="bi bi-arrow-down-right"></i> -4% from last month</span>
         </div>
       </div>
       <div class="col-12 col-md-4">
         <div class="card border-0 shadow-sm p-3 h-100">
           <span class="text-muted small mb-1">Net Savings</span>
-          <h3 class="h5 fw-bold text-dark mb-0">330,000 MMK</h3>
-          <span class="text-success small mt-2"><i class="bi bi-wallet2"></i> 66% savings rate</span>
+          <h3 class="h5 fw-bold text-dark mb-0" id="analyticsNetSavingsText">0 MMK</h3>
+          <span class="text-success small mt-2" id="analyticsSavingsRateText"><i class="bi bi-wallet2"></i> 0% savings rate</span>
         </div>
       </div>
     </div>
