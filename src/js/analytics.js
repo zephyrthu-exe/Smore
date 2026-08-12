@@ -3,6 +3,7 @@ import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
+import { enhanceAccountMenu } from "./account-menu.js";
 
 let trendChartInstance = null;
 let categoryChartInstance = null;
@@ -19,6 +20,7 @@ onAuthStateChanged(auth, (user) => {
   bindUserData(user);
 
   // 2. Setup Logout
+  enhanceAccountMenu(user);
   setupLogout();
 
   // 3. Initialize Realtime Listeners
@@ -30,7 +32,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 function bindUserData(user) {
-  const name = user.displayName || user.email.split("@")[0] || "User";
+  const name = user.displayName || user.email?.split("@")[0] || "User";
   const email = user.email || "";
   const firstLetter = name.charAt(0).toUpperCase();
 
