@@ -3,6 +3,7 @@ import { collection, onSnapshot, query, orderBy, addDoc, Timestamp } from "https
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
+import { enhanceAccountMenu } from "./account-menu.js";
 
 let spendingChartInstance = null;
 
@@ -19,6 +20,7 @@ onAuthStateChanged(auth, (user) => {
 
   // 2. Setup Logout
   setupLogout();
+  enhanceAccountMenu(user);
 
   // 3. Initialize Store & Subscriptions
   initStore(user.uid);
@@ -35,12 +37,13 @@ onAuthStateChanged(auth, (user) => {
 });
 
 function bindUserData(user) {
-  const name = user.displayName || user.email.split("@")[0] || "User";
+  const name = user.displayName || user.email?.split("@")[0] || "User";
   const email = user.email || "";
   const firstLetter = name.charAt(0).toUpperCase();
 
   const welcomeName = document.getElementById("welcomeName");
   const nameDisplay = document.getElementById("userNameDisplay");
+  const dropdownName = document.getElementById("dropdownName");
   const emailDisplay = document.getElementById("userEmailDisplay");
   const sidebarAvatar = document.getElementById("sidebarAvatar");
   const dropdownAvatar = document.getElementById("dropdownAvatar");
@@ -48,10 +51,20 @@ function bindUserData(user) {
 
   if (welcomeName) welcomeName.textContent = name;
   if (nameDisplay) nameDisplay.textContent = name;
+  if (dropdownName) dropdownName.textContent = name;
   if (emailDisplay) emailDisplay.textContent = email;
   if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
   if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
   if (avatarDisplay) avatarDisplay.textContent = firstLetter;
+
+  const savedPhoto = localStorage.getItem(`smore-profile-photo-${user.uid}`);
+  [sidebarAvatar, dropdownAvatar, avatarDisplay].forEach((avatar) => {
+    if (!avatar) return;
+    avatar.style.backgroundImage = savedPhoto ? `url("${savedPhoto}")` : "";
+    avatar.style.backgroundSize = "cover";
+    avatar.style.backgroundPosition = "center";
+    avatar.textContent = savedPhoto ? "" : firstLetter;
+  });
 }
 
 function setupLogout() {

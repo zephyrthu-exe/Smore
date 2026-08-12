@@ -3,6 +3,7 @@ import { collection, onSnapshot, query, addDoc, deleteDoc, doc, Timestamp } from
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
+import { enhanceAccountMenu } from "./account-menu.js";
 
 let currentBudgets = [];
 let currentTransactions = [];
@@ -19,6 +20,7 @@ onAuthStateChanged(auth, (user) => {
   bindUserData(user);
 
   // 2. Setup Logout
+  enhanceAccountMenu(user);
   setupLogout();
 
   // 3. Initialize Realtime Listeners
@@ -33,7 +35,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 function bindUserData(user) {
-  const name = user.displayName || user.email.split("@")[0] || "User";
+  const name = user.displayName || user.email?.split("@")[0] || "User";
   const email = user.email || "";
   const firstLetter = name.charAt(0).toUpperCase();
 
@@ -187,7 +189,7 @@ function renderBudgetsView() {
   if (highestUsageWarning) {
     warningBanner?.classList.remove("d-none");
     if (warningText) {
-      warningText.textContent = `${highestUsageWarning.category} budget is at ${highestUsageWarning.pct}% — consider reducing spending`;
+      warningText.textContent = `${highestUsageWarning.category} budget is at ${highestUsageWarning.pct}% â€” consider reducing spending`;
     }
   } else {
     warningBanner?.classList.add("d-none");
