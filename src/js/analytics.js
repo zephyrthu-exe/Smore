@@ -100,10 +100,40 @@ function listenToAnalyticsData(userId) {
     if (netSavingsEl) netSavingsEl.textContent = `${netSavings.toLocaleString()} MMK`;
     if (rateEl) rateEl.innerHTML = `<i class="bi bi-wallet2"></i> ${savingsRate}% savings rate`;
 
+    const insightEl = document.getElementById("analyticsInsightText");
+    const trendSummaryEl = document.getElementById("analyticsTrendSummary");
+    const categorySummaryEl = document.getElementById("analyticsCategorySummary");
+    const trendDataEl = document.getElementById("trendChartData");
+    const categoryDataEl = document.getElementById("categoryChartData");
+    if (insightEl) {
+      insightEl.textContent = totalIncome > 0
+        ? `${savingsRate}% of recorded income remains after expenses.`
+        : "Add an income and a few expenses to see your money story take shape.";
+    }
+    if (trendSummaryEl) trendSummaryEl.textContent = `Recorded income is ${totalIncome.toLocaleString()} MMK and recorded expenses are ${totalExpenses.toLocaleString()} MMK.`;
+    if (categorySummaryEl) {
+      categorySummaryEl.textContent = categoriesSummary(categoryMap, totalExpenses);
+    }
+    if (trendDataEl) trendDataEl.textContent = `Income: ${totalIncome.toLocaleString()} MMK. Expenses: ${totalExpenses.toLocaleString()} MMK. Net savings: ${netSavings.toLocaleString()} MMK.`;
+    if (categoryDataEl) categoryDataEl.textContent = categoryDataSummary(categoryMap, totalExpenses);
+
     // Render Charts
     renderTrendChart(totalIncome, totalExpenses);
     renderCategoryChart(categoryMap, totalExpenses);
   });
+}
+
+function categoriesSummary(categoryMap, totalExpenses) {
+  const categories = Object.entries(categoryMap);
+  if (!categories.length || totalExpenses === 0) return "No expenses recorded yet.";
+  const [topCategory, topValue] = categories.sort((a, b) => b[1] - a[1])[0];
+  return `${topCategory} is the largest recorded category at ${topValue.toLocaleString()} MMK.`;
+}
+
+function categoryDataSummary(categoryMap, totalExpenses) {
+  const categories = Object.entries(categoryMap);
+  if (!categories.length || totalExpenses === 0) return "No expense categories to display.";
+  return categories.map(([category, value]) => `${category}: ${value.toLocaleString()} MMK`).join(". ");
 }
 
 function renderTrendChart(income, expenses) {
@@ -120,7 +150,7 @@ function renderTrendChart(income, expenses) {
         {
           label: "MMK",
           data: [income, expenses],
-          backgroundColor: ["#16a34a", "#dc2626"],
+          backgroundColor: ["#3b8f72", "#d9654f"],
           borderRadius: 6
         }
       ]
@@ -134,6 +164,7 @@ function renderTrendChart(income, expenses) {
       scales: {
         y: {
           beginAtZero: true,
+          grid: { color: "rgba(25, 59, 58, 0.1)" },
           ticks: {
             callback: (val) => `${val.toLocaleString()} MMK`
           }
@@ -157,7 +188,7 @@ function renderCategoryChart(categoryMap, totalExpenses) {
       type: "doughnut",
       data: {
         labels: ["No Expenses"],
-        datasets: [{ data: [1], backgroundColor: ["#e4e4e7"] }]
+        datasets: [{ data: [1], backgroundColor: ["#d7e4de"] }]
       },
       options: {
         responsive: true,
@@ -169,7 +200,7 @@ function renderCategoryChart(categoryMap, totalExpenses) {
     return;
   }
 
-  const colors = ["#18181b", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8", "#e4e4e7"];
+  const colors = ["#d9654f", "#3b8f72", "#d79a3d", "#5f8fa3", "#8d78a8", "#78958b"];
 
   categoryChartInstance = new Chart(ctx, {
     type: "doughnut",

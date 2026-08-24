@@ -103,12 +103,19 @@
       <nav class="nav flex-column gap-1">
         <a href="dashboard.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
         <a href="transaction.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
+        <a href="transaction.html#addTxModal" class="mobile-add-action d-flex align-items-center justify-content-center" aria-label="Add transaction"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
         <a href="budget.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
-        <a href="goals.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
-        <a href="analytics.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <a href="goals.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
         <hr style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
-        <a href="#" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="customizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <a href="#" class="sidebar-link desktop-customize-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="desktopCustomizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <button type="button" class="sidebar-link more-nav-button d-flex align-items-center gap-2 text-white-50 rounded" id="mobileMoreBtn" aria-label="More options" aria-expanded="false"><i class="bi bi-three-dots"></i> More</button>
       </nav>
+      <div class="mobile-more-menu" id="mobileMoreMenu" aria-label="More navigation" hidden>
+        <a href="goals.html"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <button type="button" id="accountSettingsBtn"><i class="bi bi-person-gear"></i> Account settings</button>
+      </div>
     </div>
 
     <!-- User Account -->
@@ -162,7 +169,7 @@
     </div>
 
     <!-- Top Summary Stats Row -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 summary-bento">
       <div class="col-12 col-md-4">
         <div class="card p-3 h-100 border-0 shadow-sm">
           <div class="text-muted small mb-1">Total Budget</div>
@@ -189,24 +196,24 @@
     </div>
 
     <!-- Category Budget Cards Grid -->
-    <div class="row g-3" id="budgetsGrid">
+    <div class="row g-3 bento-grid" id="budgetsGrid">
       <!-- Dynamic Budget Cards Rendered by JS -->
     </div>
   </main>
 </div>
 
 <!-- ================= MODAL: CREATE / SET BUDGET ================= -->
-<div class="modal fade" id="createBudgetModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="createBudgetModal" tabindex="-1" aria-labelledby="createBudgetTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
       <div class="modal-header">
-        <h5 class="modal-title fw-bold fs-6">Set Category Budget Limit</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title fw-bold fs-6" id="createBudgetTitle">Set Category Budget Limit</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="createBudgetForm">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Category</label>
+            <label class="form-label small fw-semibold" for="budCategory">Category</label>
             <select class="form-select" id="budCategory" required>
               <option value="Food & Dining">Food & Dining</option>
               <option value="Transportation">Transportation</option>
@@ -217,8 +224,12 @@
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Monthly Limit (MMK)</label>
+            <label class="form-label small fw-semibold" for="budLimit">Monthly Limit (MMK)</label>
             <input type="number" class="form-control" id="budLimit" placeholder="250000" min="1" required>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="budRollover">
+            <label class="form-check-label small" for="budRollover">Carry unused amount from last month</label>
           </div>
         </div>
         <div class="modal-footer">

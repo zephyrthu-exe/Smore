@@ -103,12 +103,19 @@
       <nav class="nav flex-column gap-1">
         <a href="dashboard.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
         <a href="transaction.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
+        <a href="transaction.html#addTxModal" class="mobile-add-action d-flex align-items-center justify-content-center" aria-label="Add transaction"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
         <a href="budget.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
-        <a href="goals.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
-        <a href="analytics.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <a href="goals.html" class="sidebar-link mobile-secondary-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
         <hr style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
-        <a href="#" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="customizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <a href="#" class="sidebar-link desktop-customize-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="desktopCustomizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <button type="button" class="sidebar-link more-nav-button d-flex align-items-center gap-2 text-white-50 rounded" id="mobileMoreBtn" aria-label="More options" aria-expanded="false"><i class="bi bi-three-dots"></i> More</button>
       </nav>
+      <div class="mobile-more-menu" id="mobileMoreMenu" aria-label="More navigation" hidden>
+        <a href="goals.html" class="is-current"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <button type="button" id="accountSettingsBtn"><i class="bi bi-person-gear"></i> Account settings</button>
+      </div>
     </div>
 
     <!-- User Account -->
@@ -154,36 +161,36 @@
     </div>
 
     <!-- Goals Grid -->
-    <div class="row g-3" id="goalsGridContainer">
+    <div class="row g-3 bento-grid" id="goalsGridContainer">
       <!-- Dynamic Goals Rendered by JS -->
     </div>
   </main>
 </div>
 
 <!-- ================= MODAL: ADD NEW GOAL ================= -->
-<div class="modal fade" id="addGoalModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="addGoalModal" tabindex="-1" aria-labelledby="addGoalTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
       <div class="modal-header border-bottom-0">
-        <h5 class="modal-title fw-bold fs-6">Add New Savings Goal</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title fw-bold fs-6" id="addGoalTitle">Add New Savings Goal</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="addGoalForm">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Goal Title</label>
+            <label class="form-label small fw-semibold" for="goalTitle">Goal Title</label>
             <input type="text" class="form-control" id="goalTitle" placeholder="e.g. New Laptop, Emergency Fund" required>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Target Amount (MMK)</label>
+            <label class="form-label small fw-semibold" for="goalAmount">Target Amount (MMK)</label>
             <input type="number" class="form-control" id="goalAmount" placeholder="500000" min="1" required>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Initial Saved Amount (MMK)</label>
+            <label class="form-label small fw-semibold" for="goalInitial">Initial Saved Amount (MMK)</label>
             <input type="number" class="form-control" id="goalInitial" placeholder="0" min="0">
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Target Date</label>
+            <label class="form-label small fw-semibold" for="goalDate">Target Date</label>
             <input type="date" class="form-control" id="goalDate" required>
           </div>
         </div>

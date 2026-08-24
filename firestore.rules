@@ -51,6 +51,14 @@ service cloud.firestore {
         allow delete: if isOwner(uid);
       }
 
+      // ---- Recurring schedules: planned income and expenses ------------
+      match /recurringSchedules/{scheduleId} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && validRecurringSchedule(request.resource.data);
+        allow update: if isOwner(uid) && validRecurringSchedule(request.resource.data);
+        allow delete: if isOwner(uid);
+      }
+
       // ---- Assistant bot profile: one subcollection per user ----------
       // Stores the user's personalised bot name, style preset, and accent color.
       // Security: only the owner can read or write their own profile.
@@ -164,6 +172,22 @@ service cloud.firestore {
         && isTimestamp(data.deadline)
         && isTimestamp(data.createdAt);
   }
+
+        function validRecurringSchedule(data) {
+          return requiredFields(data,
+          ['type', 'amount', 'category', 'description', 'frequency', 'startDate', 'active', 'createdAt'])
+          && (data.type == 'income' || data.type == 'expense')
+          && isNonNegativeAmount(data.amount)
+          && isValidCategory(data.category)
+          && isString(data.description)
+          && data.description.size() >= 1
+          && data.description.size() <= 300
+          && isString(data.frequency)
+          && data.frequency in ['weekly', 'monthly', 'yearly']
+          && isTimestamp(data.startDate)
+          && data.active is bool
+          && isTimestamp(data.createdAt);
+        }
 
   // --------------------------------------------------------------------
   // users/{uid}/assistantProfile/{docId}

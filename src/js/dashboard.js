@@ -1,11 +1,15 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { collection, onSnapshot, query, orderBy, addDoc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
 import { enhanceAccountMenu } from "./account-menu.js";
+import { calculateSafeToSpend, formatMMK, getUpcomingSchedules, isSameMonth, transactionDate } from "./finance-utils.js";
 
 let spendingChartInstance = null;
+let dashboardTransactions = [];
+let dashboardBudgets = [];
+let dashboardSchedules = [];
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
@@ -26,6 +30,7 @@ onAuthStateChanged(auth, (user) => {
   initStore(user.uid);
   listenToTransactions(user.uid);
   listenToBudgets(user.uid);
+  listenToRecurringSchedules(user.uid);
   listenToGoals(user.uid);
 
   // 4. Setup Modal Forms
@@ -96,8 +101,12 @@ function listenToTransactions(userId) {
   const q = query(txRef, orderBy("date", "desc"));
 
   onSnapshot(q, (snapshot) => {
+    dashboardTransactions = snapshot.docs.map((docSnap) => docSnap.data());
+    renderDashboardBudgets();
     let totalIncome = 0;
     let totalSpent = 0;
+    let lifetimeIncome = 0;
+    let lifetimeSpent = 0;
     const categoryTotals = {};
 
     const recentTxContainer = document.getElementById("recentTransactionsContainer");
@@ -119,13 +128,17 @@ function listenToTransactions(userId) {
       const tx = docSnap.data();
       const amount = parseFloat(tx.amount) || 0;
       const isIncome = tx.type === "income";
+      if (isIncome) lifetimeIncome += amount;
+      else lifetimeSpent += amount;
 
-      if (isIncome) {
-        totalIncome += amount;
-      } else {
-        totalSpent += amount;
-        const cat = tx.category || "Uncategorised";
-        categoryTotals[cat] = (categoryTotals[cat] || 0) + amount;
+        if (isSameMonth(transactionDate(tx))) {
+          if (isIncome) {
+            totalIncome += amount;
+          } else {
+            totalSpent += amount;
+            const cat = tx.category || "Uncategorised";
+            categoryTotals[cat] = (categoryTotals[cat] || 0) + amount;
+          }
       }
 
       if (index < 5 && recentTxContainer) {
@@ -142,7 +155,7 @@ function listenToTransactions(userId) {
       }
     });
 
-    const totalBalance = totalIncome - totalSpent;
+    const totalBalance = lifetimeIncome - lifetimeSpent;
 
     document.getElementById("totalBalanceText").textContent = `${totalBalance.toLocaleString()} MMK`;
     document.getElementById("monthlyIncomeText").textContent = `${totalIncome.toLocaleString()} MMK`;
@@ -203,38 +216,144 @@ function renderChart(categoryTotals, totalExpense) {
 }
 
 function listenToBudgets(userId) {
-  const container = document.getElementById("budgetsContainer");
-  if (!container) return;
   const budgetsRef = collection(db, "users", userId, "budgets");
 
   onSnapshot(budgetsRef, (snapshot) => {
-    if (snapshot.empty) {
-      container.innerHTML = `
-        <div class="text-center py-3 text-muted small border rounded">
-          <p class="mb-0">No budget limits set.</p>
-        </div>`;
-      return;
-    }
-
-    let html = "";
-    snapshot.forEach((docSnap) => {
-      const item = docSnap.data();
-      const limit = parseFloat(item.limit) || 0;
-      const spent = parseFloat(item.spent) || 0;
-      const pct = limit > 0 ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
-      html += `
-        <div class="p-2 border rounded">
-          <div class="d-flex justify-content-between small mb-1">
-            <span class="fw-semibold">${escapeHtml(item.category)}</span>
-            <span>${spent.toLocaleString()} / ${limit.toLocaleString()} MMK</span>
-          </div>
-          <div class="progress" style="height: 6px;">
-            <div class="progress-bar ${pct >= 100 ? 'bg-danger' : (pct >= 80 ? 'bg-warning' : 'bg-dark')}" style="width: ${pct}%"></div>
-          </div>
-        </div>`;
-    });
-    container.innerHTML = html;
+    dashboardBudgets = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    renderDashboardBudgets();
   });
+}
+
+function listenToRecurringSchedules(userId) {
+  const schedulesRef = collection(db, "users", userId, "recurringSchedules");
+
+  onSnapshot(query(schedulesRef, orderBy("startDate", "asc")), (snapshot) => {
+    dashboardSchedules = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
+    renderPlanningSummary();
+  }, (error) => {
+    console.error("Recurring schedules snapshot error:", error);
+    renderPlanningSummary();
+  });
+}
+
+function renderPlanningSummary() {
+  const balanceText = document.getElementById("totalBalanceText")?.textContent || "0";
+  const balance = Number(balanceText.replace(/[^0-9-]/g, "")) || 0;
+  const projection = calculateSafeToSpend(balance, dashboardSchedules);
+  const safeToSpendText = document.getElementById("safeToSpendText");
+  const commitmentTotal = document.getElementById("upcomingCommitmentTotal");
+  const hint = document.getElementById("safeToSpendHint");
+  const container = document.getElementById("upcomingSchedulesContainer");
+
+  if (safeToSpendText) {
+    safeToSpendText.textContent = formatMMK(projection.safeToSpend);
+    safeToSpendText.classList.toggle("text-danger", projection.safeToSpend < 0);
+  }
+  if (commitmentTotal) commitmentTotal.textContent = formatMMK(projection.upcomingExpenses);
+  if (hint) hint.textContent = projection.safeToSpend < 0 ? "Scheduled expenses exceed your current balance" : "After scheduled expenses";
+  if (!container) return;
+
+  const upcoming = getUpcomingSchedules(dashboardSchedules);
+  if (upcoming.length === 0) {
+    container.innerHTML = `<div class="text-muted small">No recurring items due in the next 30 days.</div>`;
+    return;
+  }
+
+  container.innerHTML = upcoming.slice(0, 5).map((schedule) => `
+    <div class="d-flex align-items-center justify-content-between gap-2 border rounded-3 px-2 py-2">
+      <div class="min-w-0">
+        <div class="fw-semibold small text-truncate">${escapeHtml(schedule.description)}</div>
+        <div class="text-muted" style="font-size: 0.75rem;">${escapeHtml(schedule.occurrence.toLocaleDateString("en-US", { month: "short", day: "numeric" }))} · ${escapeHtml(schedule.frequency)}</div>
+      </div>
+      <span class="fw-bold small ${schedule.type === "income" ? "text-success" : "text-danger"}">${schedule.type === "income" ? "+" : "-"}${formatMMK(schedule.amount)}</span>
+      <button class="btn btn-sm btn-outline-danger border-0" type="button" aria-label="Delete ${escapeHtml(schedule.description)}" onclick="deleteRecurringSchedule('${schedule.id}')"><i class="bi bi-trash" aria-hidden="true"></i></button>
+    </div>`).join("");
+}
+
+window.deleteRecurringSchedule = async (scheduleId) => {
+  const user = auth.currentUser;
+  if (!user || !scheduleId || !confirm("Delete this recurring item?")) return;
+  try {
+    await deleteDoc(doc(db, "users", user.uid, "recurringSchedules", scheduleId));
+  } catch (error) {
+    alert("Failed to delete recurring item: " + error.message);
+  }
+};
+
+function setupRecurringScheduleForm(userId) {
+  const form = document.getElementById("recurringScheduleForm");
+  if (!form) return;
+  const dateInput = document.getElementById("scheduleStartDate");
+  if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const saveButton = document.getElementById("saveScheduleBtn");
+    const amount = Number(document.getElementById("scheduleAmount").value);
+    const description = document.getElementById("scheduleDescription").value.trim();
+    const dateValue = dateInput.value;
+    if (!description || !Number.isInteger(amount) || amount <= 0 || !dateValue) return;
+    saveButton.disabled = true;
+
+    const [year, month, day] = dateValue.split("-").map(Number);
+    try {
+      await addDoc(collection(db, "users", userId, "recurringSchedules"), {
+        type: document.getElementById("scheduleType").value,
+        description,
+        category: document.getElementById("scheduleCategory").value,
+        amount,
+        frequency: document.getElementById("scheduleFrequency").value,
+        startDate: Timestamp.fromDate(new Date(year, month - 1, day)),
+        active: true,
+        createdAt: Timestamp.now()
+      });
+      form.reset();
+      dateInput.value = new Date().toISOString().slice(0, 10);
+      closeModal("recurringScheduleModal");
+    } catch (error) {
+      alert("Error saving recurring item: " + error.message);
+    } finally {
+      saveButton.disabled = false;
+    }
+  });
+}
+
+function renderDashboardBudgets() {
+  const container = document.getElementById("budgetsContainer");
+  if (!container) return;
+
+  if (dashboardBudgets.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-3 text-muted small border rounded">
+        <p class="mb-0">No budget limits set.</p>
+      </div>`;
+    return;
+  }
+
+  const categorySpentMap = {};
+  dashboardTransactions.forEach((transaction) => {
+    if (transaction.type !== "expense" || !isSameMonth(transactionDate(transaction))) return;
+    const category = transaction.category || "General";
+    categorySpentMap[category] = (categorySpentMap[category] || 0) + (parseFloat(transaction.amount) || 0);
+  });
+
+  let html = "";
+  dashboardBudgets.forEach((item) => {
+    const limit = parseFloat(item.limit) || 0;
+    const spent = categorySpentMap[item.category] || 0;
+    const pct = limit > 0 ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
+    html += `
+      <div class="p-2 border rounded">
+        <div class="d-flex justify-content-between small mb-1">
+          <span class="fw-semibold">${escapeHtml(item.category)}</span>
+          <span>${spent.toLocaleString()} / ${limit.toLocaleString()} MMK</span>
+        </div>
+        <div class="progress" style="height: 6px;">
+          <div class="progress-bar ${pct >= 100 ? 'bg-danger' : (pct >= 80 ? 'bg-warning' : 'bg-dark')}" style="width: ${pct}%"></div>
+        </div>
+      </div>`;
+  });
+  container.innerHTML = html;
 }
 
 function listenToGoals(userId) {

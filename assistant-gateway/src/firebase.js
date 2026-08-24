@@ -57,6 +57,14 @@ function createFirebaseGateway({ app = null } = {}) {
     return loadFirebaseFirestore().getFirestore(ensureAdmin());
   }
 
+  function timestampNow() {
+    return loadFirebaseFirestore().Timestamp.now();
+  }
+
+  function timestampFromDate(date) {
+    return loadFirebaseFirestore().Timestamp.fromDate(date);
+  }
+
   /**
    * Verify an idToken string and return its decoded claims, or throw an
    * authenticated-friendly error. `uid` in the verified claims is the only
@@ -135,6 +143,167 @@ function createFirebaseGateway({ app = null } = {}) {
     return docs;
   }
 
+  function _cleanText(value, fallback = "") {
+    if (typeof value !== "string") return fallback;
+    return value.trim();
+  }
+
+  function _assertPositiveAmount(value, fieldName) {
+    const amount = _normalizeAmount(value, NaN);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      const err = new Error(`${fieldName} must be a positive number.`);
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    return amount;
+  }
+
+  async function createTransaction(uid, payload) {
+    const txType = payload && payload.txType === "income" ? "income" : "expense";
+    const amount = _assertPositiveAmount(payload && payload.amount, "Transaction amount");
+    const category = _cleanText(payload && payload.category, "General").slice(0, 40) || "General";
+    const description = _cleanText(payload && payload.description, `${txType} entry`).slice(0, 120) || `${txType} entry`;
+
+    const ref = await store()
+      .collection("users")
+      .doc(uid)
+      .collection("transactions")
+      .add({
+        type: txType,
+        amount,
+        category,
+        description,
+        date: timestampNow(),
+        createdAt: timestampNow(),
+      });
+    return ref.id;
+  }
+
+  async function deleteTransaction(uid, txId) {
+    const id = _cleanText(txId);
+    if (!id) {
+      const err = new Error("Transaction ID is required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    await store().collection("users").doc(uid).collection("transactions").doc(id).delete();
+  }
+
+  async function createBudget(uid, payload) {
+    const category = _cleanText(payload && payload.category).slice(0, 40);
+    const limit = _assertPositiveAmount(payload && payload.limit, "Budget limit");
+    const rollover = !!(payload && payload.rollover);
+
+    if (!category) {
+      const err = new Error("Budget category is required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+
+    const ref = await store()
+      .collection("users")
+      .doc(uid)
+      .collection("budgets")
+      .add({
+        category,
+        limit,
+        rollover,
+        period: "monthly",
+        createdAt: timestampNow(),
+      });
+    return ref.id;
+  }
+
+  async function deleteBudget(uid, budgetId) {
+    const id = _cleanText(budgetId);
+    if (!id) {
+      const err = new Error("Budget ID is required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    await store().collection("users").doc(uid).collection("budgets").doc(id).delete();
+  }
+
+  async function createGoal(uid, payload) {
+    const title = _cleanText(payload && payload.title).slice(0, 60);
+    const targetAmount = _assertPositiveAmount(payload && payload.targetAmount, "Goal target amount");
+    const savedAmount = _normalizeAmount(payload && payload.savedAmount, 0);
+    if (!title) {
+      const err = new Error("Goal title is required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    if (!Number.isFinite(savedAmount) || savedAmount < 0) {
+      const err = new Error("Saved amount must be zero or greater.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+
+    let deadline = null;
+    if (payload && payload.deadline) {
+      const parsed = new Date(payload.deadline);
+      if (!Number.isNaN(parsed.getTime())) {
+        deadline = timestampFromDate(parsed);
+      }
+    }
+
+    const ref = await store()
+      .collection("users")
+      .doc(uid)
+      .collection("goals")
+      .add({
+        title,
+        targetAmount,
+        savedAmount,
+        deadline,
+        createdAt: timestampNow(),
+      });
+    return ref.id;
+  }
+
+  async function deleteGoal(uid, goalId) {
+    const id = _cleanText(goalId);
+    if (!id) {
+      const err = new Error("Goal ID is required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    await store().collection("users").doc(uid).collection("goals").doc(id).delete();
+  }
+
+  async function updateGoalSavedAmount(uid, goalId, savedAmountRaw) {
+    const id = _cleanText(goalId);
+    const savedAmount = _normalizeAmount(savedAmountRaw, NaN);
+    if (!id || !Number.isFinite(savedAmount) || savedAmount < 0) {
+      const err = new Error("Goal ID and a non-negative saved amount are required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+
+    await store()
+      .collection("users")
+      .doc(uid)
+      .collection("goals")
+      .doc(id)
+      .update({ savedAmount });
+  }
+
   // Per-subcollection mappers: pick explicit fields only.
   function mapTransaction(id, data) {
     return {
@@ -190,6 +359,13 @@ function createFirebaseGateway({ app = null } = {}) {
     verifyIdToken,
     readUserFinance,
     readCollection,
+    createTransaction,
+    deleteTransaction,
+    createBudget,
+    deleteBudget,
+    createGoal,
+    deleteGoal,
+    updateGoalSavedAmount,
   };
 }
 

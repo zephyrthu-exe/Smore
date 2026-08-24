@@ -103,12 +103,19 @@
       <nav class="nav flex-column gap-1">
         <a href="dashboard.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
         <a href="transaction.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
+        <a href="#addTxModal" class="mobile-add-action d-flex align-items-center justify-content-center" aria-label="Add transaction" data-bs-toggle="modal" data-bs-target="#addTxModal"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
         <a href="budget.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
-        <a href="goals.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
-        <a href="analytics.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <a href="goals.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
         <hr style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
-        <a href="#" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="customizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <a href="#" class="sidebar-link desktop-customize-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="desktopCustomizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <button type="button" class="sidebar-link more-nav-button d-flex align-items-center gap-2 text-white-50 rounded" id="mobileMoreBtn" aria-label="More options" aria-expanded="false"><i class="bi bi-three-dots"></i> More</button>
       </nav>
+      <div class="mobile-more-menu" id="mobileMoreMenu" aria-label="More navigation" hidden>
+        <a href="goals.html"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <button type="button" id="accountSettingsBtn"><i class="bi bi-person-gear"></i> Account settings</button>
+      </div>
     </div>
 
     <!-- User Account -->
@@ -149,6 +156,7 @@
       </div>
 
       <div class="d-flex align-items-center gap-2">
+        <label class="visually-hidden" for="categoryFilter">Filter transactions by category</label>
         <select class="form-select form-select-sm border-0 shadow-sm" id="categoryFilter" style="width: 140px;">
           <option value="All">All Categories</option>
           <option value="Food & Dining">Food & Dining</option>
@@ -165,7 +173,7 @@
     </div>
 
     <!-- Top Stats Row -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 summary-bento">
       <div class="col-12 col-md-4">
         <div class="card p-3 h-100 border-0 shadow-sm">
           <div class="text-muted small mb-1">Total Transactions</div>
@@ -199,19 +207,21 @@
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="h6 fw-bold mb-0">History</h2>
             <div class="d-flex gap-2">
-              <input type="text" class="form-control form-control-sm" id="searchTxInput" placeholder="Search items..." style="width: 180px;">
+              <label class="visually-hidden" for="searchTxInput">Search transactions</label>
+              <input type="search" class="form-control form-control-sm" id="searchTxInput" placeholder="Search items..." style="width: 180px;">
             </div>
           </div>
 
           <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
+              <caption class="visually-hidden">Recorded income and expense transactions</caption>
               <thead class="table-light small text-muted">
                 <tr>
-                  <th>Date</th>
-                  <th>Description</th>
-                  <th>Category</th>
-                  <th class="text-end">Amount</th>
-                  <th class="text-center">Actions</th>
+                  <th scope="col">Date</th>
+                  <th scope="col">Description</th>
+                  <th scope="col">Category</th>
+                  <th scope="col" class="text-end">Amount</th>
+                  <th scope="col" class="text-center">Actions</th>
                 </tr>
               </thead>
               <tbody id="txTableBody" class="small">
@@ -238,28 +248,28 @@
 </div>
 
 <!-- ================= MODAL: ADD TRANSACTION ================= -->
-<div class="modal fade" id="addTxModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="addTxModal" tabindex="-1" aria-labelledby="addTxTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
       <div class="modal-header">
-        <h5 class="modal-title fw-bold fs-6">Add New Transaction</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title fw-bold fs-6" id="addTxTitle">Add New Transaction</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="addTxForm">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Type</label>
+            <label class="form-label small fw-semibold" for="txType">Type</label>
             <select class="form-select" id="txType" required>
               <option value="expense">Expense (-)</option>
               <option value="income">Income (+)</option>
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Description</label>
+            <label class="form-label small fw-semibold" for="txDescription">Description</label>
             <input type="text" class="form-control" id="txDescription" placeholder="e.g. Grab Food, Part-time Tutoring" required>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Category</label>
+            <label class="form-label small fw-semibold" for="txCategory">Category</label>
             <select class="form-select" id="txCategory" required>
               <option value="Food & Dining">Food & Dining</option>
               <option value="Transportation">Transportation</option>
@@ -270,7 +280,7 @@
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Amount (MMK)</label>
+            <label class="form-label small fw-semibold" for="txAmount">Amount (MMK)</label>
             <input type="number" class="form-control" id="txAmount" placeholder="15000" min="1" required>
           </div>
         </div>

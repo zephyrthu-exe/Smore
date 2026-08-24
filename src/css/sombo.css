@@ -21,9 +21,11 @@
 /* ── Floating Container ─────────────────────────────────────────────────── */
 .sombo-widget-container {
   position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1050;
+  bottom: 18px;
+  right: 18px;
+  max-width: calc(100vw - 24px);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 1040;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -39,8 +41,8 @@
   cursor: pointer;
   outline: none;
   position: relative;
-  width: 96px;
-  height: 110px;
+  width: 76px;
+  height: 88px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -49,6 +51,8 @@
   -webkit-tap-highlight-color: transparent;
   touch-action: none; /* prevent page scroll during drag */
   user-select: none;
+  min-width: 64px;
+  min-height: 64px;
 }
 
 .sombo-avatar-btn:focus-visible .sombo-svg {
@@ -81,8 +85,8 @@
 
 /* ── SVG Animations (Idle State) ────────────────────────────────────────── */
 .sombo-svg {
-  width: 86px;
-  height: 94px;
+  width: 68px;
+  height: 76px;
   overflow: visible;
   animation: sombo-float 4s ease-in-out infinite;
   transform-origin: center bottom;
@@ -255,6 +259,7 @@
   max-width: calc(100vw - 32px);
   height: 540px;
   max-height: calc(100vh - 140px);
+  margin: 8px;
   background: var(--sombo-panel-bg);
   border: 1px solid var(--sombo-panel-border);
   border-radius: 20px;
@@ -262,7 +267,7 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  z-index: 1049; /* below widget container (1050) so bot avatar renders above panel */
+  z-index: 1039; /* Keep the assistant below account dialogs and above page content. */
   opacity: 0;
   transform: translateY(20px) scale(0.95);
   pointer-events: none;
@@ -273,6 +278,14 @@
   opacity: 1;
   transform: translateY(0) scale(1);
   pointer-events: auto;
+}
+
+.sombo-chat-panel[aria-hidden="true"] {
+  visibility: hidden;
+}
+
+.sombo-chat-panel[aria-hidden="false"] {
+  visibility: visible;
 }
 
 /* Chat Header */
@@ -358,6 +371,15 @@
   transition: background 0.2s ease, transform 0.2s ease;
   font-size: 1.1rem;
   line-height: 1;
+  flex: 0 0 32px;
+}
+
+.sombo-close-btn:focus-visible,
+.sombo-prompt-btn:focus-visible,
+.sombo-send-btn:focus-visible,
+.sombo-input-field:focus-visible {
+  outline: 3px solid var(--sombo-accent);
+  outline-offset: 2px;
 }
 
 .sombo-close-btn:hover {
@@ -488,6 +510,55 @@
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+@media (max-width: 767.98px) {
+  .sombo-widget-container {
+    right: 0.65rem;
+    bottom: 4.8rem;
+  }
+
+  .sombo-avatar-btn {
+    width: 64px;
+    height: 76px;
+  }
+
+  .sombo-svg {
+    width: 56px;
+    height: 64px;
+  }
+
+  .sombo-chat-panel {
+    width: min(380px, calc(100vw - 1.25rem));
+    max-width: calc(100vw - 1.25rem);
+    max-height: min(540px, calc(100vh - 7rem));
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sombo-svg,
+  .sombo-shadow,
+  .sombo-antenna-tip,
+  .sombo-eye,
+  .sombo-emblem-glow,
+  .sombo-body-group,
+  .sombo-badge,
+  .sombo-msg,
+  .sombo-typing-dot {
+    animation: none !important;
+  }
+}
+
+/* Keep the assistant helpful and visually subordinate to financial work. */
+.sombo-widget-container { z-index: 1020; }
+.sombo-avatar-btn { width: 68px; height: 78px; }
+.sombo-badge { background: var(--smore-primary, #c45b3c); box-shadow: 0 4px 10px rgba(33, 60, 59, 0.18); }
+.sombo-chat-panel { border-radius: 0.75rem; border-color: var(--smore-border, #dfd7cc); box-shadow: 0 18px 42px rgba(33, 60, 59, 0.2); }
+.sombo-chat-header { background: var(--smore-rail, #214542); }
+.sombo-chat-body { background: var(--smore-canvas, #f2eee8); }
+.sombo-welcome-card, .sombo-msg-bot .sombo-msg-bubble { border-color: var(--smore-border, #dfd7cc); border-radius: 0.65rem; }
+.sombo-prompt-btn { border-radius: 0.45rem; }
+.sombo-chat-footer { border-top-color: var(--smore-border, #dfd7cc); }
 
 /* State Banners inside chat */
 .sombo-state-banner {
@@ -627,6 +698,28 @@
 /* (avatar size, shadow, preview card). The chat interface header, body,    */
 /* and message colors remain consistent across all styles.                  */
 [data-bot-style="friendly"] .sombo-avatar-btn { width: 104px; height: 118px; }
+
+@media (max-width: 767.98px) {
+  .sombo-widget-container {
+    right: 0.65rem;
+    bottom: calc(4.8rem + env(safe-area-inset-bottom));
+    z-index: 1020;
+  }
+
+  .sombo-chat-panel {
+    width: calc(100vw - 1.25rem) !important;
+    max-width: calc(100vw - 1.25rem) !important;
+    height: min(540px, calc(100dvh - 8rem)) !important;
+    max-height: calc(100dvh - 8rem) !important;
+    right: 0.625rem !important;
+    bottom: calc(5.25rem + env(safe-area-inset-bottom)) !important;
+    margin: 0 !important;
+    border-radius: 1rem;
+  }
+
+  .sombo-close-btn,
+  .sombo-send-btn { min-width: 44px; min-height: 44px; }
+}
 [data-bot-style="friendly"] .sombo-svg { width: 94px; height: 102px; }
 [data-bot-style="friendly"] .sombo-bot-preview {
   background: #faf5ff;
@@ -634,6 +727,92 @@
   border-radius: 20px;
 }
 [data-bot-style="friendly"] .sombo-bot-preview .sombo-preview-svg { transform: scale(1.08); }
+
+/* Presets also change the bot's expression and visual energy. */
+[data-bot-style="friendly"] .sombo-svg .sombo-eye {
+  fill: #fb923c;
+}
+[data-bot-style="friendly"] .sombo-svg .sombo-body-group {
+  transform-origin: 48px 55px;
+  transform: scale(1.04);
+}
+
+[data-bot-style="classic"] .sombo-svg .sombo-eye {
+  fill: #38bdf8;
+}
+
+[data-bot-style="minimal"] .sombo-svg {
+  filter: saturate(0.35) contrast(1.05);
+}
+[data-bot-style="minimal"] .sombo-svg .sombo-eye {
+  fill: #64748b;
+}
+[data-bot-style="minimal"] .sombo-svg .sombo-emblem-glow {
+  opacity: 0.55;
+}
+
+[data-bot-style="energetic"] .sombo-svg {
+  filter: drop-shadow(0 0 8px var(--sombo-accent-glow));
+}
+[data-bot-style="energetic"] .sombo-svg .sombo-eye {
+  fill: #facc15;
+}
+[data-bot-style="energetic"] .sombo-svg .sombo-antenna-tip {
+  animation: sombo-energetic-pulse 0.8s ease-in-out infinite alternate;
+}
+
+[data-bot-style="calm"] .sombo-svg {
+  filter: saturate(0.8) drop-shadow(0 4px 8px rgba(20, 83, 45, 0.18));
+}
+[data-bot-style="calm"] .sombo-svg .sombo-eye {
+  fill: #86efac;
+}
+[data-bot-style="calm"] .sombo-svg .sombo-emblem-glow {
+  opacity: 0.72;
+}
+
+.sombo-bot-preview .sombo-preview-svg {
+  width: 76px;
+  flex: 0 0 76px;
+  min-height: 76px;
+  display: grid;
+  place-items: center;
+  overflow: visible;
+}
+
+.sombo-bot-preview .sombo-preview-svg .sombo-svg {
+  width: 68px;
+  height: 76px;
+  overflow: visible;
+}
+
+.sombo-bot-preview[data-bot-style="friendly"] {
+  background: #fff4ed;
+  border-color: #fdba74;
+}
+.sombo-bot-preview[data-bot-style="minimal"] {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+.sombo-bot-preview[data-bot-style="energetic"] {
+  background: #fff7ed;
+  border-color: #fb923c;
+  box-shadow: 0 8px 22px rgba(249, 115, 22, 0.2);
+}
+.sombo-bot-preview[data-bot-style="calm"] {
+  background: #f0fdf4;
+  border-color: #86efac;
+  box-shadow: 0 6px 18px rgba(22, 101, 52, 0.12);
+}
+
+.sombo-bot-preview[data-bot-style="friendly"] .sombo-preview-svg {
+  transform: none;
+}
+
+@keyframes sombo-energetic-pulse {
+  from { transform: scale(0.85); opacity: 0.65; }
+  to { transform: scale(1.2); opacity: 1; }
+}
 
 /* Minimal — thinner shadows, no float animation */
 [data-bot-style="minimal"] .sombo-svg { animation: none; }
@@ -998,9 +1177,9 @@
   .sombo-chat-panel {
     /* JS positions the panel dynamically even on mobile. */
     /* Only constrain size so it doesn't overflow tiny screens. */
-    width: calc(100vw - 24px);
+    width: calc(100vw - 16px);
     max-width: none;
-    height: calc(100vh - 120px);
+    height: min(520px, calc(100dvh - 96px));
     max-height: 520px;
     border-radius: 16px;
   }
@@ -1009,6 +1188,10 @@
   .sombo-customize-modal {
     border-radius: 16px;
     padding: 20px 18px;
+  }
+
+  .sombo-chat-body {
+    padding: 12px;
   }
 }
 

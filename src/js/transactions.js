@@ -6,6 +6,7 @@ import { initStore, cleanupStore } from "./store.js";
 import { enhanceAccountMenu } from "./account-menu.js";
 
 let allTransactions = [];
+let transactionHashListenerBound = false;
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
@@ -29,6 +30,11 @@ onAuthStateChanged(auth, (user) => {
   // 4. Setup Form and Filter Handlers
   setupAddTransactionForm(user.uid);
   setupSearchAndFilters();
+  openTransactionModalFromHash();
+  if (!transactionHashListenerBound) {
+    window.addEventListener("hashchange", openTransactionModalFromHash);
+    transactionHashListenerBound = true;
+  }
 
   // 5. Initialize Sombo Assistant Widget
   initSomboAssistant(user);
@@ -223,6 +229,15 @@ function setupSearchAndFilters() {
 
   searchInput?.addEventListener("input", update);
   categoryFilter?.addEventListener("change", update);
+}
+
+function openTransactionModalFromHash() {
+  if (window.location.hash !== "#addTxModal") return;
+  const modal = document.getElementById("addTxModal");
+  if (modal && window.bootstrap?.Modal) {
+    window.bootstrap.Modal.getOrCreateInstance(modal).show();
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+  }
 }
 
 function escapeHtml(str) {

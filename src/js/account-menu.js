@@ -2,10 +2,10 @@ import { updateProfile, updateEmail, updatePassword, EmailAuthProvider, reauthen
 import { auth } from "./firebase-config.js";
 
 const dialogMarkup = `
-<div class="modal fade" id="editProfileModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title fs-5">Edit profile</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="editProfileForm"><div class="modal-body"><div class="mb-3"><label class="form-label" for="profileNameInput">Username</label><input class="form-control" id="profileNameInput" maxlength="80" required></div><div class="mb-3"><label class="form-label" for="profileEmailInput">Email</label><input type="email" class="form-control" id="profileEmailInput" required></div><div><label class="form-label" for="profilePhotoInput">Profile photo</label><input type="file" class="form-control" id="profilePhotoInput" accept="image/*"><div class="form-text">Use a small image (max. 350 KB).</div></div></div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-dark">Save profile</button></div></form></div></div></div>
-<div class="modal fade" id="changePasswordModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title fs-5">Change password</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="changePasswordForm"><div class="modal-body"><div class="mb-3"><label class="form-label" for="currentPasswordInput">Current password</label><input type="password" class="form-control" id="currentPasswordInput" required></div><div class="mb-3"><label class="form-label" for="newPasswordInput">New password</label><input type="password" class="form-control" id="newPasswordInput" minlength="6" required></div><div><label class="form-label" for="confirmPasswordInput">Confirm new password</label><input type="password" class="form-control" id="confirmPasswordInput" minlength="6" required></div></div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-dark">Change password</button></div></form></div></div></div>
-<div class="modal fade" id="changeLocationModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title fs-5">Change location</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><form id="changeLocationForm"><div class="modal-body"><label class="form-label" for="locationInput">Your location</label><input class="form-control" id="locationInput" maxlength="100" placeholder="e.g. Yangon, Myanmar" required></div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-dark">Save location</button></div></form></div></div></div>
-<div class="modal fade" id="appInformationModal" tabindex="-1"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title fs-5">About Smore</h2><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><p><strong>Smore</strong> is your personal finance tracker.</p><p class="mb-0 text-muted">Version 1.0 · Your financial data is stored privately in your account.</p></div><div class="modal-footer"><button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button></div></div></div></div>`;
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="accountEditProfileTitle"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title fs-5" id="accountEditProfileTitle">Edit profile</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><form id="editProfileForm"><div class="modal-body"><div class="mb-3"><label class="form-label" for="profileNameInput">Username</label><input class="form-control" id="profileNameInput" maxlength="80" required></div><div class="mb-3"><label class="form-label" for="profileEmailInput">Email</label><input type="email" class="form-control" id="profileEmailInput" required></div><div><label class="form-label" for="profilePhotoInput">Profile photo</label><input type="file" class="form-control" id="profilePhotoInput" accept="image/*"><div class="form-text">Use a small image (max. 350 KB).</div></div></div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-dark">Save profile</button></div></form></div></div></div>
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="accountChangePasswordTitle"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title fs-5" id="accountChangePasswordTitle">Change password</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><form id="changePasswordForm"><div class="modal-body"><div class="mb-3"><label class="form-label" for="currentPasswordInput">Current password</label><input type="password" class="form-control" id="currentPasswordInput" required></div><div class="mb-3"><label class="form-label" for="newPasswordInput">New password</label><input type="password" class="form-control" id="newPasswordInput" minlength="6" required></div><div><label class="form-label" for="confirmPasswordInput">Confirm new password</label><input type="password" class="form-control" id="confirmPasswordInput" minlength="6" required></div></div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-dark">Change password</button></div></form></div></div></div>
+<div class="modal fade" id="changeLocationModal" tabindex="-1" aria-labelledby="accountChangeLocationTitle"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title fs-5" id="accountChangeLocationTitle">Change location</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><form id="changeLocationForm"><div class="modal-body"><label class="form-label" for="locationInput">Your location</label><input class="form-control" id="locationInput" maxlength="100" placeholder="e.g. Yangon, Myanmar" required></div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-dark">Save location</button></div></form></div></div></div>
+<div class="modal fade" id="appInformationModal" tabindex="-1" aria-labelledby="accountInformationTitle"><div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow"><div class="modal-header"><h2 class="modal-title fs-5" id="accountInformationTitle">About Smore</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div><div class="modal-body"><p><strong>Smore</strong> is your personal finance tracker.</p><p class="mb-0 text-muted">Version 1.0 · Your financial data is stored privately in your account.</p></div><div class="modal-footer"><button type="button" class="btn btn-dark" data-bs-dismiss="modal">Close</button></div></div></div></div>`;
 
 function getDisplayName(user) {
   const savedName = localStorage.getItem(`smore-profile-name-${user.uid}`)?.trim();
@@ -41,6 +41,7 @@ function readPhoto(file) { return new Promise((resolve, reject) => { const reade
 
 export function enhanceAccountMenu(user) {
   refreshDisplay(user);
+  bindMoreNavigation();
   if (document.getElementById("accountMenuEnhanced")) return;
 
   const card = document.querySelector(".profile-card");
@@ -53,6 +54,32 @@ export function enhanceAccountMenu(user) {
   }
   const actions = `<div class="border-top px-3 py-2"><button class="btn btn-link text-dark text-decoration-none w-100 text-start py-2" data-bs-toggle="modal" data-bs-target="#editProfileModal"><i class="bi bi-person me-2"></i>Edit profile</button><button class="btn btn-link text-dark text-decoration-none w-100 text-start py-2" data-bs-toggle="modal" data-bs-target="#changePasswordModal"><i class="bi bi-key me-2"></i>Change password</button><button class="btn btn-link text-dark text-decoration-none w-100 text-start py-2" data-bs-toggle="modal" data-bs-target="#changeLocationModal"><i class="bi bi-geo-alt me-2"></i>Change location</button><button class="btn btn-link text-dark text-decoration-none w-100 text-start py-2" data-bs-toggle="modal" data-bs-target="#appInformationModal"><i class="bi bi-info-circle me-2"></i>App information</button></div>`;
   if (!card.querySelector('[data-bs-target="#editProfileModal"]')) card.querySelector(".border-top")?.insertAdjacentHTML("beforebegin", actions);
+
+  const wrap = document.getElementById("profileWrap");
+  const trigger = wrap?.querySelector(".profile-chip");
+  const closeMenu = () => {
+    wrap?.classList.remove("is-open");
+    trigger?.setAttribute("aria-expanded", "false");
+  };
+  trigger?.addEventListener("click", () => {
+    const isOpen = wrap.classList.toggle("is-open");
+    trigger.setAttribute("aria-expanded", String(isOpen));
+  });
+  trigger?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") closeMenu();
+  });
+  document.getElementById("accountSettingsBtn")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const moreMenu = document.getElementById("mobileMoreMenu");
+    const moreButton = document.getElementById("mobileMoreBtn");
+    if (moreMenu) moreMenu.hidden = true;
+    moreButton?.setAttribute("aria-expanded", "false");
+    const isOpen = wrap.classList.toggle("is-open");
+    trigger?.setAttribute("aria-expanded", String(isOpen));
+  });
+  document.addEventListener("click", (event) => {
+    if (wrap && !wrap.contains(event.target)) closeMenu();
+  });
 
   document.getElementById("editProfileModal").addEventListener("show.bs.modal", () => {
     document.getElementById("profileNameInput").value = getDisplayName(auth.currentUser);
@@ -87,4 +114,23 @@ export function enhanceAccountMenu(user) {
   });
   document.getElementById("changeLocationForm").addEventListener("submit", (event) => { event.preventDefault(); localStorage.setItem(`smore-location-${user.uid}`, document.getElementById("locationInput").value.trim()); close("changeLocationModal"); });
   refreshDisplay(user);
+}
+
+function bindMoreNavigation() {
+  const moreButton = document.getElementById("mobileMoreBtn");
+  const moreMenu = document.getElementById("mobileMoreMenu");
+  if (!moreButton || !moreMenu || moreButton.dataset.bound === "true") return;
+
+  moreButton.dataset.bound = "true";
+  moreButton.addEventListener("click", () => {
+    const isOpening = moreMenu.hidden;
+    moreMenu.hidden = !isOpening;
+    moreButton.setAttribute("aria-expanded", String(isOpening));
+  });
+  document.addEventListener("click", (event) => {
+    if (!moreMenu.contains(event.target) && event.target !== moreButton) {
+      moreMenu.hidden = true;
+      moreButton.setAttribute("aria-expanded", "false");
+    }
+  });
 }

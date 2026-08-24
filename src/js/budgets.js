@@ -4,6 +4,7 @@ import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
 import { enhanceAccountMenu } from "./account-menu.js";
+import { isPreviousMonth, isSameMonth, transactionDate } from "./finance-utils.js";
 
 let currentBudgets = [];
 let currentTransactions = [];
@@ -107,7 +108,7 @@ function renderBudgetsView() {
   // Calculate per-category spending from transactions
   const categorySpentMap = {};
   currentTransactions.forEach((tx) => {
-    if (tx.type === "expense") {
+    if (tx.type === "expense" && isSameMonth(transactionDate(tx))) {
       const cat = tx.category || "General";
       const amt = parseFloat(tx.amount) || 0;
       categorySpentMap[cat] = (categorySpentMap[cat] || 0) + amt;
@@ -136,10 +137,15 @@ function renderBudgetsView() {
   currentBudgets.forEach((bud) => {
     const limit = parseFloat(bud.limit) || 0;
     const spent = categorySpentMap[bud.category] || 0;
-    const pct = limit > 0 ? Math.round((spent / limit) * 100) : 0;
-    const remaining = Math.max(0, limit - spent);
+    const previousSpent = currentTransactions
+      .filter((tx) => tx.type === "expense" && tx.category === bud.category && isPreviousMonth(transactionDate(tx)))
+      .reduce((total, tx) => total + (parseFloat(tx.amount) || 0), 0);
+    const rollover = bud.rollover === true ? Math.max(0, limit - previousSpent) : 0;
+    const effectiveLimit = limit + rollover;
+    const pct = effectiveLimit > 0 ? Math.round((spent / effectiveLimit) * 100) : 0;
+    const remaining = Math.max(0, effectiveLimit - spent);
 
-    totalAllocated += limit;
+    totalAllocated += effectiveLimit;
     totalSpentSoFar += spent;
 
     if (pct >= 80) {
@@ -161,7 +167,8 @@ function renderBudgetsView() {
               <span class="badge ${pct >= 100 ? 'bg-danger' : (pct >= 80 ? 'bg-warning text-dark' : 'bg-light text-dark border')}">${pct}%</span>
             </div>
             <div class="small text-muted mb-2">
-              Spent <strong class="text-dark">${spent.toLocaleString()} MMK</strong> of ${limit.toLocaleString()} MMK
+              Spent <strong class="text-dark">${spent.toLocaleString()} MMK</strong> of ${effectiveLimit.toLocaleString()} MMK
+              ${rollover > 0 ? `<span class="d-block text-success">Includes ${rollover.toLocaleString()} MMK rollover</span>` : ""}
             </div>
             <div class="progress mb-3" style="height: 8px;">
               <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${Math.min(100, pct)}%"></div>
@@ -219,6 +226,7 @@ function setupCreateBudgetForm(userId) {
 
     const category = document.getElementById("budCategory").value;
     const limit = parseFloat(document.getElementById("budLimit").value) || 0;
+    const rollover = document.getElementById("budRollover")?.checked === true;
 
     if (!category || limit <= 0) {
       if (saveBtn) saveBtn.disabled = false;
@@ -229,6 +237,7 @@ function setupCreateBudgetForm(userId) {
       await addDoc(collection(db, "users", userId, "budgets"), {
         category,
         limit,
+        rollover,
         period: "monthly",
         createdAt: Timestamp.now()
       });

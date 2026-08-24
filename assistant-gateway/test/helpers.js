@@ -35,6 +35,9 @@ function testConfig(overrides = {}) {
 function buildTestApp({ firebaseImpl, geminiImpl, config } = {}) {
   const cfg = config || testConfig();
 
+  const localData = JSON.parse(JSON.stringify(DATA_BY_UID));
+  let idCounter = 100;
+
   const defaultFirebase = {
     async verifyIdToken(token) {
       if (!token) {
@@ -54,7 +57,56 @@ function buildTestApp({ firebaseImpl, geminiImpl, config } = {}) {
       return { uid };
     },
     async readUserFinance(uid) {
-      return DATA_BY_UID[uid] || { currency: "MMK", transactions: [], budgets: [], goals: [] };
+      return localData[uid] || { currency: "MMK", transactions: [], budgets: [], goals: [] };
+    },
+    async createTransaction(uid, payload) {
+      const user = ensureUser(localData, uid);
+      const id = `tx${idCounter++}`;
+      user.transactions.push({
+        id,
+        type: payload.txType,
+        amount: payload.amount,
+        category: payload.category,
+        description: payload.description,
+        date: "2026-08-01T00:00:00.000Z",
+      });
+      return id;
+    },
+    async deleteTransaction(uid, id) {
+      const user = ensureUser(localData, uid);
+      user.transactions = user.transactions.filter((t) => t.id !== id);
+    },
+    async createBudget(uid, payload) {
+      const user = ensureUser(localData, uid);
+      const id = `bdg${idCounter++}`;
+      user.budgets.push({ id, category: payload.category, limit: payload.limit, period: "monthly" });
+      return id;
+    },
+    async deleteBudget(uid, id) {
+      const user = ensureUser(localData, uid);
+      user.budgets = user.budgets.filter((b) => b.id !== id);
+    },
+    async createGoal(uid, payload) {
+      const user = ensureUser(localData, uid);
+      const id = `goal${idCounter++}`;
+      user.goals.push({
+        id,
+        title: payload.title,
+        targetAmount: payload.targetAmount,
+        savedAmount: payload.savedAmount,
+        deadline: payload.deadline || null,
+      });
+      return id;
+    },
+    async deleteGoal(uid, id) {
+      const user = ensureUser(localData, uid);
+      user.goals = user.goals.filter((g) => g.id !== id);
+    },
+    async updateGoalSavedAmount(uid, goalId, savedAmount) {
+      const user = ensureUser(localData, uid);
+      const goal = user.goals.find((g) => g.id === goalId);
+      if (!goal) return;
+      goal.savedAmount = savedAmount;
     },
   };
 
@@ -69,6 +121,13 @@ function buildTestApp({ firebaseImpl, geminiImpl, config } = {}) {
     firebase: firebaseImpl || defaultFirebase,
     gemini: geminiImpl || defaultGemini,
   });
+}
+
+function ensureUser(localData, uid) {
+  if (!localData[uid]) {
+    localData[uid] = { currency: "MMK", transactions: [], budgets: [], goals: [] };
+  }
+  return localData[uid];
 }
 
 // Shared simulated identities.

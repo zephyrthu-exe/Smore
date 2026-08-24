@@ -22,7 +22,10 @@ import {
 
 // ─── Gateway URL ─────────────────────────────────────────────────────────────
 const GATEWAY_URL =
-  window.SMORE_GATEWAY_URL || "http://172.237.84.171:8080/api/assistant";
+  window.SMORE_GATEWAY_URL ||
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8080/api/assistant"
+    : "/api/assistant");
 
 // ─── Style preset metadata ────────────────────────────────────────────────────
 const STYLE_PRESETS = [
@@ -171,6 +174,7 @@ class SomboAssistantWidget {
         role="dialog"
         aria-labelledby="sombo-panel-title"
         aria-modal="false"
+        aria-hidden="true"
       >
         <!-- Header -->
         <header class="sombo-chat-header">
@@ -211,7 +215,7 @@ class SomboAssistantWidget {
               id="sombo-input-field"
               class="sombo-input-field"
               type="text"
-              placeholder="Ask about your finances in MMK..."
+              placeholder="Ask or command in chat (e.g. add expense 5000 for lunch)..."
               maxlength="500"
               autocomplete="off"
               aria-label="Type your financial question"
@@ -266,13 +270,13 @@ class SomboAssistantWidget {
           </svg>
         </div>
         <h6>Hi! I'm ${name} 👋</h6>
-        <p>Your friendly Smore financial companion. Ask me about your spending, budgets, or savings goals!</p>
+        <p>Your Smore financial companion. Ask questions or tell me to add, update, and delete your transactions, budgets, and goals from chat.</p>
         <div class="sombo-prompts-title">Try asking me:</div>
         <div class="sombo-prompts-list">
-          <button type="button" class="sombo-prompt-btn" data-prompt="What is my available balance?">💰 What is my available balance?</button>
           <button type="button" class="sombo-prompt-btn" data-prompt="How much did I spend this month?">📊 How much did I spend this month?</button>
-          <button type="button" class="sombo-prompt-btn" data-prompt="What are my active budgets?">🎯 What are my active budgets?</button>
-          <button type="button" class="sombo-prompt-btn" data-prompt="How are my savings goals progressing?">🌱 How are my savings goals doing?</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="Add expense 5000 for lunch in category Food">➕ Add expense 5000 for lunch</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="Create budget Food 120000 with rollover">🎯 Create budget Food 120000</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="Create goal Laptop target 1000000 saved 250000 by 2026-12-31">🌱 Create goal Laptop</button>
         </div>
       </div>
     `;
@@ -296,7 +300,6 @@ class SomboAssistantWidget {
     root.setAttribute("data-bot-style", this.profile.style);
 
     // Bot name in all text targets
-    const name = this.escapeHTML(this.profile.name);
     if (this.badgeEl)      this.badgeEl.textContent      = this.profile.name;
     if (this.panelTitleEl) this.panelTitleEl.textContent  = this.profile.name;
     if (this.avatarBtnEl)  this.avatarBtnEl.setAttribute("aria-label", `Open Smore Assistant Chat with ${this.profile.name}`);
@@ -503,14 +506,17 @@ class SomboAssistantWidget {
   // ── Sidebar "Customize my bot" link ───────────────────────────────────────
   _bindSidebarCustomizeLink() {
     // Runs after mount so DOM is ready.
-    // Bind any existing #customizeBotNavBtn on the page.
-    const link = document.getElementById("customizeBotNavBtn");
-    if (link) {
+    // Bind the customization action inside the More menu.
+    const links = [
+      document.getElementById("customizeBotNavBtn"),
+      document.getElementById("desktopCustomizeBotNavBtn")
+    ].filter(Boolean);
+    links.forEach((link) => {
       link.addEventListener("click", (e) => {
         e.preventDefault();
         this.openCustomizeModal();
       });
-    }
+    });
   }
 
   // ── Profile session cache (eliminates FOUC on page navigation) ────────────
@@ -720,14 +726,14 @@ class SomboAssistantWidget {
 
     // Style selection + preview label (only updates the preview, NOT the live widget)
     const previewStyleLabel = overlay.querySelector("#preview-style-label");
+    const preview = overlay.querySelector("#customize-preview");
     overlay.querySelectorAll(".sombo-style-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         overlay.querySelectorAll(".sombo-style-btn").forEach(b => b.classList.remove("is-active"));
         btn.classList.add("is-active");
         selectedStyle = btn.dataset.style;
         previewStyleLabel.textContent = STYLE_PRESETS.find(p => p.id === selectedStyle)?.label || selectedStyle;
-        overlay.querySelector("#customize-preview").setAttribute("data-bot-style", selectedStyle);
-        // Do NOT call applyProfile here — only update the preview panel, not the live bot
+        preview.setAttribute("data-bot-style", selectedStyle);
       });
     });
 
@@ -738,6 +744,7 @@ class SomboAssistantWidget {
     colorInput.addEventListener("input", () => {
       colorPreview.textContent = colorInput.value;
       previewDot.style.background = colorInput.value;
+      preview.style.setProperty("--sombo-accent", colorInput.value);
     });
 
     // Close
@@ -800,6 +807,7 @@ class SomboAssistantWidget {
     this.isOpen = true;
     this._positionPanel();
     this.panelEl.classList.add("is-open");
+    this.panelEl.setAttribute("aria-hidden", "false");
     this.avatarBtnEl.setAttribute("aria-expanded", "true");
     this.avatarBtnEl.classList.add("is-leaning", "is-waving");
     setTimeout(() => this.avatarBtnEl.classList.remove("is-waving"), 1200);
@@ -810,8 +818,10 @@ class SomboAssistantWidget {
   closePanel() {
     this.isOpen = false;
     this.panelEl.classList.remove("is-open");
+    this.panelEl.setAttribute("aria-hidden", "true");
     this.avatarBtnEl.setAttribute("aria-expanded", "false");
     this.avatarBtnEl.classList.remove("is-leaning");
+    this.avatarBtnEl.focus();
   }
 
   // ── Auth state ────────────────────────────────────────────────────────────

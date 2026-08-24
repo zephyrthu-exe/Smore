@@ -13,6 +13,9 @@
 - Import financial records with validation
 - Gemini-powered interpretation
 - Smore Assistant
+- Recurring income and expense schedules
+- 30-day commitment projection and safe-to-spend balance
+- Optional previous-month budget rollover
 
 ## Secondary
 

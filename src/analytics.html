@@ -103,12 +103,19 @@
       <nav class="nav flex-column gap-1">
         <a href="dashboard.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
         <a href="transaction.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
+        <a href="transaction.html#addTxModal" class="mobile-add-action d-flex align-items-center justify-content-center" aria-label="Add transaction"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
         <a href="budget.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
-        <a href="goals.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
-        <a href="analytics.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <a href="goals.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html" class="sidebar-link mobile-secondary-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
         <hr style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
-        <a href="#" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="customizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <a href="#" class="sidebar-link desktop-customize-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="desktopCustomizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <button type="button" class="sidebar-link more-nav-button d-flex align-items-center gap-2 text-white-50 rounded" id="mobileMoreBtn" aria-label="More options" aria-expanded="false"><i class="bi bi-three-dots"></i> More</button>
       </nav>
+      <div class="mobile-more-menu" id="mobileMoreMenu" aria-label="More navigation" hidden>
+        <a href="goals.html"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html" class="is-current"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <button type="button" id="accountSettingsBtn"><i class="bi bi-person-gear"></i> Account settings</button>
+      </div>
     </div>
 
     <!-- User Account -->
@@ -149,8 +156,14 @@
       </div>
     </div>
 
+    <div class="analytics-intro mb-4">
+      <span class="text-uppercase small fw-bold text-primary">Your money story</span>
+      <h2 class="h5 fw-bold mb-1">A clearer view of what came in and went out.</h2>
+      <p class="text-muted small mb-0" id="analyticsInsightText">Your totals will appear here as transactions sync.</p>
+    </div>
+
     <!-- Top Summary Cards -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 summary-bento">
       <div class="col-12 col-md-4">
         <div class="card border-0 shadow-sm p-3 h-100">
           <span class="text-muted small mb-1">Total Income</span>
@@ -183,9 +196,11 @@
             <h2 class="h6 fw-bold mb-0">Income vs Expense Trend</h2>
             <span class="badge bg-dark text-white px-2 py-1 small">Overview</span>
           </div>
-          <div class="bg-light rounded d-flex align-items-center justify-content-center p-3" style="min-height: 280px;">
-            <canvas id="trendChart"></canvas>
+          <p class="chart-supporting-text" id="analyticsTrendSummary">Income and expense totals are compared below.</p>
+          <div class="analytics-chart-frame">
+            <canvas id="trendChart" role="img" aria-label="Income and expense trend chart" aria-describedby="trendChartData analyticsTrendSummary">Income and expense totals are shown in the chart.</canvas>
           </div>
+          <div id="trendChartData" class="visually-hidden" aria-live="polite"></div>
         </div>
       </div>
 
@@ -195,9 +210,11 @@
           <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 class="h6 fw-bold mb-0">Spending by Category</h2>
           </div>
-          <div class="bg-light rounded d-flex align-items-center justify-content-center p-3" style="min-height: 280px;">
-            <canvas id="categoryChart"></canvas>
+          <p class="chart-supporting-text" id="analyticsCategorySummary">Category totals will appear when you add expenses.</p>
+          <div class="analytics-chart-frame analytics-chart-frame--compact">
+            <canvas id="categoryChart" role="img" aria-label="Spending by category chart" aria-describedby="categoryChartData analyticsCategorySummary">Spending by category is shown in the chart.</canvas>
           </div>
+          <div id="categoryChartData" class="visually-hidden" aria-live="polite"></div>
         </div>
       </div>
     </div>

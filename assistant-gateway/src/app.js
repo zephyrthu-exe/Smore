@@ -17,6 +17,7 @@ const { loadConfig, isGeminiKeyPlaceholder } = require("./config");
 const { buildSystemPrompt, validateQuestion, scopeCheck } = require("./guardrails");
 const { createFirebaseGateway } = require("./firebase");
 const { createGeminiClient } = require("./gemini");
+const { PendingActionStore, parseActionRequest, executeAction, describeAction } = require("./actions");
 
 /**
  * @param {object} deps  Overrides for tests / non-default wiring.
@@ -26,6 +27,7 @@ const { createGeminiClient } = require("./gemini");
  */
 function createApp({ firebase, gemini, config: cfg } = {}) {
   const config = cfg || loadConfig();
+  const pendingActions = new PendingActionStore();
 
   // Ensure at least the real (or injected) implementations are present. If the
   // caller supplied stubs, they win — otherwise build the real ones lazily.
@@ -96,6 +98,38 @@ function createApp({ firebase, gemini, config: cfg } = {}) {
       if (!qv.ok) {
         return res.status(qv.status).json({ error: { code: qv.code, message: qv.message } });
       }
+
+      // 2.5) Parse direct data-management actions from plain chat text.
+      const parsedAction = parseActionRequest(qv.question);
+      if (parsedAction.kind === "confirm") {
+        const action = pendingActions.consume(decoded.uid, parsedAction.token);
+        if (!action) {
+          return res.status(400).json({
+            error: {
+              code: "invalid_confirmation",
+              message: "That confirmation code is invalid or expired. Ask again and confirm with the latest code.",
+            },
+          });
+        }
+        const result = await executeAction(action, decoded.uid, fb);
+        return res.status(200).json({
+          answer: `${result.message} I can also summarize your updated spending, budgets, and goals if you want.`,
+          user: { uid: decoded.uid },
+        });
+      }
+
+      if (parsedAction.kind === "action") {
+        const token = pendingActions.create(decoded.uid, parsedAction.action);
+        return res.status(200).json({
+          answer: [
+            `I can do that now: ${describeAction(parsedAction.action)}`,
+            `To prevent accidental edits, reply exactly: confirm ${token}`,
+            "You can ask me anything else instead and this draft action will expire automatically.",
+          ].join(" "),
+          user: { uid: decoded.uid },
+        });
+      }
+
       const scope = scopeCheck(qv.question);
       if (!scope.ok) {
         return res.status(scope.status).json({ error: { code: scope.code, message: scope.message } });
@@ -162,6 +196,15 @@ function handleError(err, res) {
         code: "assistant_unavailable",
         message:
           "The assistant is temporarily unavailable. Please check your connection and try again.",
+      },
+    });
+  }
+
+  if (kind === "action") {
+    return res.status(status || 400).json({
+      error: {
+        code: err.code || "invalid_action",
+        message: err.message || "The requested action could not be completed.",
       },
     });
   }
