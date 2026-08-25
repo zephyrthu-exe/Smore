@@ -24,12 +24,15 @@ function populateTxCategoryForCurrentType() {
   const txDescriptionWrap = document.getElementById('txDescriptionWrap');
   if (!txTypeEl || !txCategoryEl) return;
   const t = txTypeEl.value;
+
+  console.debug('[populateTxCategoryForCurrentType] type=', t, 'userGoals=', userGoals && userGoals.length);
+
   // Clear existing options
   txCategoryEl.innerHTML = '';
 
   if (t === 'savings') {
     // For savings only show goals
-    if (userGoals.length === 0) {
+    if (!userGoals || userGoals.length === 0) {
       const opt = document.createElement('option');
       opt.value = '';
       opt.textContent = 'No goals available';
@@ -46,9 +49,16 @@ function populateTxCategoryForCurrentType() {
       txCategoryEl.disabled = false;
       txCategoryEl.required = true;
     }
+
     // hide description when savings selected and remove required
-    if (txDescriptionWrap) txDescriptionWrap.classList.add('d-none');
+    if (txDescriptionWrap) {
+      // Try both Bootstrap utility class and direct style as fallback
+      txDescriptionWrap.classList.add('d-none');
+      try { txDescriptionWrap.style.display = 'none'; } catch (e) { /* ignore */ }
+    }
     if (txDescriptionEl) { txDescriptionEl.required = false; txDescriptionEl.value = ''; }
+
+    console.debug('[populateTxCategoryForCurrentType] savings populated, options=', txCategoryEl.options.length);
   } else {
     // restore default categories (static list)
     const defaultCats = [
@@ -63,8 +73,13 @@ function populateTxCategoryForCurrentType() {
     txCategoryEl.disabled = false;
     txCategoryEl.required = true;
     // show description and make required
-    if (txDescriptionWrap) txDescriptionWrap.classList.remove('d-none');
+    if (txDescriptionWrap) {
+      txDescriptionWrap.classList.remove('d-none');
+      try { txDescriptionWrap.style.display = ''; } catch (e) { /* ignore */ }
+    }
     if (txDescriptionEl) txDescriptionEl.required = true;
+
+    console.debug('[populateTxCategoryForCurrentType] non-savings populated, options=', txCategoryEl.options.length);
   }
 }
 
