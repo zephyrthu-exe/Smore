@@ -21,6 +21,7 @@ function populateTxCategoryForCurrentType() {
   const txTypeEl = document.getElementById('txType');
   const txCategoryEl = document.getElementById('txCategory');
   const txDescriptionEl = document.getElementById('txDescription');
+  const txDescriptionWrap = document.getElementById('txDescriptionWrap');
   if (!txTypeEl || !txCategoryEl) return;
   const t = txTypeEl.value;
   // Clear existing options
@@ -46,8 +47,7 @@ function populateTxCategoryForCurrentType() {
       txCategoryEl.required = true;
     }
     // hide description when savings selected and remove required
-    const descWrap = txDescriptionEl?.closest('.mb-3');
-    if (descWrap) descWrap.classList.add('d-none');
+    if (txDescriptionWrap) txDescriptionWrap.classList.add('d-none');
     if (txDescriptionEl) { txDescriptionEl.required = false; txDescriptionEl.value = ''; }
   } else {
     // restore default categories (static list)
@@ -63,8 +63,7 @@ function populateTxCategoryForCurrentType() {
     txCategoryEl.disabled = false;
     txCategoryEl.required = true;
     // show description and make required
-    const descWrap2 = txDescriptionEl?.closest('.mb-3');
-    if (descWrap2) descWrap2.classList.remove('d-none');
+    if (txDescriptionWrap) txDescriptionWrap.classList.remove('d-none');
     if (txDescriptionEl) txDescriptionEl.required = true;
   }
 }
@@ -297,6 +296,14 @@ function setupAddTransactionForm(userId) {
 
   // ensure category is populated correctly on type change
   txTypeEl?.addEventListener('change', () => populateTxCategoryForCurrentType());
+
+  // when the Add Transaction modal shows, ensure category/description visibility is correct
+  const addTxModalEl = document.getElementById('addTxModal');
+  if (addTxModalEl) {
+    addTxModalEl.addEventListener('show.bs.modal', () => {
+      populateTxCategoryForCurrentType();
+    });
+  }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
