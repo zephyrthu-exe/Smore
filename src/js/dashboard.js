@@ -476,7 +476,7 @@ function listenToGoals(userId) {
       try {
         const g80 = `goal-${id}-80`;
         const g100 = `goal-${id}-100`;
-        if (pct >= 80 && pct < 100) {
+        if (pct >= 75 && pct < 100) {
           addNotification({ id: g80, type: 'goal-warning', title: 'Goal nearing target', message: `${item.title || item.name || 'Goal'} is ${pct}% complete.`, link: 'goals.html' });
         }
         if (pct >= 100) {

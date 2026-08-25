@@ -1,5 +1,5 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
@@ -7,6 +7,60 @@ import { enhanceAccountMenu } from "./account-menu.js";
 
 let allTransactions = [];
 let transactionHashListenerBound = false;
+let userGoals = []; // cached goals for populating Savings categories
+
+function listenToGoalsForTransactions(userId) {
+  const q = query(collection(db, 'users', userId, 'goals'), orderBy('createdAt', 'desc'));
+  onSnapshot(q, (snap) => {
+    userGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    populateTxCategoryForCurrentType();
+  });
+}
+
+function populateTxCategoryForCurrentType() {
+  const txTypeEl = document.getElementById('txType');
+  const txCategoryEl = document.getElementById('txCategory');
+  if (!txTypeEl || !txCategoryEl) return;
+  const t = txTypeEl.value;
+  // Clear existing options
+  txCategoryEl.innerHTML = '';
+
+  if (t === 'savings') {
+    // For savings only show goals
+    if (userGoals.length === 0) {
+      const opt = document.createElement('option');
+      opt.value = '';
+      opt.textContent = 'No goals available';
+      txCategoryEl.appendChild(opt);
+      txCategoryEl.disabled = true;
+    } else {
+      userGoals.forEach(g => {
+        const opt = document.createElement('option');
+        opt.value = g.id; // value is goal id
+        opt.textContent = g.title || g.name || `Goal ${g.id}`;
+        txCategoryEl.appendChild(opt);
+      });
+      txCategoryEl.disabled = false;
+    }
+    // hide description when savings selected
+    document.getElementById('txDescription')?.closest('.mb-3')?.classList.add('d-none');
+  } else {
+    // restore default categories (static list)
+    const defaultCats = [
+      'Food & Dining','Transportation','Education','Entertainment','Shopping','Utilities','Income'
+    ];
+    defaultCats.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c;
+      opt.textContent = c;
+      txCategoryEl.appendChild(opt);
+    });
+    txCategoryEl.disabled = false;
+    // show description
+    const descWrap = document.getElementById('txDescription')?.closest('.mb-3');
+    if (descWrap) descWrap.classList.remove('d-none');
+  }
+}
 
 onAuthStateChanged(auth, (user) => {
   if (!user) {
@@ -26,6 +80,7 @@ onAuthStateChanged(auth, (user) => {
   // 3. Initialize Realtime Listeners
   initStore(user.uid);
   listenToTransactions(user.uid);
+  listenToGoalsForTransactions(user.uid);
 
   // 4. Setup Form and Filter Handlers
   setupAddTransactionForm(user.uid);
@@ -227,7 +282,12 @@ window.deleteTxRecord = async (txId) => {
 
 function setupAddTransactionForm(userId) {
   const form = document.getElementById("addTxForm");
+  const txTypeEl = document.getElementById('txType');
+  const txCategoryEl = document.getElementById('txCategory');
   if (!form) return;
+
+  // ensure category is populated correctly on type change
+  txTypeEl?.addEventListener('change', () => populateTxCategoryForCurrentType());
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -235,9 +295,56 @@ function setupAddTransactionForm(userId) {
     if (saveBtn) saveBtn.disabled = true;
 
     const type = document.getElementById("txType").value;
-    const description = document.getElementById("txDescription").value.trim();
-    const category = document.getElementById("txCategory").value;
+    const descriptionEl = document.getElementById("txDescription");
+    const description = descriptionEl ? descriptionEl.value.trim() : '';
+    const categorySelect = document.getElementById("txCategory");
     const amount = parseFloat(document.getElementById("txAmount").value) || 0;
+
+    if (type === 'savings') {
+      // when savings, description is not required and categorySelect.value contains goal id
+      const goalId = categorySelect?.value;
+      if (!goalId || amount <= 0) {
+        if (saveBtn) saveBtn.disabled = false;
+        return;
+      }
+
+      // find goal title for readable category
+      const goal = userGoals.find(g => g.id === goalId);
+      const goalTitle = goal?.title || goal?.name || 'Goal';
+
+      try {
+        // 1) add transaction record with goalId and readable category
+        await addDoc(collection(db, "users", userId, "transactions"), {
+          type: 'savings',
+          description: '',
+          category: goalTitle,
+          goalId,
+          amount,
+          date: Timestamp.now(),
+          createdAt: Timestamp.now()
+        });
+
+        // 2) increment goal saved amount
+        const goalRef = doc(db, 'users', userId, 'goals', goalId);
+        await updateDoc(goalRef, { savedAmount: increment(amount) });
+
+        form.reset();
+        const modalEl = document.getElementById("addTxModal");
+        if (modalEl) {
+          const modal = window.bootstrap?.Modal?.getInstance(modalEl);
+          if (modal) modal.hide();
+        }
+      } catch (err) {
+        alert("Error adding savings transaction: " + err.message);
+      } finally {
+        if (saveBtn) saveBtn.disabled = false;
+      }
+
+      return;
+    }
+
+    // Non-savings flow (expense/income)
+    const category = document.getElementById("txCategory").value;
 
     if (!description || amount <= 0) {
       if (saveBtn) saveBtn.disabled = false;
@@ -294,6 +401,9 @@ function setupSearchAndFilters() {
   applyCustomBtn?.addEventListener('click', () => {
     update();
   });
+
+  // ensure category selection populates correctly after goals are loaded
+  document.getElementById('txType')?.addEventListener('change', () => populateTxCategoryForCurrentType());
 }
 
 function openTransactionModalFromHash() {
