@@ -1,5 +1,5 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
@@ -11,11 +11,52 @@ let userGoals = []; // cached goals for populating Savings categories
 
 function listenToGoalsForTransactions(userId) {
   const q = query(collection(db, 'users', userId, 'goals'), orderBy('createdAt', 'desc'));
+  // realtime listener with error logging
   onSnapshot(q, (snap) => {
     userGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.debug('[listenToGoalsForTransactions] snapshot received, goals=', userGoals.length);
     populateTxCategoryForCurrentType();
+  }, async (err) => {
+    console.error('[listenToGoalsForTransactions] onSnapshot error', err);
+    // fallback: try a one-time getDocs to populate goals once
+    try {
+      const s = await getDocs(q);
+      userGoals = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      console.debug('[listenToGoalsForTransactions] getDocs fallback fetched goals=', userGoals.length);
+      populateTxCategoryForCurrentType();
+    } catch (e) {
+      console.error('[listenToGoalsForTransactions] getDocs fallback failed', e);
+    }
   });
+
+  // Also perform a one-time getDocs immediately as a fast fallback in case onSnapshot is slow
+  (async () => {
+    try {
+      const s = await getDocs(q);
+      if (!userGoals || userGoals.length === 0) {
+        userGoals = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.debug('[listenToGoalsForTransactions] immediate getDocs populated goals=', userGoals.length);
+        populateTxCategoryForCurrentType();
+      }
+    } catch (e) {
+      console.debug('[listenToGoalsForTransactions] immediate getDocs failed', e);
+    }
+  })();
 }
+
+// Ensure any element that opens the Add Transaction modal will call populate as a fallback
+(function attachAddModalTriggers() {
+  try {
+    const triggers = Array.from(document.querySelectorAll('[data-bs-target="#addTxModal"]'));
+    triggers.forEach(t => {
+      t.addEventListener('click', () => {
+        setTimeout(populateTxCategoryForCurrentType, 50);
+      });
+    });
+  } catch (e) {
+    console.warn('attachAddModalTriggers error', e);
+  }
+})();
 
 function populateTxCategoryForCurrentType() {
   const txTypeEl = document.getElementById('txType');
