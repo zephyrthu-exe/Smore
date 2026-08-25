@@ -108,6 +108,9 @@ function listenToTransactions(userId) {
 function renderFilteredTable(userId) {
   const searchInput = document.getElementById("searchTxInput");
   const categoryFilter = document.getElementById("categoryFilter");
+  const dateFilter = document.getElementById("dateFilter");
+  const customStart = document.getElementById("customDateStart");
+  const customEnd = document.getElementById("customDateEnd");
   const tableBody = document.getElementById("txTableBody");
   const emptyState = document.getElementById("emptyStateCol");
 
@@ -115,13 +118,60 @@ function renderFilteredTable(userId) {
 
   const searchQuery = (searchInput?.value || "").toLowerCase().trim();
   const categoryVal = categoryFilter?.value || "All";
+  const dateVal = dateFilter?.value || "all";
+
+  // compute date range based on dateVal
+  const now = new Date();
+  let rangeStart = null;
+  let rangeEnd = null;
+
+  if (dateVal === "today") {
+    rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    rangeEnd = new Date(rangeStart);
+    rangeEnd.setDate(rangeEnd.getDate() + 1);
+  } else if (dateVal === "last7") {
+    rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    rangeStart = new Date(rangeEnd);
+    rangeStart.setDate(rangeStart.getDate() - 7);
+  } else if (dateVal === "last30") {
+    rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    rangeStart = new Date(rangeEnd);
+    rangeStart.setDate(rangeStart.getDate() - 30);
+  } else if (dateVal === "thisMonth") {
+    rangeStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  } else if (dateVal === "custom") {
+    if (customStart?.value) {
+      rangeStart = new Date(customStart.value);
+    }
+    if (customEnd?.value) {
+      // include the end day fully
+      rangeEnd = new Date(customEnd.value);
+      rangeEnd.setDate(rangeEnd.getDate() + 1);
+    }
+  }
 
   const filtered = allTransactions.filter((tx) => {
     const desc = (tx.description || "").toLowerCase();
     const cat = (tx.category || "").toLowerCase();
     const matchesSearch = !searchQuery || desc.includes(searchQuery) || cat.includes(searchQuery);
     const matchesCategory = categoryVal === "All" || tx.category === categoryVal || (categoryVal === "Income" && tx.type === "income");
-    return matchesSearch && matchesCategory;
+
+    // compute txDate (prefer tx.date then createdAt)
+    let txDate = null;
+    if (tx.date && typeof tx.date.toDate === 'function') txDate = tx.date.toDate();
+    else if (tx.createdAt && typeof tx.createdAt.toDate === 'function') txDate = tx.createdAt.toDate();
+    else if (tx.date) txDate = new Date(tx.date);
+
+    let matchesDate = true;
+    if (rangeStart && txDate) {
+      matchesDate = txDate >= rangeStart && (rangeEnd ? txDate < rangeEnd : true);
+    } else if (rangeStart && !txDate) {
+      // if tx has no date info, exclude when a range is selected
+      matchesDate = false;
+    }
+
+    return matchesSearch && matchesCategory && matchesDate;
   });
 
   if (filtered.length === 0) {
@@ -221,6 +271,9 @@ function setupAddTransactionForm(userId) {
 function setupSearchAndFilters() {
   const searchInput = document.getElementById("searchTxInput");
   const categoryFilter = document.getElementById("categoryFilter");
+  const dateFilter = document.getElementById("dateFilter");
+  const customDateInputs = document.getElementById("customDateInputs");
+  const applyCustomBtn = document.getElementById("applyCustomDateBtn");
 
   const update = () => {
     const user = auth.currentUser;
@@ -229,6 +282,18 @@ function setupSearchAndFilters() {
 
   searchInput?.addEventListener("input", update);
   categoryFilter?.addEventListener("change", update);
+  dateFilter?.addEventListener("change", (e) => {
+    if (dateFilter.value === 'custom') {
+      customDateInputs?.classList.remove('d-none');
+    } else {
+      customDateInputs?.classList.add('d-none');
+      update();
+    }
+  });
+
+  applyCustomBtn?.addEventListener('click', () => {
+    update();
+  });
 }
 
 function openTransactionModalFromHash() {

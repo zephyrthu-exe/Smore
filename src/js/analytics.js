@@ -66,62 +66,150 @@ function setupLogout() {
   });
 }
 
+let allTransactionsAnalytics = [];
+
 function listenToAnalyticsData(userId) {
   const q = query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc"));
 
   onSnapshot(q, (snapshot) => {
-    let totalIncome = 0;
-    let totalExpenses = 0;
-    const categoryMap = {};
+    allTransactionsAnalytics = [];
 
     snapshot.forEach((docSnap) => {
-      const tx = docSnap.data();
-      const amt = parseFloat(tx.amount) || 0;
-      if (tx.type === "income") {
-        totalIncome += amt;
-      } else {
-        totalExpenses += amt;
-        const cat = tx.category || "General";
-        categoryMap[cat] = (categoryMap[cat] || 0) + amt;
-      }
+      const tx = { id: docSnap.id, ...docSnap.data() };
+      allTransactionsAnalytics.push(tx);
     });
 
-    const netSavings = totalIncome - totalExpenses;
-    const savingsRate = totalIncome > 0 ? Math.max(0, Math.round((netSavings / totalIncome) * 100)) : 0;
-
-    // Update Summary Cards
-    const incomeEl = document.getElementById("analyticsIncomeText");
-    const expenseEl = document.getElementById("analyticsExpenseText");
-    const netSavingsEl = document.getElementById("analyticsNetSavingsText");
-    const rateEl = document.getElementById("analyticsSavingsRateText");
-
-    if (incomeEl) incomeEl.textContent = `${totalIncome.toLocaleString()} MMK`;
-    if (expenseEl) expenseEl.textContent = `${totalExpenses.toLocaleString()} MMK`;
-    if (netSavingsEl) netSavingsEl.textContent = `${netSavings.toLocaleString()} MMK`;
-    if (rateEl) rateEl.innerHTML = `<i class="bi bi-wallet2"></i> ${savingsRate}% savings rate`;
-
-    const insightEl = document.getElementById("analyticsInsightText");
-    const trendSummaryEl = document.getElementById("analyticsTrendSummary");
-    const categorySummaryEl = document.getElementById("analyticsCategorySummary");
-    const trendDataEl = document.getElementById("trendChartData");
-    const categoryDataEl = document.getElementById("categoryChartData");
-    if (insightEl) {
-      insightEl.textContent = totalIncome > 0
-        ? `${savingsRate}% of recorded income remains after expenses.`
-        : "Add an income and a few expenses to see your money story take shape.";
-    }
-    if (trendSummaryEl) trendSummaryEl.textContent = `Recorded income is ${totalIncome.toLocaleString()} MMK and recorded expenses are ${totalExpenses.toLocaleString()} MMK.`;
-    if (categorySummaryEl) {
-      categorySummaryEl.textContent = categoriesSummary(categoryMap, totalExpenses);
-    }
-    if (trendDataEl) trendDataEl.textContent = `Income: ${totalIncome.toLocaleString()} MMK. Expenses: ${totalExpenses.toLocaleString()} MMK. Net savings: ${netSavings.toLocaleString()} MMK.`;
-    if (categoryDataEl) categoryDataEl.textContent = categoryDataSummary(categoryMap, totalExpenses);
-
-    // Render Charts
-    renderTrendChart(totalIncome, totalExpenses);
-    renderCategoryChart(categoryMap, totalExpenses);
+    // After snapshot, compute and render based on current filters
+    updateAnalyticsView();
   });
 }
+
+function getAnalyticsFilters() {
+  const category = document.getElementById('analyticsCategoryFilter')?.value || 'All';
+  const dateVal = document.getElementById('analyticsDateFilter')?.value || 'all';
+  const customStart = document.getElementById('analyticsCustomDateStart')?.value;
+  const customEnd = document.getElementById('analyticsCustomDateEnd')?.value;
+  return { category, dateVal, customStart, customEnd };
+}
+
+function applyAnalyticsDateFilterToTx(tx, dateVal, customStart, customEnd) {
+  const now = new Date();
+  let rangeStart = null;
+  let rangeEnd = null;
+
+  if (dateVal === 'today') {
+    rangeStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    rangeEnd = new Date(rangeStart);
+    rangeEnd.setDate(rangeEnd.getDate() + 1);
+  } else if (dateVal === 'last7') {
+    rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    rangeStart = new Date(rangeEnd);
+    rangeStart.setDate(rangeStart.getDate() - 7);
+  } else if (dateVal === 'last30') {
+    rangeEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    rangeStart = new Date(rangeEnd);
+    rangeStart.setDate(rangeStart.getDate() - 30);
+  } else if (dateVal === 'thisMonth') {
+    rangeStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    rangeEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  } else if (dateVal === 'custom') {
+    if (customStart) rangeStart = new Date(customStart);
+    if (customEnd) { rangeEnd = new Date(customEnd); rangeEnd.setDate(rangeEnd.getDate() + 1); }
+  }
+
+  if (!rangeStart) return true; // no date filtering
+
+  let txDate = null;
+  if (tx.date && typeof tx.date.toDate === 'function') txDate = tx.date.toDate();
+  else if (tx.createdAt && typeof tx.createdAt.toDate === 'function') txDate = tx.createdAt.toDate();
+  else if (tx.date) txDate = new Date(tx.date);
+
+  if (!txDate) return false; // cannot evaluate -> exclude
+  return txDate >= rangeStart && (rangeEnd ? txDate < rangeEnd : true);
+}
+
+function updateAnalyticsView() {
+  const { category, dateVal, customStart, customEnd } = getAnalyticsFilters();
+
+  // apply filters
+  let totalIncome = 0;
+  let totalExpenses = 0;
+  const categoryMap = {};
+
+  const filtered = allTransactionsAnalytics.filter((tx) => {
+    if (category !== 'All') {
+      if (category === 'Income') {
+        if (tx.type !== 'income') return false;
+      } else if (tx.category !== category) return false;
+    }
+    if (!applyAnalyticsDateFilterToTx(tx, dateVal, customStart, customEnd)) return false;
+    return true;
+  });
+
+  filtered.forEach((tx) => {
+    const amt = parseFloat(tx.amount) || 0;
+    if (tx.type === 'income') totalIncome += amt;
+    else {
+      totalExpenses += amt;
+      const cat = tx.category || 'General';
+      categoryMap[cat] = (categoryMap[cat] || 0) + amt;
+    }
+  });
+
+  const netSavings = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? Math.max(0, Math.round((netSavings / totalIncome) * 100)) : 0;
+
+  // Update Summary Cards
+  const incomeEl = document.getElementById("analyticsIncomeText");
+  const expenseEl = document.getElementById("analyticsExpenseText");
+  const netSavingsEl = document.getElementById("analyticsNetSavingsText");
+  const rateEl = document.getElementById("analyticsSavingsRateText");
+
+  if (incomeEl) incomeEl.textContent = `${totalIncome.toLocaleString()} MMK`;
+  if (expenseEl) expenseEl.textContent = `${totalExpenses.toLocaleString()} MMK`;
+  if (netSavingsEl) netSavingsEl.textContent = `${netSavings.toLocaleString()} MMK`;
+  if (rateEl) rateEl.innerHTML = `<i class="bi bi-wallet2"></i> ${savingsRate}% savings rate`;
+
+  const insightEl = document.getElementById("analyticsInsightText");
+  const trendSummaryEl = document.getElementById("analyticsTrendSummary");
+  const categorySummaryEl = document.getElementById("analyticsCategorySummary");
+  const trendDataEl = document.getElementById("trendChartData");
+  const categoryDataEl = document.getElementById("categoryChartData");
+  if (insightEl) {
+    insightEl.textContent = totalIncome > 0
+      ? `${savingsRate}% of recorded income remains after expenses.`
+      : "Add an income and a few expenses to see your money story take shape.";
+  }
+  if (trendSummaryEl) trendSummaryEl.textContent = `Recorded income is ${totalIncome.toLocaleString()} MMK and recorded expenses are ${totalExpenses.toLocaleString()} MMK.`;
+  if (categorySummaryEl) {
+    categorySummaryEl.textContent = categoriesSummary(categoryMap, totalExpenses);
+  }
+  if (trendDataEl) trendDataEl.textContent = `Income: ${totalIncome.toLocaleString()} MMK. Expenses: ${totalExpenses.toLocaleString()} MMK. Net savings: ${netSavings.toLocaleString()} MMK.`;
+  if (categoryDataEl) categoryDataEl.textContent = categoryDataSummary(categoryMap, totalExpenses);
+
+  // Render Charts
+  renderTrendChart(totalIncome, totalExpenses);
+  renderCategoryChart(categoryMap, totalExpenses);
+}
+
+// wire UI listeners for analytics filters
+function setupAnalyticsFilters() {
+  const catSel = document.getElementById('analyticsCategoryFilter');
+  const dateSel = document.getElementById('analyticsDateFilter');
+  const customWrap = document.getElementById('analyticsCustomDateInputs');
+  const applyBtn = document.getElementById('analyticsApplyCustomDateBtn');
+
+  const update = () => updateAnalyticsView();
+  catSel?.addEventListener('change', update);
+  dateSel?.addEventListener('change', () => {
+    if (dateSel.value === 'custom') customWrap?.classList.remove('d-none');
+    else { customWrap?.classList.add('d-none'); update(); }
+  });
+  applyBtn?.addEventListener('click', update);
+}
+
+// initialize filter listeners
+setupAnalyticsFilters();
 
 function categoriesSummary(categoryMap, totalExpenses) {
   const categories = Object.entries(categoryMap);

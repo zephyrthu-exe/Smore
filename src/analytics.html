@@ -154,6 +154,34 @@
         <h1 class="h4 fw-bold mb-1">Financial Analytics</h1>
         <p class="text-muted small mb-0">Gain insights into your spending habits and financial health.</p>
       </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <label class="visually-hidden" for="analyticsCategoryFilter">Filter by category</label>
+        <select id="analyticsCategoryFilter" class="form-select form-select-sm border-0 shadow-sm" style="width: 160px;">
+          <option value="All">All Categories</option>
+          <option value="Food & Dining">Food & Dining</option>
+          <option value="Transportation">Transportation</option>
+          <option value="Education">Education</option>
+          <option value="Entertainment">Entertainment</option>
+          <option value="Income">Income</option>
+        </select>
+
+        <label class="visually-hidden" for="analyticsDateFilter">Filter by date</label>
+        <select id="analyticsDateFilter" class="form-select form-select-sm border-0 shadow-sm" style="width: 160px;">
+          <option value="all">All time</option>
+          <option value="today">Today</option>
+          <option value="last7">Last 7 days</option>
+          <option value="last30">Last 30 days</option>
+          <option value="thisMonth">This month</option>
+          <option value="custom">Custom range...</option>
+        </select>
+
+        <div id="analyticsCustomDateInputs" class="d-none d-flex align-items-center gap-1">
+          <input type="date" id="analyticsCustomDateStart" class="form-control form-control-sm" style="width:140px;">
+          <input type="date" id="analyticsCustomDateEnd" class="form-control form-control-sm" style="width:140px;">
+          <button class="btn btn-sm btn-outline-secondary" id="analyticsApplyCustomDateBtn">Apply</button>
+        </div>
+      </div>
     </div>
 
     <div class="analytics-intro mb-4">

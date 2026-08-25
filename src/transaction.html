@@ -166,6 +166,22 @@
           <option value="Income">Income</option>
         </select>
 
+        <!-- Date range selector -->
+        <label class="visually-hidden" for="dateFilter">Filter by date range</label>
+        <select class="form-select form-select-sm border-0 shadow-sm" id="dateFilter" style="width: 160px;">
+          <option value="all">All time</option>
+          <option value="today">Today</option>
+          <option value="last7">Last 7 days</option>
+          <option value="last30">Last 30 days</option>
+          <option value="thisMonth">This month</option>
+          <option value="custom">Custom range...</option>
+        </select>
+        <div id="customDateInputs" class="d-none d-flex align-items-center gap-1">
+          <input type="date" id="customDateStart" class="form-control form-control-sm" style="width:140px;">
+          <input type="date" id="customDateEnd" class="form-control form-control-sm" style="width:140px;">
+          <button class="btn btn-sm btn-outline-secondary" id="applyCustomDateBtn">Apply</button>
+        </div>
+
         <button class="btn btn-sm btn-dark text-white fw-bold px-3 d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addTxModal">
           <i class="bi bi-plus-lg"></i> Add Transaction
         </button>
