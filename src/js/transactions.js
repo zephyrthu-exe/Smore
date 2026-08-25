@@ -20,6 +20,7 @@ function listenToGoalsForTransactions(userId) {
 function populateTxCategoryForCurrentType() {
   const txTypeEl = document.getElementById('txType');
   const txCategoryEl = document.getElementById('txCategory');
+  const txDescriptionEl = document.getElementById('txDescription');
   if (!txTypeEl || !txCategoryEl) return;
   const t = txTypeEl.value;
   // Clear existing options
@@ -33,6 +34,7 @@ function populateTxCategoryForCurrentType() {
       opt.textContent = 'No goals available';
       txCategoryEl.appendChild(opt);
       txCategoryEl.disabled = true;
+      txCategoryEl.required = false;
     } else {
       userGoals.forEach(g => {
         const opt = document.createElement('option');
@@ -41,9 +43,12 @@ function populateTxCategoryForCurrentType() {
         txCategoryEl.appendChild(opt);
       });
       txCategoryEl.disabled = false;
+      txCategoryEl.required = true;
     }
-    // hide description when savings selected
-    document.getElementById('txDescription')?.closest('.mb-3')?.classList.add('d-none');
+    // hide description when savings selected and remove required
+    const descWrap = txDescriptionEl?.closest('.mb-3');
+    if (descWrap) descWrap.classList.add('d-none');
+    if (txDescriptionEl) { txDescriptionEl.required = false; txDescriptionEl.value = ''; }
   } else {
     // restore default categories (static list)
     const defaultCats = [
@@ -56,9 +61,11 @@ function populateTxCategoryForCurrentType() {
       txCategoryEl.appendChild(opt);
     });
     txCategoryEl.disabled = false;
-    // show description
-    const descWrap = document.getElementById('txDescription')?.closest('.mb-3');
-    if (descWrap) descWrap.classList.remove('d-none');
+    txCategoryEl.required = true;
+    // show description and make required
+    const descWrap2 = txDescriptionEl?.closest('.mb-3');
+    if (descWrap2) descWrap2.classList.remove('d-none');
+    if (txDescriptionEl) txDescriptionEl.required = true;
   }
 }
 
@@ -173,6 +180,8 @@ function renderFilteredTable(userId) {
 
   const searchQuery = (searchInput?.value || "").toLowerCase().trim();
   const categoryVal = categoryFilter?.value || "All";
+  // support Savings filter by type
+  const isSavingsFilter = categoryVal === 'Savings';
   const dateVal = dateFilter?.value || "all";
 
   // compute date range based on dateVal
@@ -210,7 +219,7 @@ function renderFilteredTable(userId) {
     const desc = (tx.description || "").toLowerCase();
     const cat = (tx.category || "").toLowerCase();
     const matchesSearch = !searchQuery || desc.includes(searchQuery) || cat.includes(searchQuery);
-    const matchesCategory = categoryVal === "All" || tx.category === categoryVal || (categoryVal === "Income" && tx.type === "income");
+    const matchesCategory = categoryVal === "All" || tx.category === categoryVal || (categoryVal === "Income" && tx.type === "income") || (isSavingsFilter && tx.type === 'savings');
 
     // compute txDate (prefer tx.date then createdAt)
     let txDate = null;
