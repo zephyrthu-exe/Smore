@@ -14,7 +14,7 @@ function listenToGoalsForTransactions(userId) {
   // realtime listener with error logging
   onSnapshot(q, (snap) => {
     userGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-    console.debug('[listenToGoalsForTransactions] snapshot received, goals=', userGoals.length);
+    console.log('[listenToGoalsForTransactions] snapshot received, goals=', userGoals.length);
     populateTxCategoryForCurrentType();
   }, async (err) => {
     console.error('[listenToGoalsForTransactions] onSnapshot error', err);
@@ -22,7 +22,7 @@ function listenToGoalsForTransactions(userId) {
     try {
       const s = await getDocs(q);
       userGoals = s.docs.map(d => ({ id: d.id, ...d.data() }));
-      console.debug('[listenToGoalsForTransactions] getDocs fallback fetched goals=', userGoals.length);
+      console.log('[listenToGoalsForTransactions] getDocs fallback fetched goals=', userGoals.length);
       populateTxCategoryForCurrentType();
     } catch (e) {
       console.error('[listenToGoalsForTransactions] getDocs fallback failed', e);
@@ -35,11 +35,11 @@ function listenToGoalsForTransactions(userId) {
       const s = await getDocs(q);
       if (!userGoals || userGoals.length === 0) {
         userGoals = s.docs.map(d => ({ id: d.id, ...d.data() }));
-        console.debug('[listenToGoalsForTransactions] immediate getDocs populated goals=', userGoals.length);
+        console.log('[listenToGoalsForTransactions] immediate getDocs populated goals=', userGoals.length);
         populateTxCategoryForCurrentType();
       }
     } catch (e) {
-      console.debug('[listenToGoalsForTransactions] immediate getDocs failed', e);
+      console.log('[listenToGoalsForTransactions] immediate getDocs failed', e);
     }
   })();
 }
@@ -66,7 +66,7 @@ function populateTxCategoryForCurrentType() {
   if (!txTypeEl || !txCategoryEl) return;
   const t = txTypeEl.value;
 
-  console.debug('[populateTxCategoryForCurrentType] type=', t, 'userGoals=', userGoals && userGoals.length);
+  console.log('[populateTxCategoryForCurrentType] type=', t, 'userGoals=', userGoals && userGoals.length);
 
   // Clear existing options
   txCategoryEl.innerHTML = '';
@@ -99,7 +99,7 @@ function populateTxCategoryForCurrentType() {
     }
     if (txDescriptionEl) { txDescriptionEl.required = false; txDescriptionEl.value = ''; }
 
-    console.debug('[populateTxCategoryForCurrentType] savings populated, options=', txCategoryEl.options.length);
+    console.log('[populateTxCategoryForCurrentType] savings populated, options=', txCategoryEl.options.length);
   } else {
     // restore default categories (static list)
     const defaultCats = [
@@ -120,7 +120,7 @@ function populateTxCategoryForCurrentType() {
     }
     if (txDescriptionEl) txDescriptionEl.required = true;
 
-    console.debug('[populateTxCategoryForCurrentType] non-savings populated, options=', txCategoryEl.options.length);
+    console.log('[populateTxCategoryForCurrentType] non-savings populated, options=', txCategoryEl.options.length);
   }
 }
 
