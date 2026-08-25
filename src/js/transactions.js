@@ -434,3 +434,25 @@ function openTransactionModalFromHash() {
 function escapeHtml(str) {
   return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
+
+// Safety initialization: ensure the txType change handler and initial population run
+(function initTransactionUi() {
+  try {
+    // Attach change handler if not already attached
+    const txType = document.getElementById('txType');
+    if (txType) {
+      txType.removeEventListener('change', populateTxCategoryForCurrentType);
+      txType.addEventListener('change', populateTxCategoryForCurrentType);
+    }
+
+    // Populate once DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', populateTxCategoryForCurrentType);
+    } else {
+      populateTxCategoryForCurrentType();
+    }
+  } catch (e) {
+    // ignore initialization errors
+    console.warn('initTransactionUi error', e);
+  }
+})();
