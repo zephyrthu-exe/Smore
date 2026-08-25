@@ -11,6 +11,84 @@ let dashboardTransactions = [];
 let dashboardBudgets = [];
 let dashboardSchedules = [];
 
+// In-app notification store (persisted in localStorage)
+const NOTIF_STORAGE_KEY = 'smore_notifications_v1';
+function loadNotifications() {
+  try {
+    const raw = localStorage.getItem(NOTIF_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+function saveNotifications(notifs) {
+  try { localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notifs)); } catch (e) {}
+}
+function addNotification(notif) {
+  const notifs = loadNotifications();
+  // avoid duplicate by id
+  if (notifs.find(n => n.id === notif.id)) return;
+  notifs.unshift({ ...notif, read: false, ts: Date.now() });
+  saveNotifications(notifs);
+  renderNotifications();
+}
+function markAllNotificationsRead() {
+  const notifs = loadNotifications().map(n => ({ ...n, read: true }));
+  saveNotifications(notifs);
+  renderNotifications();
+}
+function markNotificationRead(id) {
+  const notifs = loadNotifications().map(n => n.id === id ? { ...n, read: true } : n);
+  saveNotifications(notifs);
+  renderNotifications();
+}
+function renderNotifications() {
+  const listEl = document.getElementById('notificationList');
+  const badgeEl = document.getElementById('notificationBadge');
+  if (!listEl || !badgeEl) return;
+  const notifs = loadNotifications();
+  const unreadCount = notifs.filter(n => !n.read).length;
+  if (unreadCount > 0) {
+    badgeEl.textContent = unreadCount;
+    badgeEl.classList.remove('d-none');
+  } else {
+    badgeEl.classList.add('d-none');
+  }
+
+  if (notifs.length === 0) {
+    listEl.innerHTML = '<div class="text-muted small text-center py-3">No notifications</div>';
+    return;
+  }
+
+  listEl.innerHTML = notifs.map(n => `
+    <button type="button" class="list-group-item list-group-item-action d-flex gap-2 align-items-start ${n.read ? '' : 'fw-semibold list-group-item-warning'}" data-id="${n.id}">
+      <div class="flex-grow-1 min-w-0 text-start">
+        <div class="small mb-1">${escapeHtml(n.title)}</div>
+        <div class="small text-muted text-truncate">${escapeHtml(n.message)}</div>
+        <div class="small text-muted mt-1">${new Date(n.ts).toLocaleString()}</div>
+      </div>
+    </button>
+  `).join('');
+
+  // attach click handlers
+  listEl.querySelectorAll('button[data-id]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const id = btn.getAttribute('data-id');
+      const notifs = loadNotifications();
+      const n = notifs.find(x => x.id === id);
+      if (!n) return;
+      // mark read
+      markNotificationRead(id);
+      // navigate if link present
+      if (n.link) window.location.href = n.link;
+    });
+  });
+}
+
+// initialize notification UI
+window.addEventListener('DOMContentLoaded', () => {
+  renderNotifications();
+  document.getElementById('markAllReadBtn')?.addEventListener('click', (e) => { e.preventDefault(); markAllNotificationsRead(); });
+});
+
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     cleanupStore();
@@ -342,6 +420,19 @@ function renderDashboardBudgets() {
     const limit = parseFloat(item.limit) || 0;
     const spent = categorySpentMap[item.category] || 0;
     const pct = limit > 0 ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
+
+    // create notifications when thresholds are reached (80% and 100%)
+    try {
+      const notifId80 = `budget-${item.category}-80`;
+      const notifId100 = `budget-${item.category}-100`;
+      if (pct >= 80 && pct < 100) {
+        addNotification({ id: notifId80, type: 'budget-warning', title: 'Budget nearing limit', message: `${item.category} is ${pct}% of its budget.`, link: 'budget.html' });
+      }
+      if (pct >= 100) {
+        addNotification({ id: notifId100, type: 'budget-exceeded', title: 'Budget reached', message: `${item.category} budget has been fully used.`, link: 'budget.html' });
+      }
+    } catch (e) { /* ignore notification errors */ }
+
     html += `
       <div class="p-2 border rounded">
         <div class="d-flex justify-content-between small mb-1">
@@ -354,6 +445,9 @@ function renderDashboardBudgets() {
       </div>`;
   });
   container.innerHTML = html;
+
+  // re-render notification UI in case new notifications added
+  renderNotifications();
 }
 
 function listenToGoals(userId) {
@@ -373,9 +467,23 @@ function listenToGoals(userId) {
     let html = "";
     snapshot.forEach((docSnap) => {
       const item = docSnap.data();
+      const id = docSnap.id;
       const target = parseFloat(item.targetAmount || item.target) || 0;
       const saved = parseFloat(item.savedAmount || item.current) || 0;
       const pct = target > 0 ? Math.min(100, Math.round((saved / target) * 100)) : 0;
+
+      // Create notifications for goal progress (80% and 100%)
+      try {
+        const g80 = `goal-${id}-80`;
+        const g100 = `goal-${id}-100`;
+        if (pct >= 80 && pct < 100) {
+          addNotification({ id: g80, type: 'goal-warning', title: 'Goal nearing target', message: `${item.title || item.name || 'Goal'} is ${pct}% complete.`, link: 'goals.html' });
+        }
+        if (pct >= 100) {
+          addNotification({ id: g100, type: 'goal-achieved', title: 'Goal achieved', message: `${item.title || item.name || 'Goal'} has been reached.`, link: 'goals.html' });
+        }
+      } catch (e) { /* ignore */ }
+
       html += `
         <div class="d-flex align-items-center gap-3 p-2 border rounded">
           <div class="rounded-circle border border-dark text-dark d-flex align-items-center justify-content-center fw-bold" style="width: 40px; height: 40px; font-size: 0.75rem; flex-shrink: 0;">
@@ -388,6 +496,9 @@ function listenToGoals(userId) {
         </div>`;
     });
     container.innerHTML = html;
+
+    // refresh notifications UI
+    renderNotifications();
   });
 }
 
