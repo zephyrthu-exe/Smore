@@ -9,6 +9,64 @@ import { isPreviousMonth, isSameMonth, transactionDate } from "./finance-utils.j
 let currentBudgets = [];
 let currentTransactions = [];
 
+// Notification helpers: track per-category notification state in localStorage to avoid repeated alerts
+const notifKeyFor = (category, level) => `budget_notified_${String(category || '').replace(/\s+/g, '_')}_${level}`;
+function isNotified(category, level) {
+  try { return localStorage.getItem(notifKeyFor(category, level)) === '1'; } catch { return false; }
+}
+function markNotified(category, level) {
+  try { localStorage.setItem(notifKeyFor(category, level), '1'); } catch {}
+}
+function clearNotified(category, level) {
+  try { localStorage.removeItem(notifKeyFor(category, level)); } catch {}
+}
+
+async function ensureNotificationPermission() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  try {
+    const perm = await Notification.requestPermission();
+    return perm === 'granted';
+  } catch (e) {
+    return false;
+  }
+}
+
+function showDesktopNotification(title, body, tag) {
+  if (!('Notification' in window) || Notification.permission !== 'granted') return;
+  try {
+    new Notification(title, { body, tag });
+  } catch (e) {
+    // ignore
+  }
+}
+
+function showBudgetWarningNotification(category, pct) {
+  if (isNotified(category, 80)) return;
+  showDesktopNotification('Budget warning', `${category} budget is at ${pct}% used`, `budget-${category}-80`);
+  markNotified(category, 80);
+}
+
+function showBudgetExceededPrompt(category) {
+  if (isNotified(category, 100)) return;
+  showDesktopNotification('Budget full', `${category} budget has been fully used.`, `budget-${category}-100`);
+  // Also show an in-page confirmation so the user can navigate immediately
+  setTimeout(() => {
+    try {
+      if (confirm(`${category} budget is fully used. Create another budget now?`)) {
+        // Navigate to budget page
+        window.location.href = './budget.html';
+      }
+    } catch (e) {
+      // fall back silently
+    }
+  }, 500);
+  markNotified(category, 100);
+}
+
+// Try to request notification permission early but non-blocking
+ensureNotificationPermission().catch(() => {});
+
 onAuthStateChanged(auth, (user) => {
   if (!user) {
     cleanupStore();
@@ -133,6 +191,7 @@ function renderBudgetsView() {
   }
 
   let html = "";
+  const exhaustedCategories = [];
 
   currentBudgets.forEach((bud) => {
     const limit = parseFloat(bud.limit) || 0;
@@ -153,6 +212,13 @@ function renderBudgetsView() {
         highestUsageWarning = { category: bud.category, pct };
       }
     }
+
+    // Track exhausted categories for notifications
+    if (pct >= 100) exhaustedCategories.push(bud.category);
+
+    // Clear previously set notification flags when usage drops below thresholds
+    if (pct < 80) clearNotified(bud.category, 80);
+    if (pct < 100) clearNotified(bud.category, 100);
 
     let progressColor = "bg-dark";
     if (pct >= 100) progressColor = "bg-danger";
@@ -188,6 +254,26 @@ function renderBudgetsView() {
   });
 
   grid.innerHTML = html;
+
+  // Show warning banner as before
+  if (highestUsageWarning) {
+    warningBanner?.classList.remove("d-none");
+    if (warningText) {
+      warningText.textContent = `${highestUsageWarning.category} budget is at ${highestUsageWarning.pct}% — consider reducing spending`;
+    }
+
+    // Desktop/in-app notification for the highest usage warning (80% threshold)
+    if (highestUsageWarning.pct >= 80) {
+      showBudgetWarningNotification(highestUsageWarning.category, highestUsageWarning.pct);
+    }
+  } else {
+    warningBanner?.classList.add("d-none");
+  }
+
+  // For any fully exhausted categories, notify and prompt once
+  exhaustedCategories.forEach((cat) => {
+    showBudgetExceededPrompt(cat);
+  });
 
   if (statTotal) statTotal.textContent = `${totalAllocated.toLocaleString()} MMK`;
   if (statSpent) statSpent.textContent = `${totalSpentSoFar.toLocaleString()} MMK`;
