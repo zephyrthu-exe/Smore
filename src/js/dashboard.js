@@ -65,10 +65,15 @@ function renderNotifications() {
         <div class="small text-muted text-truncate">${escapeHtml(n.message)}</div>
         <div class="small text-muted mt-1">${new Date(n.ts).toLocaleString()}</div>
       </div>
+      <div class="ms-2 d-flex align-items-start">
+        <button type="button" class="btn btn-sm btn-outline-danger delete-notif-btn" data-id="${n.id}" title="Delete notification">
+          <i class="bi bi-trash"></i>
+        </button>
+      </div>
     </button>
   `).join('');
 
-  // attach click handlers
+  // attach click handlers for notification items
   listEl.querySelectorAll('button[data-id]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const id = btn.getAttribute('data-id');
@@ -81,6 +86,25 @@ function renderNotifications() {
       if (n.link) window.location.href = n.link;
     });
   });
+
+  // attach delete handlers for trash buttons (stop propagation so parent click doesn't also fire)
+  listEl.querySelectorAll('.delete-notif-btn').forEach(db => {
+    db.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = db.getAttribute('data-id');
+      if (!id) return;
+      if (confirm('Delete this notification?')) {
+        deleteNotification(id);
+      }
+    });
+  });
+}
+
+// delete single notification
+function deleteNotification(id) {
+  const notifs = loadNotifications().filter(n => n.id !== id);
+  saveNotifications(notifs);
+  renderNotifications();
 }
 
 // initialize notification UI
