@@ -59,24 +59,24 @@ function renderNotifications() {
   }
 
   listEl.innerHTML = notifs.map(n => `
-    <button type="button" class="list-group-item list-group-item-action d-flex gap-2 align-items-start ${n.read ? '' : 'fw-semibold list-group-item-warning'}" data-id="${n.id}">
-      <div class="flex-grow-1 min-w-0 text-start">
+    <div class="list-group-item d-flex gap-2 align-items-start ${n.read ? '' : 'fw-semibold list-group-item-warning'}">
+      <div class="flex-grow-1 min-w-0 text-start notif-clickable" role="button" tabindex="0" data-id="${n.id}">
         <div class="small mb-1">${escapeHtml(n.title)}</div>
         <div class="small text-muted text-truncate">${escapeHtml(n.message)}</div>
         <div class="small text-muted mt-1">${new Date(n.ts).toLocaleString()}</div>
       </div>
       <div class="ms-2 d-flex align-items-start">
-        <button type="button" class="btn btn-sm btn-outline-danger delete-notif-btn" data-id="${n.id}" title="Delete notification">
-          <i class="bi bi-trash"></i>
+        <button type="button" class="btn btn-sm btn-outline-danger p-1 delete-notif-btn" data-id="${n.id}" title="Delete notification">
+          <i class="bi bi-trash" style="font-size:0.9rem"></i>
         </button>
       </div>
-    </button>
+    </div>
   `).join('');
 
-  // attach click handlers for notification items
-  listEl.querySelectorAll('button[data-id]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const id = btn.getAttribute('data-id');
+  // attach click handlers for notification clickable areas
+  listEl.querySelectorAll('.notif-clickable').forEach(el => {
+    el.addEventListener('click', (e) => {
+      const id = el.getAttribute('data-id');
       const notifs = loadNotifications();
       const n = notifs.find(x => x.id === id);
       if (!n) return;
@@ -84,6 +84,13 @@ function renderNotifications() {
       markNotificationRead(id);
       // navigate if link present
       if (n.link) window.location.href = n.link;
+    });
+    // keyboard accessibility: enter key
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        el.click();
+      }
     });
   });
 
