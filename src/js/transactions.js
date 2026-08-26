@@ -387,9 +387,17 @@ function setupAddTransactionForm(userId) {
       try {
         // Use a transaction to ensure both the transaction doc and goal update succeed or fail together.
         await runTransaction(db, async (tx) => {
-          // create a new transaction doc ref and set it
           const txCollection = collection(db, "users", userId, "transactions");
           const newTxRef = doc(txCollection);
+
+          const goalRef = doc(db, 'users', userId, 'goals', goalId);
+          // Firestore requires all reads before writes in a transaction; read goal first
+          const goalSnap = await tx.get(goalRef);
+          if (!goalSnap.exists()) {
+            throw new Error('Selected goal does not exist');
+          }
+
+          // Now perform writes
           tx.set(newTxRef, {
             type: 'savings',
             description: '',
@@ -399,13 +407,6 @@ function setupAddTransactionForm(userId) {
             date: Timestamp.now(),
             createdAt: Timestamp.now()
           });
-
-          const goalRef = doc(db, 'users', userId, 'goals', goalId);
-          // ensure goal exists by reading it first (transactional read)
-          const goalSnap = await tx.get(goalRef);
-          if (!goalSnap.exists()) {
-            throw new Error('Selected goal does not exist');
-          }
 
           tx.update(goalRef, { savedAmount: increment(amount) });
         });
