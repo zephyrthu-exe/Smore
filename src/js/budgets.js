@@ -108,7 +108,8 @@ function renderBudgetsView() {
   // Calculate per-category spending from transactions
   const categorySpentMap = {};
   currentTransactions.forEach((tx) => {
-    if (tx.type === "expense" && isSameMonth(transactionDate(tx))) {
+    const normalizedType = (tx.type || "").toLowerCase();
+    if ((normalizedType === "expense" || normalizedType === "savings") && isSameMonth(transactionDate(tx))) {
       const cat = tx.category || "General";
       const amt = parseFloat(tx.amount) || 0;
       categorySpentMap[cat] = (categorySpentMap[cat] || 0) + amt;
@@ -138,7 +139,10 @@ function renderBudgetsView() {
     const limit = parseFloat(bud.limit) || 0;
     const spent = categorySpentMap[bud.category] || 0;
     const previousSpent = currentTransactions
-      .filter((tx) => tx.type === "expense" && tx.category === bud.category && isPreviousMonth(transactionDate(tx)))
+      .filter((tx) => {
+        const normalizedType = (tx.type || "").toLowerCase();
+        return (normalizedType === "expense" || normalizedType === "savings") && tx.category === bud.category && isPreviousMonth(transactionDate(tx));
+      })
       .reduce((total, tx) => total + (parseFloat(tx.amount) || 0), 0);
     const rollover = bud.rollover === true ? Math.max(0, limit - previousSpent) : 0;
     const effectiveLimit = limit + rollover;

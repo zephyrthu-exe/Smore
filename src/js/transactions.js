@@ -1,5 +1,5 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
@@ -9,11 +9,19 @@ let allTransactions = [];
 let transactionHashListenerBound = false;
 let userGoals = []; // cached goals for populating Savings categories
 
+function isGoalCompleted(goal) {
+  const target = Number(goal?.targetAmount ?? goal?.target ?? 0);
+  const saved = Number(goal?.savedAmount ?? goal?.current ?? 0);
+  return target > 0 && saved >= target;
+}
+
 function listenToGoalsForTransactions(userId) {
   const q = query(collection(db, 'users', userId, 'goals'), orderBy('createdAt', 'desc'));
   // realtime listener with error logging
   onSnapshot(q, (snap) => {
-    userGoals = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    userGoals = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(goal => !isGoalCompleted(goal));
     console.log('[listenToGoalsForTransactions] snapshot received, goals=', userGoals.length);
     populateTxCategoryForCurrentType();
   }, async (err) => {
@@ -21,7 +29,9 @@ function listenToGoalsForTransactions(userId) {
     // fallback: try a one-time getDocs to populate goals once
     try {
       const s = await getDocs(q);
-      userGoals = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      userGoals = s.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .filter(goal => !isGoalCompleted(goal));
       console.log('[listenToGoalsForTransactions] getDocs fallback fetched goals=', userGoals.length);
       populateTxCategoryForCurrentType();
     } catch (e) {
@@ -34,7 +44,9 @@ function listenToGoalsForTransactions(userId) {
     try {
       const s = await getDocs(q);
       if (!userGoals || userGoals.length === 0) {
-        userGoals = s.docs.map(d => ({ id: d.id, ...d.data() }));
+        userGoals = s.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(goal => !isGoalCompleted(goal));
         console.log('[listenToGoalsForTransactions] immediate getDocs populated goals=', userGoals.length);
         populateTxCategoryForCurrentType();
       }
@@ -205,7 +217,8 @@ function listenToTransactions(userId) {
       allTransactions.push({ id: docSnap.id, ...data });
 
       const amt = parseFloat(data.amount) || 0;
-      if (data.type === "expense") {
+      const normalizedType = (data.type || "").toLowerCase();
+      if (normalizedType === "expense" || normalizedType === "savings") {
         totalSpent += amt;
       } else {
         totalReceived += amt;
@@ -381,35 +394,32 @@ function setupAddTransactionForm(userId) {
       }
 
       // find goal title for readable category
-      const goal = userGoals.find(g => g.id === goalId);
+      const goal = userGoals.find(g => g.id === goalId) || (await getDocs(collection(db, 'users', userId, 'goals'))).docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        .find(g => g.id === goalId);
       const goalTitle = goal?.title || goal?.name || 'Goal';
 
+      if (goal && isGoalCompleted(goal)) {
+        alert('This goal is already fully funded, so it can no longer receive more savings.');
+        if (saveBtn) saveBtn.disabled = false;
+        return;
+      }
+
       try {
-        // Use a transaction to ensure both the transaction doc and goal update succeed or fail together.
-        await runTransaction(db, async (tx) => {
-          const txCollection = collection(db, "users", userId, "transactions");
-          const newTxRef = doc(txCollection);
-
-          const goalRef = doc(db, 'users', userId, 'goals', goalId);
-          // Firestore requires all reads before writes in a transaction; read goal first
-          const goalSnap = await tx.get(goalRef);
-          if (!goalSnap.exists()) {
-            throw new Error('Selected goal does not exist');
-          }
-
-          // Now perform writes
-          tx.set(newTxRef, {
-            type: 'savings',
-            description: '',
-            category: goalTitle,
-            goalId,
-            amount,
-            date: Timestamp.now(),
-            createdAt: Timestamp.now()
-          });
-
-          tx.update(goalRef, { savedAmount: increment(amount) });
+        // 1) add transaction record with goalId and readable category
+        await addDoc(collection(db, "users", userId, "transactions"), {
+          type: 'savings',
+          description: '',
+          category: goalTitle,
+          goalId,
+          amount,
+          date: Timestamp.now(),
+          createdAt: Timestamp.now()
         });
+
+        // 2) increment goal saved amount
+        const goalRef = doc(db, 'users', userId, 'goals', goalId);
+        await updateDoc(goalRef, { savedAmount: increment(amount) });
 
         form.reset();
         const modalEl = document.getElementById("addTxModal");
@@ -418,13 +428,7 @@ function setupAddTransactionForm(userId) {
           if (modal) modal.hide();
         }
       } catch (err) {
-        // Provide a clearer message for permission issues
-        console.error('savings transaction failed', err);
-        if (err && err.message && err.message.toLowerCase().includes('permission')) {
-          alert('Failed to save to the selected goal due to insufficient permissions. Please check Firestore rules to ensure the authenticated user can update their goals.');
-        } else {
-          alert("Error adding savings transaction: " + err.message);
-        }
+        alert("Error adding savings transaction: " + err.message);
       } finally {
         if (saveBtn) saveBtn.disabled = false;
       }
