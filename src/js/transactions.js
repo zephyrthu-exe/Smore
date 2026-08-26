@@ -1,5 +1,5 @@
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
 import { initStore, cleanupStore } from "./store.js";
@@ -385,20 +385,30 @@ function setupAddTransactionForm(userId) {
       const goalTitle = goal?.title || goal?.name || 'Goal';
 
       try {
-        // 1) add transaction record with goalId and readable category
-        await addDoc(collection(db, "users", userId, "transactions"), {
-          type: 'savings',
-          description: '',
-          category: goalTitle,
-          goalId,
-          amount,
-          date: Timestamp.now(),
-          createdAt: Timestamp.now()
-        });
+        // Use a transaction to ensure both the transaction doc and goal update succeed or fail together.
+        await runTransaction(db, async (tx) => {
+          // create a new transaction doc ref and set it
+          const txCollection = collection(db, "users", userId, "transactions");
+          const newTxRef = doc(txCollection);
+          tx.set(newTxRef, {
+            type: 'savings',
+            description: '',
+            category: goalTitle,
+            goalId,
+            amount,
+            date: Timestamp.now(),
+            createdAt: Timestamp.now()
+          });
 
-        // 2) increment goal saved amount
-        const goalRef = doc(db, 'users', userId, 'goals', goalId);
-        await updateDoc(goalRef, { savedAmount: increment(amount) });
+          const goalRef = doc(db, 'users', userId, 'goals', goalId);
+          // ensure goal exists by reading it first (transactional read)
+          const goalSnap = await tx.get(goalRef);
+          if (!goalSnap.exists()) {
+            throw new Error('Selected goal does not exist');
+          }
+
+          tx.update(goalRef, { savedAmount: increment(amount) });
+        });
 
         form.reset();
         const modalEl = document.getElementById("addTxModal");
@@ -407,7 +417,13 @@ function setupAddTransactionForm(userId) {
           if (modal) modal.hide();
         }
       } catch (err) {
-        alert("Error adding savings transaction: " + err.message);
+        // Provide a clearer message for permission issues
+        console.error('savings transaction failed', err);
+        if (err && err.message && err.message.toLowerCase().includes('permission')) {
+          alert('Failed to save to the selected goal due to insufficient permissions. Please check Firestore rules to ensure the authenticated user can update their goals.');
+        } else {
+          alert("Error adding savings transaction: " + err.message);
+        }
       } finally {
         if (saveBtn) saveBtn.disabled = false;
       }
