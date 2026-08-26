@@ -13,6 +13,7 @@ let dashboardSchedules = [];
 
 // In-app notification store (persisted in localStorage)
 const NOTIF_STORAGE_KEY = 'smore_notifications_v1';
+const NOTIF_DELETED_KEY = 'smore_notifications_deleted_v1';
 function loadNotifications() {
   try {
     const raw = localStorage.getItem(NOTIF_STORAGE_KEY);
@@ -22,7 +23,28 @@ function loadNotifications() {
 function saveNotifications(notifs) {
   try { localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notifs)); } catch (e) {}
 }
+function loadDeletedNotifications() {
+  try {
+    const raw = localStorage.getItem(NOTIF_DELETED_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) { return []; }
+}
+function saveDeletedNotifications(ids) {
+  try { localStorage.setItem(NOTIF_DELETED_KEY, JSON.stringify(ids)); } catch (e) {}
+}
+function addDeletedNotification(id) {
+  if (!id) return;
+  const ids = loadDeletedNotifications();
+  if (!ids.includes(id)) {
+    ids.push(id);
+    saveDeletedNotifications(ids);
+  }
+}
 function addNotification(notif) {
+  // don't add notifications user has deleted explicitly
+  const deleted = loadDeletedNotifications();
+  if (notif && notif.id && deleted.includes(notif.id)) return;
+
   const notifs = loadNotifications();
   // avoid duplicate by id
   if (notifs.find(n => n.id === notif.id)) return;
@@ -109,6 +131,9 @@ function renderNotifications() {
 
 // delete single notification
 function deleteNotification(id) {
+  if (!id) return;
+  // record that user deleted this notification so it won't be re-created
+  addDeletedNotification(id);
   const notifs = loadNotifications().filter(n => n.id !== id);
   saveNotifications(notifs);
   renderNotifications();
