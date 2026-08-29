@@ -3204,4 +3204,16 @@ body:not(.auth-page) main .card:not(.card-dark-balance) .text-dark {
 body:not(.auth-page) .table tbody td::before {
   color: var(--smore-muted) !important;
 }
+/* Transaction/Dashboard history table body: plain date and description cells have no
+   color class and inherit the table's color, so the legacy `.card .small` hard-coded
+   #536b67 (or Bootstrap's dark `.table` color) leaves them dark on the dark card
+   surface. Re-assert theme-aware ink on the table and tbody so un-classed cells read
+   clearly in both themes. Cells that declare their own color (.text-success/.text-danger
+   amounts, bg-light badges) are unaffected, because a direct declaration on an element
+   always wins over the color inherited from an ancestor. */
+body:not(.auth-page) main .card:not(.card-dark-balance) .table,
+body:not(.auth-page) main .card:not(.card-dark-balance) .table tbody {
+  color: var(--smore-ink) !important;
+}
+
 
