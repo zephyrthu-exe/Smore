@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap");
 
 :root {
   --smore-primary: #d9654f;
@@ -2542,7 +2542,6 @@ body.auth-page .auth-submit { background: var(--workspace-coral); border-color: 
     opacity: 1;
   }
 }
-}
 
 
 /* ============================================================
@@ -2639,4 +2638,547 @@ body {
 .notif-clickable { min-width: 0; overflow: hidden; }
 .notif-clickable .text-truncate { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .delete-notif-btn { flex-shrink: 0; }
+
+/* ==========================================================================
+   UI Modernization — S'more / campfire identity (light + dark themes)
+   Appended last so it wins the cascade over the legacy layers above.
+   ========================================================================== */
+
+/* 1 ── Token system (single source) ─────────────────────────────────────── */
+:root {
+  color-scheme: light;
+  --smore-primary: #c98a3e;
+  --smore-primary-dark: #a96f2b;
+  --smore-primary-soft: #f6e7cf;
+  --smore-glow: rgba(201, 138, 62, 0.22);
+  --smore-canvas: #f7f1e6;
+  --smore-surface: #fffaf2;
+  --smore-surface-alt: #f5ecdd;
+  --smore-surface-2: #efe4d1;
+  --smore-rail: #3b2418;
+  --smore-rail-2: #291810;
+  --smore-rail-ink: #f3e6d3;
+  --smore-ink: #2b1810;
+  --smore-ink-soft: #4c3626;
+  --smore-muted: #7a6855;
+  --smore-border: #e7d9c3;
+  --smore-border-strong: #d9c6a8;
+  --smore-success: #3f8f5f;
+  --smore-success-soft: #e3f2e7;
+  --smore-danger: #c14b3a;
+  --smore-danger-soft: #fbe8e3;
+  --smore-warning: #bd7a22;
+  --smore-warning-soft: #f9ecd2;
+  --smore-info: #4a7d92;
+  --smore-info-soft: #e4eef2;
+  --smore-radius: 1rem;
+  --smore-radius-sm: 0.6rem;
+  --smore-shadow: 0 10px 30px rgba(59, 36, 24, 0.08);
+  --smore-shadow-raised: 0 18px 44px rgba(59, 36, 24, 0.16);
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --workspace-ink: var(--smore-rail);
+  --workspace-ink-soft: #5a3a24;
+  --workspace-accent: var(--smore-primary);
+  --workspace-coral: var(--smore-danger);
+  --workspace-mint: var(--smore-success-soft);
+  --workspace-blue: var(--smore-info-soft);
+  --workspace-surface: var(--smore-surface);
+  --workspace-background: var(--smore-canvas);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --smore-primary: #e2a15c;
+  --smore-primary-dark: #c98a3e;
+  --smore-primary-soft: #3a2a18;
+  --smore-glow: rgba(226, 161, 92, 0.22);
+  --smore-canvas: #150d0a;
+  --smore-surface: #20140f;
+  --smore-surface-alt: #291b14;
+  --smore-surface-2: #33221a;
+  --smore-rail: #1a0f0a;
+  --smore-rail-2: #120a07;
+  --smore-rail-ink: #f3e6d3;
+  --smore-ink: #f3e6d3;
+  --smore-ink-soft: #dcc8ac;
+  --smore-muted: #b6a086;
+  --smore-border: #3b2b1f;
+  --smore-border-strong: #4d3929;
+  --smore-success: #6cbd8d;
+  --smore-success-soft: #1e3a2a;
+  --smore-danger: #e3907c;
+  --smore-danger-soft: #3d231d;
+  --smore-warning: #e3a95f;
+  --smore-warning-soft: #3a2c16;
+  --smore-info: #83b7cd;
+  --smore-info-soft: #1c323c;
+  --smore-shadow: 0 10px 30px rgba(0, 0, 0, 0.42);
+  --smore-shadow-raised: 0 18px 44px rgba(0, 0, 0, 0.6);
+  --workspace-ink: #241410;
+  --workspace-ink-soft: #33221a;
+  --workspace-accent: var(--smore-primary);
+  --workspace-coral: var(--smore-danger);
+  --workspace-mint: var(--smore-success-soft);
+  --workspace-blue: var(--smore-info-soft);
+  --workspace-surface: var(--smore-surface);
+  --workspace-background: var(--smore-canvas);
+}
+/* 2 ── Base & typography ─────────────────────────────────────────────────── */
+body {
+  font-family: var(--font-body) !important;
+  color: var(--smore-ink) !important;
+  background: var(--smore-canvas) !important;
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+
+body:not(.auth-page) {
+  --workspace-background: var(--smore-canvas);
+  --workspace-surface: var(--smore-surface);
+  --workspace-ink: var(--smore-rail);
+  --workspace-ink-soft: var(--smore-ink-soft);
+  background: var(--smore-canvas) !important;
+}
+
+h1, h2, h3, h4, h5, h6 { color: var(--smore-ink); }
+h1, h2, .brand-mark, .display-font, .stat-tile .value, .txn-amount {
+  font-family: var(--font-display) !important;
+}
+.navbar-brand { letter-spacing: -0.02em; }
+
+.text-muted, .small, .text-secondary, .chart-supporting-text { color: var(--smore-muted) !important; }
+.text-primary { color: var(--smore-primary) !important; }
+.text-dark { color: var(--smore-ink) !important; }
+.text-success { color: var(--smore-success) !important; }
+.text-danger { color: var(--smore-danger) !important; }
+.text-warning { color: var(--smore-warning) !important; }
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--smore-primary) 70%, #fff);
+  outline-offset: 2px;
+}
+
+/* 3 ── Buttons ──────────────────────────────────────────────────────────── */
+.btn { border-radius: var(--smore-radius-sm); font-weight: 600; }
+.btn-primary, .auth-submit {
+  background: var(--smore-primary) !important;
+  border-color: var(--smore-primary) !important;
+  color: #fff !important;
+}
+.btn-primary:hover, .btn-primary:focus-visible,
+.auth-submit:hover, .auth-submit:focus-visible {
+  background: var(--smore-primary-dark) !important;
+  border-color: var(--smore-primary-dark) !important;
+  color: #fff !important;
+}
+.btn-dark {
+  background: var(--smore-rail) !important;
+  border-color: var(--smore-rail) !important;
+  color: var(--smore-rail-ink) !important;
+}
+.btn-dark:hover, .btn-dark:focus-visible {
+  background: var(--smore-rail-2) !important;
+  border-color: var(--smore-rail-2) !important;
+}
+.btn-outline-dark { color: var(--smore-ink) !important; border-color: var(--smore-border-strong) !important; }
+.btn-outline-dark:hover, .btn-outline-dark:focus-visible {
+  background: var(--smore-primary-soft) !important; color: var(--smore-ink) !important; border-color: var(--smore-primary) !important;
+}
+.btn-outline-danger { color: var(--smore-danger) !important; border-color: var(--smore-danger) !important; }
+.btn-light { background: var(--smore-surface-alt) !important; border-color: var(--smore-border) !important; color: var(--smore-ink) !important; }
+.btn-danger { background: var(--smore-danger) !important; border-color: var(--smore-danger) !important; }
+.bg-dark { background-color: var(--smore-rail) !important; }
+.bg-success { background-color: var(--smore-success) !important; }
+.bg-warning { background-color: var(--smore-warning) !important; }
+.bg-danger { background-color: var(--smore-danger) !important; }
+.bg-light { background-color: var(--smore-surface-alt) !important; }
+/* 4 ── App shell (sidebar) ──────────────────────────────────────────────── */
+.app-sidebar {
+  background: linear-gradient(180deg, var(--smore-rail) 0%, var(--smore-rail-2) 100%) !important;
+  box-shadow: 8px 0 28px rgba(20, 10, 6, 0.25);
+}
+.brand-logo span { color: var(--smore-rail-ink) !important; letter-spacing: 0.01em; }
+.brand-logo svg { fill: var(--smore-primary) !important; stroke: var(--smore-primary); }
+
+.sidebar-link {
+  color: rgba(243, 230, 211, 0.72) !important;
+  border: 1px solid transparent;
+}
+.sidebar-link:hover,
+.sidebar-link:focus-visible {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+.sidebar-link.active {
+  color: #2b1810 !important;
+  background: var(--smore-primary) !important;
+  border-color: var(--smore-primary) !important;
+  box-shadow: 0 4px 14px var(--smore-glow) !important;
+  font-weight: 700;
+}
+.sidebar-link i { color: var(--smore-primary) !important; }
+.sidebar-link.active i { color: #2b1810 !important; }
+
+.sidebar-theme-toggle { width: 100%; margin-top: 0.4rem; }
+
+.sidebar-link.sidebar-theme-toggle {
+  border: 1px solid color-mix(in srgb, var(--smore-primary) 60%, transparent);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--smore-rail-ink) !important;
+}
+.sidebar-link.sidebar-theme-toggle:hover,
+.sidebar-link.sidebar-theme-toggle:focus-visible {
+  border-color: var(--smore-primary) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+}
+
+.profile-wrap { border-top-color: rgba(255, 255, 255, 0.16) !important; }
+.profile-chip:hover,
+.profile-wrap.is-open .profile-chip { background: rgba(255, 255, 255, 0.08); }
+.avatar, .user-avatar-sm {
+  /* Use background-color (not the `background` shorthand) so the inline
+     background-image set by app-shell.js/account-menu.js (uploaded profile
+     photo) is not reset to `none` by the shorthand's !important reset. */
+  background-color: var(--smore-primary) !important;
+  color: #2b1810 !important;
+}
+.profile-card {
+  background: var(--smore-surface) !important;
+  color: var(--smore-ink) !important;
+  border: 1px solid var(--smore-border) !important;
+}
+
+/* 5 ── Main content surfaces ────────────────────────────────────────────── */
+main h1, .app-sidebar ~ main h1 { color: var(--smore-ink) !important; }
+
+main .card,
+.hero-card,
+.auth-panel,
+.dash-panel,
+.stat-tile,
+.analytics-intro {
+  background: var(--smore-surface) !important;
+  border: 1px solid var(--smore-border) !important;
+  border-radius: var(--smore-radius) !important;
+  box-shadow: var(--smore-shadow) !important;
+}
+main .card:hover { box-shadow: var(--smore-shadow-raised) !important; }
+
+main .card.card-dark-balance,
+.app-sidebar ~ main .card-dark-balance,
+body:not(.auth-page) main .card.card-dark-balance,
+body:not(.auth-page) .summary-bento > [class*="col-"] > .card.card-dark-balance {
+  background: linear-gradient(160deg, var(--smore-rail) 0%, var(--smore-rail-2) 100%) !important;
+}
+.card-dark-balance { color: var(--smore-rail-ink); }
+.card-dark-balance .text-white-50 { color: rgba(243, 230, 211, 0.72) !important; }
+.card-dark-balance .text-white { color: #fff !important; }
+
+.stat-tile .value { color: var(--smore-ink) !important; }
+.user-pill {
+  background: var(--smore-surface) !important;
+  border: 1px solid var(--smore-border) !important;
+  color: var(--smore-muted) !important;
+}
+.user-pill strong { color: var(--smore-ink) !important; }
+
+body:not(.auth-page) .summary-bento > [class*="col-"] > .card::after,
+body:not(.auth-page) .bento-grid > [class*="col-"] > .card::after {
+  background: var(--smore-glow);
+}
+body:not(.auth-page) .summary-bento > [class*="col-"]:first-child > .card,
+body:not(.auth-page) .summary-bento > [class*="col-"]:nth-child(2) > .card,
+body:not(.auth-page) .summary-bento > [class*="col-"]:nth-child(3) > .card {
+  background: var(--smore-surface) !important;
+}
+/* 6 ── Tables ───────────────────────────────────────────────────────────── */
+.table-responsive {
+  border: 1px solid var(--smore-border) !important;
+  border-radius: var(--smore-radius) !important;
+  background: var(--smore-surface) !important;
+}
+.table { color: var(--smore-ink); --bs-table-bg: transparent; }
+.table thead th {
+  background: var(--smore-surface-alt) !important;
+  color: var(--smore-muted) !important;
+  border-bottom-color: var(--smore-border) !important;
+}
+.table tbody td { border-color: var(--smore-border); }
+.table tbody tr:hover { background: var(--smore-surface-alt) !important; }
+.table td.text-end { font-variant-numeric: tabular-nums; }
+
+/* 7 ── Forms ────────────────────────────────────────────────────────────── */
+.form-control, .form-select {
+  border-color: var(--smore-border-strong) !important;
+  background-color: var(--smore-surface) !important;
+  color: var(--smore-ink) !important;
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--smore-primary) !important;
+  box-shadow: 0 0 0 0.2rem var(--smore-glow) !important;
+}
+.form-control::placeholder { color: var(--smore-muted); opacity: 0.8; }
+.form-label { color: var(--smore-ink-soft); font-weight: 600; }
+.form-check-input:checked { background-color: var(--smore-primary); border-color: var(--smore-primary); }
+
+/* 8 ── Modals ───────────────────────────────────────────────────────────── */
+.modal-content {
+  background: var(--smore-surface) !important;
+  color: var(--smore-ink) !important;
+  border: 1px solid var(--smore-border) !important;
+  border-radius: var(--smore-radius) !important;
+  box-shadow: var(--smore-shadow-raised) !important;
+}
+.modal-header, .modal-footer { border-color: var(--smore-border) !important; }
+.modal-title { color: var(--smore-ink); }
+
+/* 9 ── Badges & alerts ──────────────────────────────────────────────────── */
+.badge { font-weight: 600; border-radius: 0.4rem; }
+.badge.bg-dark { background-color: var(--smore-rail) !important; }
+.badge.bg-success { background-color: var(--smore-success) !important; }
+.badge.bg-warning { background-color: var(--smore-warning) !important; color: #2b1810 !important; }
+.badge.bg-danger { background-color: var(--smore-danger) !important; }
+.alert-warning {
+  background: var(--smore-warning-soft) !important;
+  color: var(--smore-warning) !important;
+  border: 1px solid var(--smore-warning) !important;
+}
+.status-alert.is-success { background: var(--smore-success-soft); color: var(--smore-success); border-color: var(--smore-success); }
+.status-alert.is-error { background: var(--smore-danger-soft); color: var(--smore-danger); border-color: var(--smore-danger); }
+.status-alert.is-info { background: var(--smore-info-soft); color: var(--smore-info); border-color: var(--smore-info); }
+
+/* 10 ── Progress — "toasted" signature ──────────────────────────────────── */
+.progress {
+  height: 10px !important;
+  background: var(--smore-surface-2) !important;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.progress-bar {
+  background-image: linear-gradient(90deg, #f2d9b0 0%, #e2a15c 45%, #a9612a 100%) !important;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+.progress-bar.bg-dark {
+  background-image: linear-gradient(90deg, #f2d9b0 0%, #e2a15c 45%, #a9612a 100%) !important;
+}
+.progress-bar.bg-success {
+  background-image: linear-gradient(90deg, #d5ecd9 0%, #6cbd8d 100%) !important;
+}
+.progress-bar.bg-warning {
+  background-image: linear-gradient(90deg, #f7e3bd 0%, #e3a95f 100%) !important;
+}
+.progress-bar.bg-danger {
+  background-image: linear-gradient(90deg, #f6c8bd 0%, #e3907c 100%) !important;
+}
+/* 11 ── Analytics ───────────────────────────────────────────────────────── */
+.analytics-section-title { color: var(--smore-muted) !important; }
+.analytics-category-name { color: var(--smore-ink) !important; }
+.analytics-category-amount, .analytics-category-share { color: var(--smore-muted) !important; }
+.analytics-chart-frame {
+  background: var(--smore-surface-alt) !important;
+  border: 1px solid var(--smore-border) !important;
+  border-radius: var(--smore-radius-sm);
+}
+.analytics-bar-track { background: var(--smore-surface-2) !important; }
+.analytics-bar-fill { background: var(--smore-primary) !important; }
+.analytics-bar-fill--success { background: var(--smore-success) !important; }
+.analytics-bar-fill--warning { background: var(--smore-warning) !important; }
+.analytics-bar-fill--danger { background: var(--smore-danger) !important; }
+.analytics-period-badge { background: var(--smore-primary-soft); color: var(--smore-primary); }
+.analytics-goal-done-badge { background: var(--smore-success-soft); color: var(--smore-success); }
+body:not(.auth-page) #analyticsIncomeText { color: var(--smore-success) !important; }
+body:not(.auth-page) #analyticsExpenseText { color: var(--smore-danger) !important; }
+body:not(.auth-page) #analyticsNetSavingsText { color: var(--smore-ink) !important; }
+
+/* 12 ── Transactions ────────────────────────────────────────────────────── */
+.txn-filter-bar { background: var(--smore-surface-alt); }
+.txn-filter-btn { color: var(--smore-muted); }
+.txn-filter-btn:hover, .txn-filter-btn:focus-visible { color: var(--smore-primary); }
+.txn-filter-btn.is-active { background: var(--smore-surface) !important; color: var(--smore-primary); box-shadow: var(--smore-shadow); }
+.txn-card { background: var(--smore-surface) !important; border-color: var(--smore-border) !important; }
+.txn-card--income { border-left-color: var(--smore-success) !important; }
+.txn-card--expense { border-left-color: var(--smore-danger) !important; }
+.txn-category { color: var(--smore-ink) !important; }
+.txn-amount--income { color: var(--smore-success) !important; }
+.txn-amount--expense { color: var(--smore-danger) !important; }
+.txn-badge--income { background: var(--smore-success-soft); color: var(--smore-success); }
+.txn-badge--expense { background: var(--smore-danger-soft); color: var(--smore-danger); }
+.txn-date, .txn-desc { color: var(--smore-muted) !important; }
+.smore-modal { border-color: var(--smore-border) !important; }
+
+/* 13 ── Import preview ─────────────────────────────────────────────────── */
+.import-preview-wrap { border-color: var(--smore-border) !important; }
+.import-preview-table thead th { background: var(--smore-surface-alt) !important; color: var(--smore-primary); }
+.import-preview-table tbody td { border-bottom-color: var(--smore-border); }
+.import-row-valid { background: var(--smore-success-soft); }
+.import-row-invalid { background: var(--smore-danger-soft); }
+.import-status-badge--valid { background: var(--smore-success-soft); color: var(--smore-success); }
+.import-status-badge--invalid { background: var(--smore-danger-soft); color: var(--smore-danger); }
+.import-error-list { color: var(--smore-danger); }
+
+/* 14 ── Notifications, loading, misc ────────────────────────────────────── */
+.dropdown-menu { background: var(--smore-surface) !important; border-color: var(--smore-border) !important; }
+.dropdown-item { color: var(--smore-ink); }
+.dropdown-item:hover, .dropdown-item:focus { background: var(--smore-surface-alt); color: var(--smore-ink); }
+.loading-screen { color: var(--smore-muted); }
+.status-link-btn { color: inherit; }
+.hidden { display: none !important; }
+canvas { max-width: 100%; }
+
+/* 15 ── Landing / hero ──────────────────────────────────────────────────── */
+.hero-card { padding: 2rem; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+/* 16 ── Auth (login / register) ────────────────────────────────────────── */
+body.auth-page {
+  background: var(--smore-canvas) !important;
+  color: var(--smore-ink) !important;
+}
+.auth-intro {
+  background: linear-gradient(160deg, var(--smore-rail) 0%, var(--smore-rail-2) 100%) !important;
+  color: var(--smore-rail-ink) !important;
+}
+.auth-intro h1 { color: #fff !important; font-family: var(--font-display) !important; letter-spacing: -0.01em; }
+.auth-intro-copy p { color: rgba(243, 230, 211, 0.78) !important; }
+.auth-brand { color: #fff !important; font-family: var(--font-display); }
+.auth-brand-mark span { background: var(--smore-primary); }
+.auth-benefits {
+  color: rgba(243, 230, 211, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+}
+.auth-benefits p { color: var(--smore-primary) !important; }
+.auth-panel { background: var(--smore-surface) !important; color: var(--smore-ink) !important; }
+.auth-heading h2 { color: var(--smore-ink) !important; font-family: var(--font-display) !important; }
+.auth-heading p { color: var(--smore-muted) !important; }
+.auth-tabs { background: var(--smore-surface-alt); }
+.auth-tab.is-active { color: var(--smore-primary) !important; }
+.auth-page .form-control {
+  border-color: var(--smore-border-strong) !important;
+  background: var(--smore-surface) !important;
+  color: var(--smore-ink) !important;
+}
+.auth-page .form-label { color: var(--smore-ink) !important; }
+.auth-page .auth-submit {
+  background: var(--smore-primary) !important;
+  border-color: var(--smore-primary) !important;
+  color: #fff !important;
+}
+.auth-page .auth-submit:hover, .auth-page .auth-submit:focus-visible {
+  background: var(--smore-primary-dark) !important;
+  border-color: var(--smore-primary-dark) !important;
+}
+.auth-page #google-signin-btn {
+  background: var(--smore-surface) !important;
+  color: var(--smore-ink) !important;
+  border-color: var(--smore-border-strong) !important;
+}
+.auth-page #google-signin-btn:hover, .auth-page #google-signin-btn:focus-visible {
+  background: var(--smore-surface-alt) !important;
+  color: var(--smore-ink) !important;
+}
+.auth-switch { color: var(--smore-muted); }
+.auth-switch button { color: var(--smore-primary); }
+.auth-divider { color: var(--smore-muted); }
+.auth-divider::before, .auth-divider::after { background: var(--smore-border); }
+.field-hint { color: var(--smore-muted); }
+
+/* 17 ── Floating theme toggle (auth page) ──────────────────────────────── */
+.theme-float {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1040;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--smore-primary) 55%, var(--smore-surface));
+  border-radius: 999px;
+  background: var(--smore-surface);
+  color: var(--smore-ink);
+  font-weight: 600;
+  box-shadow: var(--smore-shadow);
+  cursor: pointer;
+}
+.theme-float:hover, .theme-float:focus-visible { border-color: var(--smore-primary); color: var(--smore-primary); }
+/* 18 ── Warm borders (global) ──────────────────────────────────────────── */
+.border { border-color: var(--smore-border) !important; }
+.border-dark { border-color: var(--smore-border-strong) !important; }
+hr { border-color: var(--smore-border); opacity: 0.7; }
+
+/* 19 ── Dark theme component refinements ───────────────────────────────── */
+[data-theme="dark"] .mobile-more-menu { background: var(--smore-surface); border-color: var(--smore-border); }
+[data-theme="dark"] .mobile-more-menu a,
+[data-theme="dark"] .mobile-more-menu button { color: var(--smore-ink); }
+[data-theme="dark"] .mobile-more-menu a:hover,
+[data-theme="dark"] .mobile-more-menu a:focus-visible,
+[data-theme="dark"] .mobile-more-menu a.is-current,
+[data-theme="dark"] .mobile-more-menu button:hover,
+[data-theme="dark"] .mobile-more-menu button:focus-visible { background: var(--smore-surface-alt); }
+[data-theme="dark"] .mobile-more-menu i { color: var(--smore-primary); }
+
+[data-theme="dark"] .dropdown-menu .list-group-item,
+[data-theme="dark"] .list-group-item {
+  background: var(--smore-surface);
+  color: var(--smore-ink);
+  border-color: var(--smore-border);
+}
+[data-theme="dark"] .btn-close { filter: invert(1) grayscale(1); }
+[data-theme="dark"] .table tbody tr { background: var(--smore-surface); }
+[data-theme="dark"] .table tbody td::before { color: var(--smore-muted); }
+
+/* 20 ── Responsive refinements ─────────────────────────────────────────── */
+@media (max-width: 767.98px) {
+  .sidebar-theme-toggle { display: none !important; }
+  .app-sidebar { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3) !important; }
+  .mobile-more-menu { background: var(--smore-surface) !important; }
+  .theme-float { top: 0.75rem; right: 0.75rem; }
+}
+
+/* 21 ── Auth split-card radius fix ──────────────────────────────────────── */
+body.auth-page .auth-panel {
+  border: 0 !important;
+  border-radius: 0 var(--smore-radius) var(--smore-radius) 0 !important;
+  box-shadow: none !important;
+}
+body.auth-page .auth-intro {
+  border-radius: var(--smore-radius) 0 0 var(--smore-radius) !important;
+}
+@media (max-width: 767.98px) {
+  body.auth-page .auth-panel,
+  body.auth-page .auth-intro { border-radius: var(--smore-radius) !important; }
+}
+
+
+/* 22 ── Text-contrast repair (both themes) ──────────────────────────────────
+   The earlier legacy "workspace" rules emit card headings and muted/small
+   labels with `--workspace-ink` or hard-coded dark grays (e.g. #536b67). Those
+   resolve to dark values in dark mode, leaving the text unreadable on the dark
+   card surface. Re-assert theme-aware ink/muted colors (auto-switching for light
+   and dark) using specificity that always beats the legacy rules. The
+   .card-dark-balance cards are excluded so their intentional light-on-dark
+   labeling (--smore-rail-ink / .text-white-50) stays bright. */
+body:not(.auth-page) main .card:not(.card-dark-balance) > .text-muted,
+body:not(.auth-page) main .card:not(.card-dark-balance) .small {
+  color: var(--smore-muted) !important;
+}
+
+body:not(.auth-page) main .card:not(.card-dark-balance) h1,
+body:not(.auth-page) main .card:not(.card-dark-balance) h2,
+body:not(.auth-page) main .card:not(.card-dark-balance) h3,
+body:not(.auth-page) main .card:not(.card-dark-balance) h4,
+body:not(.auth-page) main .card:not(.card-dark-balance) h5,
+body:not(.auth-page) main .card:not(.card-dark-balance) h6 {
+  color: var(--smore-ink) !important;
+}
+
+/* Mobile stacked-table cell labels: the legacy #536b67 would override the modern
+   muted color on dark backgrounds. */
+body:not(.auth-page) .table tbody td::before {
+  color: var(--smore-muted) !important;
+}
 

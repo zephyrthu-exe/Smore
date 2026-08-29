@@ -253,7 +253,7 @@ function renderChart(categoryTotals, totalExpense) {
       type: "doughnut",
       data: {
         labels: ["No Expenses"],
-        datasets: [{ data: [1], backgroundColor: ["#e4e4e7"] }]
+        datasets: [{ data: [1], backgroundColor: ["#efe4d1"] }]
       },
       options: { cutout: "75%", plugins: { legend: { display: false } } }
     });
@@ -261,7 +261,7 @@ function renderChart(categoryTotals, totalExpense) {
     return;
   }
 
-  const colors = ["#18181b", "#52525b", "#71717a", "#a1a1aa", "#d4d4d8"];
+  const colors = ["#c98a3e", "#8a5a2b", "#e2a15c", "#5c4634", "#d9b98a", "#3b2418"];
 
   spendingChartInstance = new Chart(ctx, {
     type: "doughnut",

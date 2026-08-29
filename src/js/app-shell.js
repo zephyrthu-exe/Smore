@@ -10,6 +10,7 @@ import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/
 import { auth } from "./firebase-config.js";
 import { enhanceAccountMenu } from "./account-menu.js";
 import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
+import { mountThemeToggle } from "./theme.js";
 
 // ─── Small helpers ─────────────────────────────────────────────────────────
 
@@ -95,6 +96,7 @@ export function initAuthenticatedPage(user, pageSetup) {
   bindUserData(user);
   enhanceAccountMenu(user);
   setupLogout(destroySomboAssistant);
+  mountThemeToggle();
   pageSetup?.(user);
   initSomboAssistant(user);
 }

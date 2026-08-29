@@ -6,9 +6,9 @@
   --sombo-navy-dark:    #0f172a;
   --sombo-navy-main:    #1e293b;
   --sombo-navy-light:   #334155;
-  --sombo-accent:       #ff6b35;          /* overridden per user */
-  --sombo-accent-glow:  rgba(255,107,53,0.4);
-  --sombo-accent-light: rgba(255,107,53,0.12);
+  --sombo-accent:       var(--smore-primary, #c98a3e);          /* overridden per user */
+  --sombo-accent-glow:  color-mix(in srgb, var(--smore-primary, #c98a3e) 42%, transparent);
+  --sombo-accent-light: color-mix(in srgb, var(--smore-primary, #c98a3e) 13%, transparent);
   --sombo-cream-main:   #fff8f0;
   --sombo-cream-accent: #fef3c7;
   --sombo-eye-blue:     #38bdf8;
@@ -1357,3 +1357,73 @@
     transition: none !important;
   }
 }
+
+/* ==========================================================================
+   UI Modernization — Sombo harmonization (dark theme)
+   ========================================================================== */
+[data-theme="dark"] {
+  --sombo-navy-dark: #120a07;
+  --sombo-navy-main: #1a0f0a;
+  --sombo-navy-light: #2a1a12;
+  --sombo-cream-main: #f3e6d3;
+  --sombo-cream-accent: #f7e3bd;
+  --sombo-panel-bg: var(--smore-surface);
+  --sombo-panel-border: var(--smore-border);
+}
+
+[data-theme="dark"] .sombo-chat-header {
+  background: linear-gradient(135deg, var(--smore-rail) 0%, var(--smore-rail-2) 100%);
+}
+[data-theme="dark"] .sombo-chat-body { background: var(--smore-canvas); }
+[data-theme="dark"] .sombo-welcome-card,
+[data-theme="dark"] .sombo-msg-bot .sombo-msg-bubble,
+[data-theme="dark"] .sombo-typing-indicator {
+  background: var(--smore-surface);
+  border-color: var(--smore-border);
+  color: var(--smore-ink);
+}
+[data-theme="dark"] .sombo-welcome-card h6,
+[data-theme="dark"] .sombo-welcome-card p { color: var(--smore-ink); }
+[data-theme="dark"] .sombo-msg-time,
+[data-theme="dark"] .sombo-disclaimer,
+[data-theme="dark"] .sombo-prompts-title { color: var(--smore-muted); }
+[data-theme="dark"] .sombo-prompt-btn {
+  background: var(--smore-surface-alt);
+  border-color: var(--smore-border);
+  color: var(--smore-ink);
+}
+[data-theme="dark"] .sombo-input-field {
+  background: var(--smore-surface-alt);
+  border-color: var(--smore-border);
+  color: var(--smore-ink);
+}
+[data-theme="dark"] .sombo-input-field:focus { background: var(--smore-surface); }
+[data-theme="dark"] .sombo-chat-footer { background: var(--smore-surface); border-top-color: var(--smore-border); }
+[data-theme="dark"] .sombo-quick-btn.is-cancel {
+  background: var(--smore-surface-alt);
+  color: var(--smore-ink);
+  border-color: var(--smore-border);
+}
+[data-theme="dark"] .sombo-onboard-modal,
+[data-theme="dark"] .sombo-customize-modal {
+  background: var(--smore-surface);
+  color: var(--smore-ink);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+}
+[data-theme="dark"] .sombo-onboard-modal h5,
+[data-theme="dark"] .sombo-onboard-modal p,
+[data-theme="dark"] .sombo-customize-header h5,
+[data-theme="dark"] .sombo-preview-name,
+[data-theme="dark"] .sombo-onboard-label { color: var(--smore-ink); }
+[data-theme="dark"] .sombo-preview-style,
+[data-theme="dark"] .sombo-color-name,
+[data-theme="dark"] .sombo-customize-close { color: var(--smore-muted); }
+[data-theme="dark"] .sombo-onboard-input,
+[data-theme="dark"] .sombo-style-btn,
+[data-theme="dark"] .sombo-bot-preview,
+[data-theme="dark"] .sombo-btn-secondary {
+  background: var(--smore-surface-alt);
+  border-color: var(--smore-border);
+  color: var(--smore-ink);
+}
+[data-theme="dark"] .sombo-customize-overlay { background: rgba(0, 0, 0, 0.6); }

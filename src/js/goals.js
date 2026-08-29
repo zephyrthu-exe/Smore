@@ -73,7 +73,7 @@ function renderGoalsView() {
                 <div class="progress-bar ${isAchieved ? 'bg-success' : 'bg-dark'}" role="progressbar" style="width: ${pct}%;"></div>
               </div>
               <div class="d-flex justify-content-between small text-muted">
-                <span>Progress: <strong class="text-dark">${pct}%</strong></span>
+                <span><strong class="text-dark">${pct}%</strong> toasted</span>
                 <strong class="text-dark">${saved.toLocaleString()} MMK</strong>
               </div>
             </div>

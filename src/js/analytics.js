@@ -188,7 +188,7 @@ function renderTrendChart(income, expenses) {
         {
           label: "MMK",
           data: [income, expenses],
-          backgroundColor: ["#3b8f72", "#d9654f"],
+          backgroundColor: ["#3f8f5f", "#c14b3a"],
           borderRadius: 6
         }
       ]
@@ -202,7 +202,7 @@ function renderTrendChart(income, expenses) {
       scales: {
         y: {
           beginAtZero: true,
-          grid: { color: "rgba(25, 59, 58, 0.1)" },
+          grid: { color: "rgba(122, 104, 85, 0.2)" },
           ticks: {
             callback: (val) => `${val.toLocaleString()} MMK`
           }
@@ -226,7 +226,7 @@ function renderCategoryChart(categoryMap, totalExpenses) {
       type: "doughnut",
       data: {
         labels: ["No Expenses"],
-        datasets: [{ data: [1], backgroundColor: ["#d7e4de"] }]
+        datasets: [{ data: [1], backgroundColor: ["#efe4d1"] }]
       },
       options: {
         responsive: true,
@@ -238,7 +238,7 @@ function renderCategoryChart(categoryMap, totalExpenses) {
     return;
   }
 
-  const colors = ["#d9654f", "#3b8f72", "#d79a3d", "#5f8fa3", "#8d78a8", "#78958b"];
+  const colors = ["#c98a3e", "#3f8f5f", "#e2a15c", "#5c4634", "#8a5a2b", "#d9b98a"];
 
   categoryChartInstance = new Chart(ctx, {
     type: "doughnut",
