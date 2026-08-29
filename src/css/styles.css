@@ -3216,4 +3216,23 @@ body:not(.auth-page) main .card:not(.card-dark-balance) .table tbody {
   color: var(--smore-ink) !important;
 }
 
+/* 23 ── Empty-state panels (Goals / Budgets) ────────────────────────────────
+   The ".bg-white" empty-state tiles (goals.js / budgets.js) are injected as bare
+   divs — not `.card` — so the text-contrast rules above never reach them, and
+   Bootstrap's `.bg-white` utility forces a white tile in dark mode. Remap those
+   utility classes to the theme tokens so the panel and its copy stay readable in
+   both light and dark themes (the heading is promoted to ink to match the
+   "No transactions found" empty state inside the transaction card). */
+body:not(.auth-page) main .bg-white {
+  background-color: var(--smore-surface) !important;
+  border-color: var(--smore-border) !important;
+}
+body:not(.auth-page) main .bg-white h6 {
+  color: var(--smore-ink) !important;
+}
+body:not(.auth-page) main .bg-white p,
+body:not(.auth-page) main .bg-white .small {
+  color: var(--smore-muted) !important;
+}
+
 

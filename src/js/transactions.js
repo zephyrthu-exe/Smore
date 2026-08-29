@@ -276,8 +276,8 @@ function renderFilteredTable(userId) {
 
     html += `
       <tr>
-        <td>${escapeHtml(dateStr)}</td>
-        <td class="fw-semibold">${escapeHtml(tx.description || tx.category || "Transaction")}</td>
+        <td class="txn-date">${escapeHtml(dateStr)}</td>
+        <td class="txn-desc fw-semibold">${escapeHtml(tx.description || tx.category || "Transaction")}</td>
         <td><span class="badge bg-light text-dark border">${escapeHtml(tx.category || "General")}</span></td>
         <td class="text-end fw-bold ${isIncome ? 'text-success' : 'text-danger'}">
           ${isIncome ? '+' : '-'}${amt.toLocaleString()} MMK
