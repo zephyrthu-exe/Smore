@@ -3021,7 +3021,7 @@ body:not(.auth-page) #analyticsNetSavingsText { color: var(--smore-ink) !importa
 .import-error-list { color: var(--smore-danger); }
 
 /* 14 ── Notifications, loading, misc ────────────────────────────────────── */
-.dropdown-menu { background: var(--smore-surface) !important; border-color: var(--smore-border) !important; }
+.dropdown-menu { background: var(--smore-surface) !important; border-color: var(--smore-border) !important; color: var(--smore-ink) !important; }
 .dropdown-item { color: var(--smore-ink); }
 .dropdown-item:hover, .dropdown-item:focus { background: var(--smore-surface-alt); color: var(--smore-ink); }
 .loading-screen { color: var(--smore-muted); }
@@ -3126,6 +3126,12 @@ hr { border-color: var(--smore-border); opacity: 0.7; }
   background: var(--smore-surface);
   color: var(--smore-ink);
   border-color: var(--smore-border);
+}
+/* Notifications dropdown inner text: force theme-aware reading color (Bootstrap keeps
+   --bs-body-color / --bs-list-group-color dark since the app uses data-theme, not data-bs-theme) */
+[data-theme="dark"] .dropdown-menu .list-group-item .text-muted,
+[data-theme="dark"] .dropdown-menu .list-group-item .small {
+  color: var(--smore-muted) !important;
 }
 [data-theme="dark"] .btn-close { filter: invert(1) grayscale(1); }
 [data-theme="dark"] .table tbody tr { background: var(--smore-surface); }
