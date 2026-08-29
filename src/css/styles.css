@@ -3176,6 +3176,23 @@ body:not(.auth-page) main .card:not(.card-dark-balance) h6 {
   color: var(--smore-ink) !important;
 }
 
+/* Bare value text inside a card (e.g. a `div.h4` / `div.h3` with no heading or
+   muted helper class, like the "Safe to spend" figure) has no color of its own
+   and would inherit Bootstrap's `.card { color: #212529 }` (dark), making it
+   vanish on the dark surface. Re-assert theme-aware ink on the whole card so
+   un-classed descendants stay readable (auto-switches for light/dark). */
+body:not(.auth-page) main .card:not(.card-dark-balance) {
+  color: var(--smore-ink) !important;
+}
+
+/* Values deliberately marked `text-dark` (available balance, spent-so-far, net
+   savings) stay hard-coded dark in Bootstrap and would also render dark-on-dark;
+   remap them to the theme ink within cards. `.text-dark` used on light elements
+   outside `main .card` (e.g. sidebar link buttons) is intentionally untouched. */
+body:not(.auth-page) main .card:not(.card-dark-balance) .text-dark {
+  color: var(--smore-ink) !important;
+}
+
 /* Mobile stacked-table cell labels: the legacy #536b67 would override the modern
    muted color on dark backgrounds. */
 body:not(.auth-page) .table tbody td::before {
