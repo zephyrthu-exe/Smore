@@ -1,89 +1,35 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+// analytics.js
+// Analytics page: summarizes income and expenses with summary cards, a trend
+// bar chart, and a category doughnut chart, all filterable by category and
+// date range.
+
 import { collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
-import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
-import { initStore, cleanupStore } from "./store.js";
-import { enhanceAccountMenu } from "./account-menu.js";
+import { startAuthenticatedPage } from "./app-shell.js";
 
 let trendChartInstance = null;
 let categoryChartInstance = null;
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    cleanupStore();
-    destroySomboAssistant();
-    window.location.replace("./index.html");
-    return;
-  }
-
-  // 1. Bind User Info
-  bindUserData(user);
-
-  // 2. Setup Logout
-  enhanceAccountMenu(user);
-  setupLogout();
-
-  // 3. Initialize Realtime Listeners
-  initStore(user.uid);
-  listenToAnalyticsData(user.uid);
-
-  // 4. Initialize Sombo Assistant Widget
-  initSomboAssistant(user);
-});
-
-function bindUserData(user) {
-  const name = user.displayName || user.email?.split("@")[0] || "User";
-  const email = user.email || "";
-  const firstLetter = name.charAt(0).toUpperCase();
-
-  const nameDisplay = document.getElementById("userNameDisplay");
-  const emailDisplay = document.getElementById("userEmailDisplay");
-  const sidebarAvatar = document.getElementById("sidebarAvatar");
-  const dropdownAvatar = document.getElementById("dropdownAvatar");
-  const avatarDisplay = document.getElementById("userAvatarDisplay");
-
-  if (nameDisplay) nameDisplay.textContent = name;
-  if (emailDisplay) emailDisplay.textContent = email;
-  if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
-  if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
-  if (avatarDisplay) avatarDisplay.textContent = firstLetter;
-}
-
-function setupLogout() {
-  document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async function() {
-    this.disabled = true;
-    this.textContent = "Signing out...";
-    try {
-      cleanupStore();
-      destroySomboAssistant();
-      await signOut(auth);
-      window.location.href = "./index.html";
-    } catch (err) {
-      console.error("Logout error:", err);
-      this.disabled = false;
-      this.textContent = "Log Out";
-    }
-  });
-}
-
 let allTransactionsAnalytics = [];
 
+// Entry point: protect the page (redirect to login if signed out), then start
+// listening for the current user's transactions.
+startAuthenticatedPage((user) => {
+  listenToAnalyticsData(user.uid);
+});
+
+// Keeps allTransactionsAnalytics in sync with Firestore and re-renders the
+// whole page (respecting the currently selected filters).
 function listenToAnalyticsData(userId) {
   const q = query(collection(db, "users", userId, "transactions"), orderBy("createdAt", "desc"));
 
   onSnapshot(q, (snapshot) => {
-    allTransactionsAnalytics = [];
-
-    snapshot.forEach((docSnap) => {
-      const tx = { id: docSnap.id, ...docSnap.data() };
-      allTransactionsAnalytics.push(tx);
-    });
-
-    // After snapshot, compute and render based on current filters
+    allTransactionsAnalytics = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
     updateAnalyticsView();
   });
 }
 
+// Reads the current filter values from the filter controls.
 function getAnalyticsFilters() {
   const category = document.getElementById('analyticsCategoryFilter')?.value || 'All';
   const dateVal = document.getElementById('analyticsDateFilter')?.value || 'all';
@@ -92,6 +38,7 @@ function getAnalyticsFilters() {
   return { category, dateVal, customStart, customEnd };
 }
 
+// Returns true when the transaction falls inside the selected date range.
 function applyAnalyticsDateFilterToTx(tx, dateVal, customStart, customEnd) {
   const now = new Date();
   let rangeStart = null;
@@ -128,6 +75,7 @@ function applyAnalyticsDateFilterToTx(tx, dateVal, customStart, customEnd) {
   return txDate >= rangeStart && (rangeEnd ? txDate < rangeEnd : true);
 }
 
+// Recomputes every summary, text block and chart from the filtered data.
 function updateAnalyticsView() {
   const { category, dateVal, customStart, customEnd } = getAnalyticsFilters();
 
@@ -192,7 +140,7 @@ function updateAnalyticsView() {
   renderCategoryChart(categoryMap, totalExpenses);
 }
 
-// wire UI listeners for analytics filters
+// Wires the UI listeners for the analytics filters.
 function setupAnalyticsFilters() {
   const catSel = document.getElementById('analyticsCategoryFilter');
   const dateSel = document.getElementById('analyticsDateFilter');
@@ -208,9 +156,10 @@ function setupAnalyticsFilters() {
   applyBtn?.addEventListener('click', update);
 }
 
-// initialize filter listeners
+// Initialize the filter listeners (the controls live in the static HTML).
 setupAnalyticsFilters();
 
+// One-line summary for the category text block.
 function categoriesSummary(categoryMap, totalExpenses) {
   const categories = Object.entries(categoryMap);
   if (!categories.length || totalExpenses === 0) return "No expenses recorded yet.";
@@ -218,6 +167,7 @@ function categoriesSummary(categoryMap, totalExpenses) {
   return `${topCategory} is the largest recorded category at ${topValue.toLocaleString()} MMK.`;
 }
 
+// A short, machine-readable recap used for the hidden summary attribute.
 function categoryDataSummary(categoryMap, totalExpenses) {
   const categories = Object.entries(categoryMap);
   if (!categories.length || totalExpenses === 0) return "No expense categories to display.";
@@ -306,3 +256,4 @@ function renderCategoryChart(categoryMap, totalExpenses) {
     }
   });
 }
+

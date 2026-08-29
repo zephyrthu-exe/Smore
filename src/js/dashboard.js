@@ -1,9 +1,12 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+// dashboard.js
+// Dashboard page: welcome summary with current balance, monthly income and
+// expense, a spending doughnut chart, recent transactions, budgets, savings
+// goals and a planning summary for recurring schedules. It also powers the
+// in-app notification centre (persisted in localStorage).
+
 import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
-import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
-import { initStore, cleanupStore } from "./store.js";
-import { enhanceAccountMenu } from "./account-menu.js";
+import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 import { calculateSafeToSpend, formatMMK, getUpcomingSchedules, isSameMonth, transactionDate } from "./finance-utils.js";
 
 let spendingChartInstance = null;
@@ -11,27 +14,33 @@ let dashboardTransactions = [];
 let dashboardBudgets = [];
 let dashboardSchedules = [];
 
-// In-app notification store (persisted in localStorage)
+// ─── In-app notification store (persisted in localStorage) ────────────────
+
 const NOTIF_STORAGE_KEY = 'smore_notifications_v1';
 const NOTIF_DELETED_KEY = 'smore_notifications_deleted_v1';
+
 function loadNotifications() {
   try {
     const raw = localStorage.getItem(NOTIF_STORAGE_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch (e) { return []; }
 }
+
 function saveNotifications(notifs) {
   try { localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify(notifs)); } catch (e) {}
 }
+
 function loadDeletedNotifications() {
   try {
     const raw = localStorage.getItem(NOTIF_DELETED_KEY);
     return raw ? JSON.parse(raw) : [];
   } catch (e) { return []; }
 }
+
 function saveDeletedNotifications(ids) {
   try { localStorage.setItem(NOTIF_DELETED_KEY, JSON.stringify(ids)); } catch (e) {}
 }
+
 function addDeletedNotification(id) {
   if (!id) return;
   const ids = loadDeletedNotifications();
@@ -40,6 +49,7 @@ function addDeletedNotification(id) {
     saveDeletedNotifications(ids);
   }
 }
+
 function addNotification(notif) {
   // don't add notifications user has deleted explicitly
   const deleted = loadDeletedNotifications();
@@ -52,16 +62,13 @@ function addNotification(notif) {
   saveNotifications(notifs);
   renderNotifications();
 }
+
 function markAllNotificationsRead() {
   const notifs = loadNotifications().map(n => ({ ...n, read: true }));
   saveNotifications(notifs);
   renderNotifications();
 }
-function markNotificationRead(id) {
-  const notifs = loadNotifications().map(n => n.id === id ? { ...n, read: true } : n);
-  saveNotifications(notifs);
-  renderNotifications();
-}
+
 function renderNotifications() {
   const listEl = document.getElementById('notificationList');
   const badgeEl = document.getElementById('notificationBadge');
@@ -145,90 +152,18 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('markAllReadBtn')?.addEventListener('click', (e) => { e.preventDefault(); markAllNotificationsRead(); });
 });
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    cleanupStore();
-    destroySomboAssistant();
-    window.location.replace("./index.html");
-    return;
-  }
+// ─── Page bootstrap ────────────────────────────────────────────────────────
 
-  // 1. User Profile Binding
-  bindUserData(user);
-
-  // 2. Setup Logout
-  setupLogout();
-  enhanceAccountMenu(user);
-
-  // 3. Initialize Store & Subscriptions
-  initStore(user.uid);
+// Entry point: protect the page (redirect to login if signed out), then wire
+// up all the dashboard widgets.
+startAuthenticatedPage((user) => {
   listenToTransactions(user.uid);
   listenToBudgets(user.uid);
   listenToRecurringSchedules(user.uid);
   listenToGoals(user.uid);
-
-  // 4. Setup Modal Forms
   setupBudgetForm(user.uid);
   setupGoalForm(user.uid);
-
-  // 5. Initialize Sombo Assistant Widget
-  initSomboAssistant(user);
 });
-
-function bindUserData(user) {
-  const name = user.displayName || user.email?.split("@")[0] || "User";
-  const email = user.email || "";
-  const firstLetter = name.charAt(0).toUpperCase();
-
-  const welcomeName = document.getElementById("welcomeName");
-  const nameDisplay = document.getElementById("userNameDisplay");
-  const dropdownName = document.getElementById("dropdownName");
-  const emailDisplay = document.getElementById("userEmailDisplay");
-  const sidebarAvatar = document.getElementById("sidebarAvatar");
-  const dropdownAvatar = document.getElementById("dropdownAvatar");
-  const avatarDisplay = document.getElementById("userAvatarDisplay");
-
-  if (welcomeName) welcomeName.textContent = name;
-  if (nameDisplay) nameDisplay.textContent = name;
-  if (dropdownName) dropdownName.textContent = name;
-  if (emailDisplay) emailDisplay.textContent = email;
-  if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
-  if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
-  if (avatarDisplay) avatarDisplay.textContent = firstLetter;
-
-  const savedPhoto = localStorage.getItem(`smore-profile-photo-${user.uid}`);
-  [sidebarAvatar, dropdownAvatar, avatarDisplay].forEach((avatar) => {
-    if (!avatar) return;
-    avatar.style.backgroundImage = savedPhoto ? `url("${savedPhoto}")` : "";
-    avatar.style.backgroundSize = "cover";
-    avatar.style.backgroundPosition = "center";
-    avatar.textContent = savedPhoto ? "" : firstLetter;
-  });
-}
-
-function setupLogout() {
-  const logoutAction = async (btn) => {
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = "Signing out...";
-    }
-    try {
-      cleanupStore();
-      destroySomboAssistant();
-      await signOut(auth);
-      window.location.href = "./index.html";
-    } catch (err) {
-      console.error("Logout error:", err);
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = "Log out";
-      }
-    }
-  };
-
-  document.getElementById("logoutBtn")?.addEventListener("click", function() { logoutAction(this); });
-  document.getElementById("sidebarLogoutBtn")?.addEventListener("click", function() { logoutAction(this); });
-}
 
 function listenToTransactions(userId) {
   const txRef = collection(db, "users", userId, "transactions");
@@ -265,14 +200,14 @@ function listenToTransactions(userId) {
       if (isIncome) lifetimeIncome += amount;
       else lifetimeSpent += amount;
 
-        if (isSameMonth(transactionDate(tx))) {
-          if (isIncome) {
-            totalIncome += amount;
-          } else {
-            totalSpent += amount;
-            const cat = tx.category || "Uncategorised";
-            categoryTotals[cat] = (categoryTotals[cat] || 0) + amount;
-          }
+      if (isSameMonth(transactionDate(tx))) {
+        if (isIncome) {
+          totalIncome += amount;
+        } else {
+          totalSpent += amount;
+          const cat = tx.category || "Uncategorised";
+          categoryTotals[cat] = (categoryTotals[cat] || 0) + amount;
+        }
       }
 
       if (index < 5 && recentTxContainer) {
@@ -413,44 +348,6 @@ window.deleteRecurringSchedule = async (scheduleId) => {
     alert("Failed to delete recurring item: " + error.message);
   }
 };
-
-function setupRecurringScheduleForm(userId) {
-  const form = document.getElementById("recurringScheduleForm");
-  if (!form) return;
-  const dateInput = document.getElementById("scheduleStartDate");
-  if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().slice(0, 10);
-
-  form.addEventListener("submit", async (event) => {
-    event.preventDefault();
-    const saveButton = document.getElementById("saveScheduleBtn");
-    const amount = Number(document.getElementById("scheduleAmount").value);
-    const description = document.getElementById("scheduleDescription").value.trim();
-    const dateValue = dateInput.value;
-    if (!description || !Number.isInteger(amount) || amount <= 0 || !dateValue) return;
-    saveButton.disabled = true;
-
-    const [year, month, day] = dateValue.split("-").map(Number);
-    try {
-      await addDoc(collection(db, "users", userId, "recurringSchedules"), {
-        type: document.getElementById("scheduleType").value,
-        description,
-        category: document.getElementById("scheduleCategory").value,
-        amount,
-        frequency: document.getElementById("scheduleFrequency").value,
-        startDate: Timestamp.fromDate(new Date(year, month - 1, day)),
-        active: true,
-        createdAt: Timestamp.now()
-      });
-      form.reset();
-      dateInput.value = new Date().toISOString().slice(0, 10);
-      closeModal("recurringScheduleModal");
-    } catch (error) {
-      alert("Error saving recurring item: " + error.message);
-    } finally {
-      saveButton.disabled = false;
-    }
-  });
-}
 
 function renderDashboardBudgets() {
   const container = document.getElementById("budgetsContainer");
@@ -612,13 +509,3 @@ function setupGoalForm(userId) {
   });
 }
 
-function closeModal(modalId) {
-  const modalEl = document.getElementById(modalId);
-  if (!modalEl) return;
-  const instance = window.bootstrap?.Modal?.getInstance(modalEl);
-  if (instance) instance.hide();
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-}

@@ -2544,3 +2544,99 @@ body.auth-page .auth-submit { background: var(--workspace-coral); border-color: 
 }
 }
 
+
+/* ============================================================
+   App shell styles (moved from the inline <style> blocks that
+   were duplicated across dashboard/transaction/budget/goals/
+   analytics pages)
+   ============================================================ */
+
+body {
+  background: #f8fafc;
+}
+
+.profile-wrap {
+  position: relative;
+  margin-top: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.75rem;
+}
+
+.profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.85rem;
+  transition: background 0.15s ease;
+}
+
+.profile-chip:hover,
+.profile-wrap.is-open .profile-chip {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #1f2937;
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.profile-card {
+  position: absolute;
+  left: calc(100% + 14px);
+  bottom: 0;
+  width: 290px;
+  background: #fff;
+  color: #0f172a;
+  border-radius: 1rem;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px) scale(0.98);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+  z-index: 1050;
+}
+
+.profile-wrap:hover .profile-card,
+.profile-wrap:focus-within .profile-card,
+.profile-wrap.is-open .profile-card {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
+}
+
+.profile-card::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 0;
+  bottom: 0;
+  width: 16px;
+}
+
+@media (max-width: 767.98px) {
+  .profile-card {
+    left: 0;
+    bottom: calc(100% + 10px);
+    width: 100%;
+  }
+}
+
+/* Notifications dropdown layout tweaks (dashboard only) */
+.dropdown-menu .list-group-item { overflow: hidden; align-items: center; }
+.notif-clickable { min-width: 0; overflow: hidden; }
+.notif-clickable .text-truncate { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.delete-notif-btn { flex-shrink: 0; }
+

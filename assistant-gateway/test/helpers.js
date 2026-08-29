@@ -108,6 +108,32 @@ function buildTestApp({ firebaseImpl, geminiImpl, config } = {}) {
       if (!goal) return;
       goal.savedAmount = savedAmount;
     },
+    async updateTransaction(uid, id, payload) {
+      const user = ensureUser(localData, uid);
+      const t = user.transactions.find((x) => x.id === id);
+      if (!t) return;
+      if (payload.txType) t.type = payload.txType;
+      if (payload.amount !== undefined) t.amount = payload.amount;
+      if (payload.category) t.category = payload.category;
+      if (payload.description) t.description = payload.description;
+    },
+    async updateBudget(uid, id, payload) {
+      const user = ensureUser(localData, uid);
+      const b = user.budgets.find((x) => x.id === id);
+      if (!b) return;
+      if (payload.category) b.category = payload.category;
+      if (payload.limit !== undefined) b.limit = payload.limit;
+      if (payload.rollover !== undefined) b.rollover = payload.rollover;
+    },
+    async updateGoal(uid, id, payload) {
+      const user = ensureUser(localData, uid);
+      const g = user.goals.find((x) => x.id === id);
+      if (!g) return;
+      if (payload.title) g.title = payload.title;
+      if (payload.targetAmount !== undefined) g.targetAmount = payload.targetAmount;
+      if (payload.savedAmount !== undefined) g.savedAmount = payload.savedAmount;
+      if (payload.deadline) g.deadline = payload.deadline;
+    },
   };
 
   const defaultGemini = {

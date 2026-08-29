@@ -304,6 +304,104 @@ function createFirebaseGateway({ app = null } = {}) {
       .update({ savedAmount });
   }
 
+  // Build a partial Firestore update from a whitelist of allowed fields. Any
+  // unexpected keys are silently dropped, and amounts are rounded to ints.
+  function pickUpdatable(payload, allowed) {
+    const update = {};
+    for (const key of allowed) {
+      if (payload && payload[key] !== undefined) {
+        if (key === "amount" || key === "limit" || key === "targetAmount" || key === "savedAmount") {
+          update[key] = _normalizeAmount(payload[key], _HALT());
+        } else {
+          update[key] = payload[key];
+        }
+      }
+    }
+    return update;
+  }
+
+  // Sentinel so a malformed numeric field fails loudly (NaN propagates).
+  function _HALT() {
+    return NaN;
+  }
+
+  function _cleanUpdate(err, update) {
+    for (const k of Object.keys(update)) {
+      if (Number.isNaN(update[k])) {
+        throw Object.assign(new Error("Amount fields must be numbers."), {
+          kind: "action",
+          status: 400,
+          code: "invalid_action_payload",
+        });
+      }
+    }
+    return update;
+  }
+
+  async function updateTransaction(uid, txId, payload) {
+    const id = _cleanText(txId);
+    if (!id) {
+      const err = new Error("Transaction ID is required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    const update = _cleanUpdate(null, pickUpdatable(payload, ["txType", "amount", "category", "description"]));
+    if (Object.keys(update).length === 0) {
+      const err = new Error("Nothing to update on that transaction.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    await store().collection("users").doc(uid).collection("transactions").doc(id).update(update);
+  }
+
+  async function updateBudget(uid, budgetId, payload) {
+    const id = _cleanText(budgetId);
+    if (!id) {
+      const err = new Error("Budget ID is required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    const update = _cleanUpdate(null, pickUpdatable(payload, ["category", "limit", "rollover"]));
+    if (Object.keys(update).length === 0) {
+      const err = new Error("Nothing to update on that budget.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    await store().collection("users").doc(uid).collection("budgets").doc(id).update(update);
+  }
+
+  async function updateGoal(uid, goalId, payload) {
+    const id = _cleanText(goalId);
+    if (!id) {
+      const err = new Error("Goal ID is required.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    const update = _cleanUpdate(null, pickUpdatable(payload, ["title", "targetAmount", "savedAmount"]));
+    if (payload && payload.deadline) {
+      const parsed = new Date(payload.deadline);
+      if (!Number.isNaN(parsed.getTime())) update.deadline = timestampFromDate(parsed);
+    }
+    if (Object.keys(update).length === 0) {
+      const err = new Error("Nothing to update on that goal.");
+      err.kind = "action";
+      err.status = 400;
+      err.code = "invalid_action_payload";
+      throw err;
+    }
+    await store().collection("users").doc(uid).collection("goals").doc(id).update(update);
+  }
+
   // Per-subcollection mappers: pick explicit fields only.
   function mapTransaction(id, data) {
     return {
@@ -322,6 +420,7 @@ function createFirebaseGateway({ app = null } = {}) {
       category: typeof data.category === "string" ? data.category : "",
       limit: _normalizeAmount(data.limit),
       period: data.period || "unknown",
+      rollover: !!data.rollover,
     };
   }
 
@@ -361,10 +460,13 @@ function createFirebaseGateway({ app = null } = {}) {
     readCollection,
     createTransaction,
     deleteTransaction,
+    updateTransaction,
     createBudget,
     deleteBudget,
+    updateBudget,
     createGoal,
     deleteGoal,
+    updateGoal,
     updateGoalSavedAmount,
   };
 }

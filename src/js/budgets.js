@@ -1,96 +1,41 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
-import { collection, onSnapshot, query, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+// budgets.js
+// Budgets page: shows every category limit as a card with its monthly spend,
+// plus overall stats and a warning banner when a budget is nearly exhausted.
+
+import { collection, onSnapshot, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
-import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
-import { initStore, cleanupStore } from "./store.js";
-import { enhanceAccountMenu } from "./account-menu.js";
+import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 import { isPreviousMonth, isSameMonth, transactionDate } from "./finance-utils.js";
 
+// Live data for the current user, fed by the Firestore listeners below.
 let currentBudgets = [];
 let currentTransactions = [];
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    cleanupStore();
-    destroySomboAssistant();
-    window.location.replace("./index.html");
-    return;
-  }
-
-  // 1. Bind User Info
-  bindUserData(user);
-
-  // 2. Setup Logout
-  enhanceAccountMenu(user);
-  setupLogout();
-
-  // 3. Initialize Realtime Listeners
-  initStore(user.uid);
+// Entry point: protect the page (redirect to login if signed out), then wire
+// up the budget features.
+startAuthenticatedPage((user) => {
   listenToBudgetsAndTxns(user.uid);
-
-  // 4. Setup Form Handler
   setupCreateBudgetForm(user.uid);
-
-  // 5. Initialize Sombo Assistant Widget
-  initSomboAssistant(user);
 });
 
-function bindUserData(user) {
-  const name = user.displayName || user.email?.split("@")[0] || "User";
-  const email = user.email || "";
-  const firstLetter = name.charAt(0).toUpperCase();
-
-  const nameDisplay = document.getElementById("userNameDisplay");
-  const emailDisplay = document.getElementById("userEmailDisplay");
-  const sidebarAvatar = document.getElementById("sidebarAvatar");
-  const dropdownAvatar = document.getElementById("dropdownAvatar");
-  const avatarDisplay = document.getElementById("userAvatarDisplay");
-
-  if (nameDisplay) nameDisplay.textContent = name;
-  if (emailDisplay) emailDisplay.textContent = email;
-  if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
-  if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
-  if (avatarDisplay) avatarDisplay.textContent = firstLetter;
-}
-
-function setupLogout() {
-  document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async function() {
-    this.disabled = true;
-    this.textContent = "Signing out...";
-    try {
-      cleanupStore();
-      destroySomboAssistant();
-      await signOut(auth);
-      window.location.href = "./index.html";
-    } catch (err) {
-      console.error("Logout error:", err);
-      this.disabled = false;
-      this.textContent = "Log Out";
-    }
-  });
-}
-
+// Keeps budgets AND transactions in sync. Both snapshots must arrive before
+// the view is rendered, because every card combines a budget with the
+// monthly spending for that category.
 function listenToBudgetsAndTxns(userId) {
   const budgetRef = collection(db, "users", userId, "budgets");
   const txnRef = collection(db, "users", userId, "transactions");
 
   onSnapshot(budgetRef, (budgetSnap) => {
-    currentBudgets = [];
-    budgetSnap.forEach((docSnap) => {
-      currentBudgets.push({ id: docSnap.id, ...docSnap.data() });
-    });
+    currentBudgets = budgetSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
 
     onSnapshot(txnRef, (txnSnap) => {
-      currentTransactions = [];
-      txnSnap.forEach((docSnap) => {
-        currentTransactions.push({ id: docSnap.id, ...docSnap.data() });
-      });
-
+      currentTransactions = txnSnap.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
       renderBudgetsView();
     });
   });
 }
 
+// Draws each budget card, the top stats, and the warning banner.
 function renderBudgetsView() {
   const grid = document.getElementById("budgetsGrid");
   const statTotal = document.getElementById("statTotalBudget");
@@ -105,7 +50,7 @@ function renderBudgetsView() {
   let totalSpentSoFar = 0;
   let highestUsageWarning = null;
 
-  // Calculate per-category spending from transactions
+  // Calculate per-category spending from this month's transactions.
   const categorySpentMap = {};
   currentTransactions.forEach((tx) => {
     const normalizedType = (tx.type || "").toLowerCase();
@@ -207,6 +152,7 @@ function renderBudgetsView() {
   }
 }
 
+// Delete button handler referenced by the cards above.
 window.deleteBudgetRecord = async (budId) => {
   const user = auth.currentUser;
   if (!user) return;
@@ -219,6 +165,7 @@ window.deleteBudgetRecord = async (budId) => {
   }
 };
 
+// Wires the "Create Budget" modal form to add a budget in Firestore.
 function setupCreateBudgetForm(userId) {
   const form = document.getElementById("createBudgetForm");
   if (!form) return;
@@ -247,19 +194,11 @@ function setupCreateBudgetForm(userId) {
       });
 
       form.reset();
-      const modalEl = document.getElementById("createBudgetModal");
-      if (modalEl) {
-        const modal = window.bootstrap?.Modal?.getInstance(modalEl);
-        if (modal) modal.hide();
-      }
+      closeModal("createBudgetModal");
     } catch (err) {
       alert("Error saving budget: " + err.message);
     } finally {
       if (saveBtn) saveBtn.disabled = false;
     }
   });
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }

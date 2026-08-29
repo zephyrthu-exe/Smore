@@ -619,6 +619,52 @@
   40%           { transform: scale(1);   opacity: 1; }
 }
 
+/* Quick Replies (Confirm / Cancel a staged data change) */
+.sombo-quick-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 12px;
+  width: fit-content;
+}
+
+.sombo-quick-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+
+.sombo-quick-btn:focus-visible {
+  outline: 3px solid var(--sombo-accent);
+  outline-offset: 2px;
+}
+
+.sombo-quick-btn.is-confirm {
+  background: var(--sombo-accent);
+  color: #ffffff;
+  box-shadow: 0 4px 12px var(--sombo-accent-glow);
+}
+
+.sombo-quick-btn.is-confirm:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+
+.sombo-quick-btn.is-cancel {
+  background: #ffffff;
+  color: #475569;
+  border-color: #e2e8f0;
+}
+
+.sombo-quick-btn.is-cancel:hover {
+  background: #f8fafc;
+}
+
 /* Chat Input Footer */
 .sombo-chat-footer {
   padding: 12px 14px;
@@ -960,26 +1006,104 @@
   color: #ffffff;
 }
 
-/* Color picker row */
-.sombo-color-row {
+/* Accent color picker (friendly named swatches) */
+.sombo-label-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.sombo-label-row .sombo-onboard-label {
+  margin-bottom: 0;
+}
+
+.sombo-color-name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+.sombo-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
+  position: relative;
 }
 
-.sombo-color-input {
-  width: 44px;
-  height: 36px;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 8px;
-  padding: 2px;
+.sombo-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #e2e8f0;
   cursor: pointer;
+  padding: 0;
+  position: relative;
+  display: inline-block;
+  appearance: none;
+  -webkit-appearance: none;
   background: none;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
 }
 
-.sombo-color-preview {
-  font-size: 0.8rem;
-  color: #64748b;
+.sombo-swatch:hover {
+  transform: scale(1.12);
+  border-color: #94a3b8;
+}
+
+.sombo-swatch.is-active {
+  border-color: var(--sombo-navy-main);
+  box-shadow: 0 0 0 3px var(--sombo-accent-light), 0 2px 6px rgba(15, 23, 42, 0.25);
+}
+
+.sombo-swatch.is-active::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.45);
+}
+
+/* "Pick a custom color" rainbow swatch (wraps the native color input) */
+.sombo-swatch-custom {
+  background: conic-gradient(#ff5f6d, #ffc371, #3ddc84, #38bdf8, #a855f7, #ff5f6d);
+  border-color: #e2e8f0;
+}
+
+.sombo-swatch-custom::before {
+  content: "+";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Native color input is visually hidden but still opens the browser picker */
+.sombo-color-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+  opacity: 0;
 }
 
 /* Onboarding actions */

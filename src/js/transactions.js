@@ -1,13 +1,29 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+// transactions.js
+// Transactions page: lists all transactions in a searchable, filterable
+// table and lets the user add or delete transactions. Savings transactions
+// also increase the saved amount of the chosen goal.
+
 import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
-import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
-import { initStore, cleanupStore } from "./store.js";
-import { enhanceAccountMenu } from "./account-menu.js";
+import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 
 let allTransactions = [];
 let transactionHashListenerBound = false;
-let userGoals = []; // cached goals for populating Savings categories
+let userGoals = []; // cached goals for populating the Savings category
+
+// Entry point: protect the page (redirect to login if signed out), then wire
+// up all the page features.
+startAuthenticatedPage((user) => {
+  listenToTransactions(user.uid);
+  listenToGoalsForTransactions(user.uid);
+  setupAddTransactionForm(user.uid);
+  setupSearchAndFilters();
+  openTransactionModalFromHash();
+  if (!transactionHashListenerBound) {
+    window.addEventListener("hashchange", openTransactionModalFromHash);
+    transactionHashListenerBound = true;
+  }
+});
 
 function isGoalCompleted(goal) {
   const target = Number(goal?.targetAmount ?? goal?.target ?? 0);
@@ -134,74 +150,6 @@ function populateTxCategoryForCurrentType() {
 
     console.log('[populateTxCategoryForCurrentType] non-savings populated, options=', txCategoryEl.options.length);
   }
-}
-
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    cleanupStore();
-    destroySomboAssistant();
-    window.location.replace("./index.html");
-    return;
-  }
-
-  // 1. Bind User Info
-  bindUserData(user);
-
-  // 2. Setup Logout
-  enhanceAccountMenu(user);
-  setupLogout();
-
-  // 3. Initialize Realtime Listeners
-  initStore(user.uid);
-  listenToTransactions(user.uid);
-  listenToGoalsForTransactions(user.uid);
-
-  // 4. Setup Form and Filter Handlers
-  setupAddTransactionForm(user.uid);
-  setupSearchAndFilters();
-  openTransactionModalFromHash();
-  if (!transactionHashListenerBound) {
-    window.addEventListener("hashchange", openTransactionModalFromHash);
-    transactionHashListenerBound = true;
-  }
-
-  // 5. Initialize Sombo Assistant Widget
-  initSomboAssistant(user);
-});
-
-function bindUserData(user) {
-  const name = user.displayName || user.email?.split("@")[0] || "User";
-  const email = user.email || "";
-  const firstLetter = name.charAt(0).toUpperCase();
-
-  const nameDisplay = document.getElementById("userNameDisplay");
-  const emailDisplay = document.getElementById("userEmailDisplay");
-  const sidebarAvatar = document.getElementById("sidebarAvatar");
-  const dropdownAvatar = document.getElementById("dropdownAvatar");
-  const avatarDisplay = document.getElementById("userAvatarDisplay");
-
-  if (nameDisplay) nameDisplay.textContent = name;
-  if (emailDisplay) emailDisplay.textContent = email;
-  if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
-  if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
-  if (avatarDisplay) avatarDisplay.textContent = firstLetter;
-}
-
-function setupLogout() {
-  document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async function() {
-    this.disabled = true;
-    this.textContent = "Signing out...";
-    try {
-      cleanupStore();
-      destroySomboAssistant();
-      await signOut(auth);
-      window.location.href = "./index.html";
-    } catch (err) {
-      console.error("Logout error:", err);
-      this.disabled = false;
-      this.textContent = "Log Out";
-    }
-  });
 }
 
 function listenToTransactions(userId) {
@@ -422,11 +370,7 @@ function setupAddTransactionForm(userId) {
         await updateDoc(goalRef, { savedAmount: increment(amount) });
 
         form.reset();
-        const modalEl = document.getElementById("addTxModal");
-        if (modalEl) {
-          const modal = window.bootstrap?.Modal?.getInstance(modalEl);
-          if (modal) modal.hide();
-        }
+        closeModal("addTxModal");
       } catch (err) {
         alert("Error adding savings transaction: " + err.message);
       } finally {
@@ -455,11 +399,7 @@ function setupAddTransactionForm(userId) {
       });
 
       form.reset();
-      const modalEl = document.getElementById("addTxModal");
-      if (modalEl) {
-        const modal = window.bootstrap?.Modal?.getInstance(modalEl);
-        if (modal) modal.hide();
-      }
+      closeModal("addTxModal");
     } catch (err) {
       alert("Error adding transaction: " + err.message);
     } finally {
@@ -508,10 +448,6 @@ function openTransactionModalFromHash() {
   }
 }
 
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-}
-
 // Safety initialization: ensure the txType change handler and initial population run
 (function initTransactionUi() {
   try {
@@ -533,3 +469,6 @@ function escapeHtml(str) {
     console.warn('initTransactionUi error', e);
   }
 })();
+
+
+

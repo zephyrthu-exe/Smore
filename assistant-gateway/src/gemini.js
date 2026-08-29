@@ -25,7 +25,18 @@ const GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
 function createGeminiClient({ apiKey, model = "gemini-2.5-flash", maxOutputTokens = 800, transport } = {}) {
   const doFetch = transport || ((url, init) => fetch(url, init));
 
-  async function generate(systemPrompt, userPrompt) {
+  async function generate(systemPrompt, userPrompt, options = {}) {
+    const generationConfig = {
+      maxOutputTokens,
+      temperature: 0.2, // low temperature → deterministic, factual-leaning output
+    };
+    // Structured output: ask the model to return a JSON object shaped by
+    // `responseSchema` (used for the { reply, action } envelope).
+    if (options && options.responseSchema) {
+      generationConfig.responseMimeType = "application/json";
+      generationConfig.responseSchema = options.responseSchema;
+    }
+
     const url = `${GEMINI_BASE_URL}/models/${encodeURIComponent(model)}:generateContent`;
     const body = {
       systemInstruction: {
@@ -37,10 +48,7 @@ function createGeminiClient({ apiKey, model = "gemini-2.5-flash", maxOutputToken
           parts: [{ text: userPrompt }],
         },
       ],
-      generationConfig: {
-        maxOutputTokens,
-        temperature: 0.2, // low temperature → deterministic, factual-leaning output
-      },
+      generationConfig,
     };
 
     const res = await doFetch(url, {
@@ -90,7 +98,19 @@ function createGeminiClient({ apiKey, model = "gemini-2.5-flash", maxOutputToken
       err.status = 502;
       throw err;
     }
-    return { text };
+
+    // Best-effort JSON parse when structured output was requested; never throw
+    // here — the caller decides how to treat plain text.
+    let json = null;
+    if (options && options.responseSchema) {
+      try {
+        json = JSON.parse(text);
+      } catch {
+        json = null;
+      }
+    }
+
+    return { text, json };
   }
 
   return { generate };

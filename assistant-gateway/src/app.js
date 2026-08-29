@@ -13,11 +13,24 @@ const cors = require("cors");
 const helmet = require("helmet");
 const { rateLimit } = require("express-rate-limit");
 
-const { loadConfig, isGeminiKeyPlaceholder } = require("./config");
-const { buildSystemPrompt, validateQuestion, scopeCheck } = require("./guardrails");
+const { loadConfig, isGeminiKeyPlaceholder, isLoopbackHost } = require("./config");
+const {
+  buildSystemPrompt,
+  validateQuestion,
+  scopeCheck,
+  parseAssistantResponse,
+  ACTION_RESPONSE_SCHEMA,
+} = require("./guardrails");
 const { createFirebaseGateway } = require("./firebase");
 const { createGeminiClient } = require("./gemini");
-const { PendingActionStore, parseActionRequest, executeAction, describeAction } = require("./actions");
+const {
+  PendingActionStore,
+  parseConfirmation,
+  sanitizeAction,
+  executeAction,
+  describeAction,
+  findMissingReference,
+} = require("./actions");
 
 /**
  * @param {object} deps  Overrides for tests / non-default wiring.
@@ -45,6 +58,12 @@ function createApp({ firebase, gemini, config: cfg } = {}) {
         // No-origin requests (curl, server-to-server / health checks) are fine.
         if (!origin) return cb(null, true);
         if (config.allowedOrigins.includes(origin)) return cb(null, true);
+        // Dev convenience: allow any loopback static-server origin (localhost /
+        // 127.0.0.1 on any port) so the bot works no matter which local port the
+        // page is served from. Production stays exact-match-only.
+        if (config.env !== "production" && isLoopbackHost(origin)) {
+          return cb(null, true);
+        }
         return cb(new Error(`Origin "${origin}" is not allowed by the gateway.`));
       },
       methods: ["GET", "POST", "OPTIONS"],
@@ -99,8 +118,9 @@ function createApp({ firebase, gemini, config: cfg } = {}) {
         return res.status(qv.status).json({ error: { code: qv.code, message: qv.message } });
       }
 
-      // 2.5) Parse direct data-management actions from plain chat text.
-      const parsedAction = parseActionRequest(qv.question);
+      // 2.5) Explicit confirmations are matched deterministically (never by the
+      //      model), so a model can never silently confirm a data change.
+      const parsedAction = parseConfirmation(qv.question);
       if (parsedAction.kind === "confirm") {
         const action = pendingActions.consume(decoded.uid, parsedAction.token);
         if (!action) {
@@ -113,19 +133,7 @@ function createApp({ firebase, gemini, config: cfg } = {}) {
         }
         const result = await executeAction(action, decoded.uid, fb);
         return res.status(200).json({
-          answer: `${result.message} I can also summarize your updated spending, budgets, and goals if you want.`,
-          user: { uid: decoded.uid },
-        });
-      }
-
-      if (parsedAction.kind === "action") {
-        const token = pendingActions.create(decoded.uid, parsedAction.action);
-        return res.status(200).json({
-          answer: [
-            `I can do that now: ${describeAction(parsedAction.action)}`,
-            `To prevent accidental edits, reply exactly: confirm ${token}`,
-            "You can ask me anything else instead and this draft action will expire automatically.",
-          ].join(" "),
+          answer: `${result.message} I can also summarize your updated spending, budgets, and goals if you like.`,
           user: { uid: decoded.uid },
         });
       }
@@ -147,12 +155,45 @@ function createApp({ firebase, gemini, config: cfg } = {}) {
         });
       }
 
-      // 5) Send to Gemini with the guardrail system prompt.
+      // 5) Ask the model for the natural-language envelope { reply, action }.
       const systemPrompt = buildSystemPrompt(finance);
-      const { text } = await gem.generate(systemPrompt, qv.question);
+      const { text } = await gem.generate(systemPrompt, qv.question, { responseSchema: ACTION_RESPONSE_SCHEMA });
+      const envelope = parseAssistantResponse(text);
 
-      // 6) Respond (never echo raw user data beyond the answer; include uid only).
-      res.status(200).json({ answer: text, user: { uid: decoded.uid } });
+      // 6) If the model proposed a data change, validate it, stage it behind a
+      //    per-user confirmation token, and ask for explicit confirmation.
+      if (envelope.action) {
+        const sanitized = sanitizeAction(envelope.action);
+        if (!sanitized.ok) {
+          return res.status(200).json({
+            answer: `I thought you wanted to change something, but I couldn't make out the exact details (${sanitized.reason}). Could you tell me what you'd like to add, update, or delete?`,
+            user: { uid: decoded.uid },
+          });
+        }
+        // Never write to an item that isn't in the caller's own data. If the
+        // model guessed an id, ask which item they meant instead.
+        const missing = findMissingReference(sanitized.action, finance);
+        if (missing) {
+          return res.status(200).json({
+            answer: `I couldn't find a ${missing.kind} matching that in your data. Tell me which ${missing.kind} you mean (by name/category), and I'll take care of it.`,
+            user: { uid: decoded.uid },
+          });
+        }
+        const token = pendingActions.create(decoded.uid, sanitized.action);
+        const description = describeAction(sanitized.action);
+        return res.status(200).json({
+          answer: [
+            `I can do that now: ${description}.`,
+            `To confirm, reply exactly: confirm ${token}`,
+            "This draft expires in a few minutes, and you can ask me anything else instead.",
+          ].join(" "),
+          confirmation: { token, description },
+          user: { uid: decoded.uid },
+        });
+      }
+
+      // 7) Otherwise answer the question from the server-computed facts.
+      res.status(200).json({ answer: envelope.reply, user: { uid: decoded.uid } });
     } catch (err) {
       handleError(err, res);
     }

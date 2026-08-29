@@ -1,86 +1,33 @@
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
+// goals.js
+// Savings Goals page: shows every goal as a card with its progress and lets
+// the user add or delete goals. Goals are stored in Firestore under the
+// current user's "goals" collection.
+
 import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
-import { initSomboAssistant, destroySomboAssistant } from "./sombo-assistant.js";
-import { initStore, cleanupStore } from "./store.js";
-import { enhanceAccountMenu } from "./account-menu.js";
+import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 
+// All goals for the current user, kept up to date by the Firestore listener.
 let currentGoals = [];
 
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    cleanupStore();
-    destroySomboAssistant();
-    window.location.replace("./index.html");
-    return;
-  }
-
-  // 1. Bind User Info
-  bindUserData(user);
-
-  // 2. Setup Logout
-  enhanceAccountMenu(user);
-  setupLogout();
-
-  // 3. Initialize Realtime Listeners
-  initStore(user.uid);
+// Entry point: protect the page (redirect to login if signed out), then wire
+// up the goal features.
+startAuthenticatedPage((user) => {
   listenToGoals(user.uid);
-
-  // 4. Setup Form Handler
   setupAddGoalForm(user.uid);
-
-  // 5. Initialize Sombo Assistant Widget
-  initSomboAssistant(user);
 });
 
-function bindUserData(user) {
-  const name = user.displayName || user.email?.split("@")[0] || "User";
-  const email = user.email || "";
-  const firstLetter = name.charAt(0).toUpperCase();
-
-  const nameDisplay = document.getElementById("userNameDisplay");
-  const emailDisplay = document.getElementById("userEmailDisplay");
-  const sidebarAvatar = document.getElementById("sidebarAvatar");
-  const dropdownAvatar = document.getElementById("dropdownAvatar");
-  const avatarDisplay = document.getElementById("userAvatarDisplay");
-
-  if (nameDisplay) nameDisplay.textContent = name;
-  if (emailDisplay) emailDisplay.textContent = email;
-  if (sidebarAvatar) sidebarAvatar.textContent = firstLetter;
-  if (dropdownAvatar) dropdownAvatar.textContent = firstLetter;
-  if (avatarDisplay) avatarDisplay.textContent = firstLetter;
-}
-
-function setupLogout() {
-  document.getElementById("sidebarLogoutBtn")?.addEventListener("click", async function() {
-    this.disabled = true;
-    this.textContent = "Signing out...";
-    try {
-      cleanupStore();
-      destroySomboAssistant();
-      await signOut(auth);
-      window.location.href = "./index.html";
-    } catch (err) {
-      console.error("Logout error:", err);
-      this.disabled = false;
-      this.textContent = "Log Out";
-    }
-  });
-}
-
+// Keeps currentGoals in sync with Firestore (newest first) and re-renders.
 function listenToGoals(userId) {
   const q = query(collection(db, "users", userId, "goals"), orderBy("createdAt", "desc"));
 
   onSnapshot(q, (snapshot) => {
-    currentGoals = [];
-    snapshot.forEach((docSnap) => {
-      currentGoals.push({ id: docSnap.id, ...docSnap.data() });
-    });
-
+    currentGoals = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
     renderGoalsView();
   });
 }
 
+// Draws each goal as a card (or an empty state with a shortcut to add one).
 function renderGoalsView() {
   const container = document.getElementById("goalsGridContainer");
   if (!container) return;
@@ -157,6 +104,7 @@ function renderGoalsView() {
   container.innerHTML = html;
 }
 
+// Delete button handler referenced by the cards above.
 window.deleteGoalRecord = async (goalId) => {
   const user = auth.currentUser;
   if (!user) return;
@@ -169,6 +117,8 @@ window.deleteGoalRecord = async (goalId) => {
   }
 };
 
+// Wires the "Add Goal" modal form to create a goal in Firestore. The button
+// stays disabled while the request is in flight so it cannot be double-tapped.
 function setupAddGoalForm(userId) {
   const form = document.getElementById("addGoalForm");
   if (!form) return;
@@ -188,32 +138,23 @@ function setupAddGoalForm(userId) {
       return;
     }
 
-    const [y, m, d] = dateVal.split("-").map(Number);
-    const deadlineObj = new Date(y, m - 1, d);
+    const [year, month, day] = dateVal.split("-").map(Number);
 
     try {
       await addDoc(collection(db, "users", userId, "goals"), {
         title,
         targetAmount,
         savedAmount: initialSaved,
-        deadline: Timestamp.fromDate(deadlineObj),
+        deadline: Timestamp.fromDate(new Date(year, month - 1, day)),
         createdAt: Timestamp.now()
       });
 
       form.reset();
-      const modalEl = document.getElementById("addGoalModal");
-      if (modalEl) {
-        const modal = window.bootstrap?.Modal?.getInstance(modalEl);
-        if (modal) modal.hide();
-      }
+      closeModal("addGoalModal");
     } catch (err) {
       alert("Error adding goal: " + err.message);
     } finally {
       if (saveBtn) saveBtn.disabled = false;
     }
   });
-}
-
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
