@@ -2301,7 +2301,7 @@ body.auth-page .auth-submit { background: var(--workspace-coral); border-color: 
 
   body:not(.auth-page) .app-sidebar nav {
     display: grid !important;
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 0.15rem !important;
     width: 100%;
   }
@@ -3139,7 +3139,6 @@ hr { border-color: var(--smore-border); opacity: 0.7; }
 
 /* 20 ── Responsive refinements ─────────────────────────────────────────── */
 @media (max-width: 767.98px) {
-  .sidebar-theme-toggle { display: none !important; }
   .app-sidebar { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3) !important; }
   .mobile-more-menu { background: var(--smore-surface) !important; }
   .theme-float { top: 0.75rem; right: 0.75rem; }
@@ -3234,5 +3233,3 @@ body:not(.auth-page) main .bg-white p,
 body:not(.auth-page) main .bg-white .small {
   color: var(--smore-muted) !important;
 }
-
-

@@ -368,6 +368,10 @@ class SomboAssistantWidget {
     root.style.setProperty("--sombo-accent-glow", this.profile.accentColor + "66");
     root.style.setProperty("--sombo-accent-light", this.profile.accentColor + "20");
 
+    if (window?.syncBotAccentTheme) {
+      window.syncBotAccentTheme(this.profile);
+    }
+
     // Style preset
     root.setAttribute("data-bot-style", this.profile.style);
 
@@ -852,8 +856,8 @@ class SomboAssistantWidget {
     if (!this.currentUser) return false;
     try {
       await saveBotProfile(this.currentUser.uid, data);
-      this.applyProfile(data);
       this._cacheProfile(data);
+      this.applyProfile(data);
       return true;
     } catch (err) {
       console.warn("[SomboWidget] Could not save profile:", err.code || err.message, err.message);

@@ -7,6 +7,78 @@ const STORAGE_KEY = "smore-theme";
 const DARK = "dark";
 const LIGHT = "light";
 
+function normalizeHexColor(value) {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(trimmed)) {
+    return trimmed;
+  }
+  return null;
+}
+
+function hexToRgb(hex) {
+  const value = normalizeHexColor(hex);
+  if (!value) return null;
+  const normalized = value.length === 4
+    ? value.split("").map((ch, idx) => ch + ch).join("")
+    : value;
+  const num = Number.parseInt(normalized.slice(1), 16);
+  return {
+    r: (num >> 16) & 255,
+    g: (num >> 8) & 255,
+    b: num & 255,
+  };
+}
+
+function rgbToHex({ r, g, b }) {
+  return `#${[r, g, b].map((channel) => Math.max(0, Math.min(255, channel)).toString(16).padStart(2, "0")).join("")}`;
+}
+
+function adjustColor(hex, amount) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  const mix = (channel) => Math.max(0, Math.min(255, Math.round(channel + (255 - channel) * amount)));
+  return rgbToHex({
+    r: mix(rgb.r),
+    g: mix(rgb.g),
+    b: mix(rgb.b),
+  });
+}
+
+function darkenColor(hex, amount = 0.18) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return hex;
+  return rgbToHex({
+    r: Math.round(rgb.r * (1 - amount)),
+    g: Math.round(rgb.g * (1 - amount)),
+    b: Math.round(rgb.b * (1 - amount)),
+  });
+}
+
+export function syncBotAccentTheme(profileOverride = null) {
+  try {
+    const profile = profileOverride || JSON.parse(sessionStorage.getItem("smore_bot_profile_cache") || "null");
+    if (!profile) {
+      document.documentElement.style.removeProperty("--smore-primary");
+      document.documentElement.style.removeProperty("--smore-primary-dark");
+      document.documentElement.style.removeProperty("--smore-primary-soft");
+      document.documentElement.style.removeProperty("--smore-glow");
+      return;
+    }
+    const color = normalizeHexColor(profile?.accentColor || "#ff6b35");
+    if (!color) return;
+
+    const darkened = darkenColor(color, 0.18);
+    const soft = adjustColor(color, 0.82);
+    document.documentElement.style.setProperty("--smore-primary", color);
+    document.documentElement.style.setProperty("--smore-primary-dark", darkened);
+    document.documentElement.style.setProperty("--smore-primary-soft", soft);
+    document.documentElement.style.setProperty("--smore-glow", `${color}55`);
+  } catch (_) {
+    // Ignore malformed profile cache.
+  }
+}
+
 export function getPreferredTheme() {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -29,6 +101,7 @@ export function applyTheme(theme) {
   } catch (e) {
     /* ignore */
   }
+  syncBotAccentTheme();
   syncToggleUI(next);
   return next;
 }
@@ -71,6 +144,11 @@ export function mountThemeToggle() {
   }
 
   syncToggleUI(currentTheme());
+}
+
+// Expose the helper so the bot customization widget can keep app colors in sync.
+if (typeof window !== "undefined") {
+  window.syncBotAccentTheme = syncBotAccentTheme;
 }
 
 // Apply the saved (or system) theme as soon as this module loads.
