@@ -22,24 +22,43 @@
  *   NODE_ENV                             production
  */
 
-const { createApp } = require("../assistant-gateway/src/app");
-const { createFirebaseGateway } = require("../assistant-gateway/src/firebase");
-const { FirestorePendingActionStore } = require("../assistant-gateway/src/actions");
+let app;
+let startupError;
 
-// The gateway's CORS allow-list must contain the exact origin the page is served
-// from. On the default `*.vercel.app` domain Vercel exposes VERCEL_URL, so we
-// default to it when ALLOWED_ORIGINS was not configured. If you use a custom
-// domain, set ALLOWED_ORIGINS explicitly to that origin in the dashboard.
-if (!process.env.ALLOWED_ORIGINS && process.env.VERCEL_URL) {
-  process.env.ALLOWED_ORIGINS = `https://${process.env.VERCEL_URL}`;
+function getApp() {
+  if (app || startupError) return app;
+  try {
+    // Keep all gateway imports inside the handler initialization. This lets
+    // Vercel load the function and return a useful diagnostic if a nested
+    // dependency or runtime configuration is unavailable.
+    const { createApp } = require("../assistant-gateway/src/app");
+    const { createFirebaseGateway } = require("../assistant-gateway/src/firebase");
+    const { FirestorePendingActionStore } = require("../assistant-gateway/src/actions");
+
+    if (!process.env.ALLOWED_ORIGINS && process.env.VERCEL_URL) {
+      process.env.ALLOWED_ORIGINS = `https://${process.env.VERCEL_URL}`;
+    }
+
+    const firebaseGateway = createFirebaseGateway();
+    const pendingActions = new FirestorePendingActionStore(firebaseGateway);
+    ({ app } = createApp({ firebase: firebaseGateway, pendingActions }));
+    return app;
+  } catch (error) {
+    startupError = error;
+    return null;
+  }
 }
 
-// Module-level singletons are reused across warm invocations, so the Firebase
-// Admin app, the config, and the Express app are built once per lambda instance.
-const firebaseGateway = createFirebaseGateway();
-const pendingActions = new FirestorePendingActionStore(firebaseGateway);
-const { app } = createApp({ firebase: firebaseGateway, pendingActions });
-
-// An Express app is a plain Node (req, res) handler, which is exactly the shape
-// a Vercel Node Function expects.
-module.exports = (req, res) => app(req, res);
+module.exports = (req, res) => {
+  const gateway = getApp();
+  if (!gateway) {
+    console.error("[gateway] startup failed:", startupError?.message || "unknown error");
+    return res.status(503).json({
+      error: {
+        code: "gateway_startup_failed",
+        message: "The assistant gateway is not configured correctly on the server.",
+      },
+    });
+  }
+  return gateway(req, res);
+};
