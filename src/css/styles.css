@@ -12,6 +12,7 @@
   --smore-danger: #b94e3d;
   --smore-success: #2f8066;
   --smore-radius: 1rem;
+  --smore-color: #ffffff;
   --smore-shadow: 0 18px 40px rgba(49, 87, 213, 0.08);
   --font-display: "Fraunces", Georgia, serif;
   --font-body: "DM Sans", "Segoe UI", sans-serif;
@@ -1636,7 +1637,7 @@ body:not(.auth-page) > .d-flex {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #050505;
+  color: var(--smore-color) !important;
   font: inherit;
   font-weight: 800;
   text-decoration: underline;
@@ -2666,6 +2667,7 @@ body {
   --smore-success: #3f8f5f;
   --smore-success-soft: #e3f2e7;
   --smore-danger: #c14b3a;
+  --smore-color: #000000;
   --smore-danger-soft: #fbe8e3;
   --smore-warning: #bd7a22;
   --smore-warning-soft: #f9ecd2;
@@ -3088,7 +3090,7 @@ body.auth-page {
 
 /* 17 ── Floating theme toggle (auth page) ──────────────────────────────── */
 .theme-float {
-  position: fixed;
+  position:absolute;
   top: 1rem;
   right: 1rem;
   z-index: 1040;
