@@ -4,6 +4,19 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Smore — Budgets</title>
+  <script>
+    (function () {
+      try {
+        var t = localStorage.getItem("smore-theme");
+        if (t !== "light" && t !== "dark") {
+          t = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        }
+        document.documentElement.setAttribute("data-theme", t);
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
 
   <!-- Bootstrap 5 CSS & Icons -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
@@ -12,82 +25,6 @@
   <!-- External Stylesheets -->
   <link rel="stylesheet" href="./css/styles.css">
   <link rel="stylesheet" href="./css/sombo.css">
-  <style>
-    body {
-      background: #f8fafc;
-    }
-    .profile-wrap {
-      position: relative;
-      margin-top: auto;
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding-top: 0.75rem;
-    }
-    .profile-chip {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      width: 100%;
-      background: transparent;
-      border: 0;
-      color: inherit;
-      text-align: left;
-      padding: 0.6rem 0.75rem;
-      border-radius: 0.85rem;
-      transition: background 0.15s ease;
-    }
-    .profile-chip:hover,
-    .profile-wrap.is-open .profile-chip {
-      background: rgba(255, 255, 255, 0.08);
-    }
-    .avatar {
-      width: 38px;
-      height: 38px;
-      border-radius: 50%;
-      background: #1f2937;
-      color: #fff;
-      display: grid;
-      place-items: center;
-      font-weight: 600;
-      flex: 0 0 auto;
-    }
-    .profile-card {
-      position: absolute;
-      left: calc(100% + 14px);
-      bottom: 0;
-      width: 290px;
-      background: #fff;
-      color: #0f172a;
-      border-radius: 1rem;
-      box-shadow: 0 18px 45px rgba(15, 23, 42, 0.22);
-      opacity: 0;
-      visibility: hidden;
-      transform: translateY(8px) scale(0.98);
-      transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
-      z-index: 1050;
-    }
-    .profile-wrap:hover .profile-card,
-    .profile-wrap:focus-within .profile-card,
-    .profile-wrap.is-open .profile-card {
-      opacity: 1;
-      visibility: visible;
-      transform: translateY(0) scale(1);
-    }
-    .profile-card::before {
-      content: "";
-      position: absolute;
-      left: -16px;
-      top: 0;
-      bottom: 0;
-      width: 16px;
-    }
-    @media (max-width: 767.98px) {
-      .profile-card {
-        left: 0;
-        bottom: calc(100% + 10px);
-        width: 100%;
-      }
-    }
-  </style>
 </head>
 <body class="bg-light">
 
@@ -103,12 +40,20 @@
       <nav class="nav flex-column gap-1">
         <a href="dashboard.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
         <a href="transaction.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
+        <a href="transaction.html#addTxModal" class="mobile-add-action d-flex align-items-center justify-content-center" aria-label="Add transaction"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
         <a href="budget.html" class="sidebar-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
-        <a href="goals.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
-        <a href="analytics.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <a href="goals.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
         <hr style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
-        <a href="#" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="customizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <a href="#" class="sidebar-link desktop-customize-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="desktopCustomizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <button type="button" class="sidebar-link more-nav-button d-flex align-items-center gap-2 text-white-50 rounded" id="mobileMoreBtn" aria-label="More options" aria-expanded="false"><i class="bi bi-three-dots"></i> More</button>
+        <button type="button" class="sidebar-link sidebar-theme-toggle d-flex align-items-center gap-2 px-3 py-2 rounded" data-theme-toggle aria-pressed="false" aria-label="Toggle theme"><i data-theme-icon class="bi bi-moon-stars"></i><span data-theme-label>Dark mode</span></button>
       </nav>
+      <div class="mobile-more-menu" id="mobileMoreMenu" aria-label="More navigation" hidden>
+        <a href="goals.html"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="analytics.html"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <button type="button" id="accountSettingsBtn"><i class="bi bi-person-gear"></i> Account settings</button>
+      </div>
     </div>
 
     <!-- User Account -->
@@ -162,7 +107,7 @@
     </div>
 
     <!-- Top Summary Stats Row -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-4 summary-bento">
       <div class="col-12 col-md-4">
         <div class="card p-3 h-100 border-0 shadow-sm">
           <div class="text-muted small mb-1">Total Budget</div>
@@ -189,24 +134,24 @@
     </div>
 
     <!-- Category Budget Cards Grid -->
-    <div class="row g-3" id="budgetsGrid">
+    <div class="row g-3 bento-grid" id="budgetsGrid">
       <!-- Dynamic Budget Cards Rendered by JS -->
     </div>
   </main>
 </div>
 
 <!-- ================= MODAL: CREATE / SET BUDGET ================= -->
-<div class="modal fade" id="createBudgetModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="createBudgetModal" tabindex="-1" aria-labelledby="createBudgetTitle" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content border-0 shadow">
       <div class="modal-header">
-        <h5 class="modal-title fw-bold fs-6">Set Category Budget Limit</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title fw-bold fs-6" id="createBudgetTitle">Set Category Budget Limit</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <form id="createBudgetForm">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Category</label>
+            <label class="form-label small fw-semibold" for="budCategory">Category</label>
             <select class="form-select" id="budCategory" required>
               <option value="Food & Dining">Food & Dining</option>
               <option value="Transportation">Transportation</option>
@@ -217,8 +162,12 @@
             </select>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-semibold">Monthly Limit (MMK)</label>
+            <label class="form-label small fw-semibold" for="budLimit">Monthly Limit (MMK)</label>
             <input type="number" class="form-control" id="budLimit" placeholder="250000" min="1" required>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="budRollover">
+            <label class="form-check-label small" for="budRollover">Carry unused amount from last month</label>
           </div>
         </div>
         <div class="modal-footer">

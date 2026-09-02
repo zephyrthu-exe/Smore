@@ -31,6 +31,31 @@ function parseAllowedOrigins(raw) {
   return value.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+/** Parses the hostname out of an Origin header value (or "" if invalid). */
+function parseOriginHostname(origin) {
+  try {
+    // Node's URL returns IPv6 hosts bracketed (e.g. "[::1]"); strip them so the
+    // loopback check compares against the raw bare address.
+    return new URL(origin).hostname.replace(/^\[|\]$/g, "");
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * True when an Origin header points at a local loopback address
+ * (localhost / 127.0.0.1 / ::1) regardless of port. Used to let local dev
+ * static servers (Live Server, Vite, etc.) talk to the gateway from any port
+ * without hand-editing ALLOWED_ORIGINS, while still rejecting every real
+ * remote origin not in the allow-list. Browsers set `Origin` yourself — this
+ * only ever reflects the page's real address, so a remote attacker can't spoof a
+ * loopback Origin to bypass the allow-list.
+ */
+function isLoopbackHost(origin) {
+  const host = parseOriginHostname(origin);
+  return host === "localhost" || host === "127.0.0.1" || host === "::1";
+}
+
 /**
  * Returns the runtime configuration object. Reads from process.env each call
  * so tests that mutate env between cases get the fresh value.
@@ -81,4 +106,4 @@ function isGeminiKeyPlaceholder(apiKey) {
   );
 }
 
-module.exports = { loadConfig, isGeminiKeyPlaceholder, parseAllowedOrigins };
+module.exports = { loadConfig, isGeminiKeyPlaceholder, parseAllowedOrigins, isLoopbackHost };

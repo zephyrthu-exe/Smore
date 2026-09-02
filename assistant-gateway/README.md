@@ -22,9 +22,11 @@ Secret Manager or (a paid tier) for Cloud Functions out of the box. This gateway
 moves the secret keeping and the Gemini call onto the Harmy VPS instead, where
 the API key is an ordinary environment variable.
 
-The gateway never modifies the frontend, never changes `firestore.rules`, and
-never exposes the Gemini key. It only **reads** the user's own data to answer
-questions.
+The gateway never changes `firestore.rules` and never exposes the Gemini key. It
+**reads** the user's own data to answer questions and, only after the user
+explicitly confirms, applies the same add/update/delete that the app's own pages
+do — always against the caller's **own** `users/{uid}/…` subcollections. No
+client-supplied `uid` is ever trusted; only the verified token UID is used.
 
 ---
 
@@ -38,12 +40,22 @@ questions.
   path is built from the token's UID, never from client input. (Mirrors
   `firestore.rules`.)
 - **CORS allow-list.** Only origins listed in `ALLOWED_ORIGINS` may call the
-  gateway. Others get `403`.
+  gateway. Others get `403`. In development (`NODE_ENV != "production"`) any local
+  loopback origin (`http://localhost:<port>` / `http://127.0.0.1:<port>`) is also
+  accepted so the widget works from any local static-server port; production stays
+  exact-match-only.
 - **Rate limiting.** Per-IP request caps protect against abuse.
-- **Guardrails.** Gemini is instructed to never perform authoritative financial
-  calculations, never invent missing data, never give professional financial
-  advice, and to state clearly when information is insufficient. The gateway
-  also rejects out-of-scope topics before a Gemini call is made.
+- **Guardrails.** The gateway computes every authoritative figure (totals, by-
+  category breakdowns, remaining budget, goal progress) deterministically; the
+  model only restates those numbers and maps the user's wording to a typed
+  action. The model is instructed to never invent data, never give professional
+  financial advice, and to state clearly when information is insufficient.
+  Out-of-scope topics (investing, tax, lending) are rejected before a Gemini call.
+- **Confirmation for writes.** Any data-changing request (add, update, or delete a
+  transaction, budget, or goal) is staged behind a short-lived, per-user
+  confirmation token and executed only after the user replies `confirm <code>`
+  (or taps the Confirm button). A user can never confirm another user's staged
+  action.
 - **Secrets.** `GEMINI_API_KEY` and the Firebase service-account file live only
   as VPS environment variables / a file outside the repo. Nothing is committed
   (see `.gitignore` and `.env.example`).
@@ -69,11 +81,14 @@ assistant-gateway/
 │   ├── gemini.js         # Minimal Gemini REST client (native fetch)
 │   └── guardrails.js     # Input validation, scope checks, system prompt
 └── test/
-    ├── helpers.js        # Test app builder with stubs
+    ├── helpers.js            # Test app builder with stubs
     ├── health.test.js
     ├── auth.test.js
     ├── isolation.test.js
     ├── assistant.test.js
+    ├── assistant-actions.test.js
+    ├── actions.test.js
+    ├── cors.test.js
     ├── ratelimit.test.js
     └── guardrails.test.js
 ```
@@ -102,6 +117,28 @@ cp .env.example .env
 # edit .env  (GEMINI_API_KEY, GOOGLE_APPLICATION_CREDENTIALS, etc.)
 npm start            # HTTP server on PORT (default 8080)
 ```
+
+### “Unable to reach the Smore Assistant gateway”
+
+That front-end message is raised when the browser can't complete the request to
+the gateway — almost always one of two things:
+
+1. **The gateway isn't running.** Start it first:
+   ```bash
+   cd assistant-gateway && npm start     # or: node src/server.js
+   ```
+   Confirm it's up with `curl http://localhost:8080/health`.
+
+2. **The page origin isn't allowed by CORS.** The widget calls the gateway at
+   `http://localhost:8080/api/assistant` when the page is opened on
+   `localhost`/`127.0.0.1`, and every other URL falls back to a same-origin
+   `/api/assistant`. Make sure:
+   - The site is served by a local HTTP server (VS Code **Live Server**, etc.),
+     **not** opened via `file://` (a `file://` origin can't reach the gateway).
+   - In dev, any `localhost:PORT` origin is now accepted automatically; in
+     production, add your real domain under `ALLOWED_ORIGINS`.
+   - If you run the gateway on a non-default port, set `window.SMORE_GATEWAY_URL`
+     (e.g. `http://localhost:9090/api/assistant`) before the widget loads.
 
 > ⚠️ `.env` is git-ignored. Never commit it. The `.env.example` file is the only
 > committed template and contains placeholders only.
@@ -150,6 +187,18 @@ Success `200`:
 { "answer": "Your food budget is ... You are about X MMK under/over...", "user": { "uid": "abc" } }
 ```
 
+When the user asks to **add / change / delete** something, the same response also
+carries a `confirmation` object and the `answer` invites the user to confirm:
+```json
+{
+  "answer": "I can do that now: ... To confirm, reply exactly: confirm 6F3A2C ...",
+  "confirmation": { "token": "6F3A2C", "description": "Add an expense of 5,000 MMK in Food" },
+  "user": { "uid": "abc" }
+}
+```
+The action is only executed after the browser sends `confirm 6F3A2C` (or the user
+taps the Confirm button).
+
 Failure response shape (all errors):
 ```json
 { "error": { "code": "unauthorized | invalid_question | out_of_scope | forbidden_origin | rate_limited | assistant_unavailable | bad_json | internal | not_found", "message": "..." } }
@@ -167,12 +216,17 @@ Failure response shape (all errors):
 
 ---
 
-## Supported question topics
+## Supported question topics and actions
 
-- **Spending** (overview, by category, by time)
+- **Spending** (overview, by category, by time, this month)
 - **Transactions** (history, individual records)
-- **Budgets** (remaining vs. limit)
+- **Budgets** (remaining vs. limit, rollover)
 - **Savings goals** (progress, deadlines)
+
+The bot can also **change** the user's own data from chat — add, update, or
+delete a transaction, budget, or savings goal — whenever the model understands
+the request. Because the user may phrase it any number of ways, the model emits a
+structured *action* and the gateway validates + confirms it before writing.
 
 Investment, tax, lending, credit, and general professional finance advice are
 rejected/declined on purpose.
@@ -220,9 +274,10 @@ them):
 
 ---
 
-## Connect the frontend (for reference — no frontend files were changed)
+## Connect the frontend
 
-The browser already holds a Firebase ID token after login. It would call:
+The browser already holds a Firebase ID token after login. To ask the assistant it
+calls:
 
 ```js
 const res = await fetch(API_BASE + "/api/assistant", {
@@ -235,5 +290,6 @@ const res = await fetch(API_BASE + "/api/assistant", {
 });
 ```
 
-Only backend files were created/modified as part of this task; the frontend was
-left untouched.
+The gateway backend lives in this folder; the frontend is connected through
+`sombo-assistant.js`, which renders the reply and, for data changes, an inline
+Confirm / Cancel pair of buttons.

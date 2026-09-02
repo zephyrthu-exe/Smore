@@ -22,7 +22,10 @@ import {
 
 // ─── Gateway URL ─────────────────────────────────────────────────────────────
 const GATEWAY_URL =
-  window.SMORE_GATEWAY_URL || "http://172.237.84.171:8080/api/assistant";
+  window.SMORE_GATEWAY_URL ||
+  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8080/api/assistant"
+    : "/api/assistant");
 
 // ─── Style preset metadata ────────────────────────────────────────────────────
 const STYLE_PRESETS = [
@@ -32,6 +35,78 @@ const STYLE_PRESETS = [
   { id: "energetic", label: "Energetic" },
   { id: "calm",      label: "Calm" },
 ];
+// ─── Accent color presets (friendly, named) ──────────────────────────────────
+const ACCENT_PRESETS = [
+  { value: "#ff6b35", label: "Sombo Orange" },
+  { value: "#c45b3c", label: "Terracotta" },
+  { value: "#2563eb", label: "Ocean Blue" },
+  { value: "#16a34a", label: "Emerald" },
+  { value: "#db2777", label: "Berry" },
+  { value: "#7c3aed", label: "Violet" },
+  { value: "#334155", label: "Slate" },
+];
+
+/** Returns a friendly display name for a hex accent color, or "Custom". */
+function getAccentLabel(color) {
+  const value = String(color || DEFAULT_BOT_PROFILE.accentColor).toLowerCase();
+  const match = ACCENT_PRESETS.find(p => p.value.toLowerCase() === value);
+  return match ? match.label : "Custom";
+}
+
+/** Builds the clickable preset swatch buttons for an accent picker group. */
+function buildSwatchButtons(activeColor) {
+  const active = String(activeColor).toLowerCase();
+  return ACCENT_PRESETS.map(p => `
+      <button type="button" class="sombo-swatch${p.value.toLowerCase() === active ? " is-active" : ""}"
+              data-color="${p.value}" aria-label="${p.label}" title="${p.label}"
+              style="background:${p.value}"></button>`).join("");
+}
+
+/**
+ * Builds the whole accent picker: preset swatches + a rainbow "custom" button that
+ * opens the native color input (no raw hex shown to the user).
+ */
+function buildAccentPicker(activeColor, colorInputId) {
+  return `
+      <div class="sombo-swatches">
+        ${buildSwatchButtons(activeColor)}
+        <button type="button" class="sombo-swatch sombo-swatch-custom" aria-label="Pick a custom color" title="Pick a custom color"></button>
+        <input type="color" class="sombo-color-input" id="${colorInputId}" value="${activeColor}" tabindex="-1"/>
+      </div>`;
+}
+
+/**
+ * Wires up an accent picker group.
+ *  - Clicking a preset swatch selects it and syncs the color input + label.
+ *  - Clicking the rainbow custom swatch opens the native color picker.
+ *  - A custom colour switches the label to "Custom".
+ * @param {HTMLElement} container  The `.sombo-swatches` element.
+ * @param {HTMLInputElement} colorInput  The hidden native color input.
+ * @param {HTMLElement} nameEl  The element that shows the friendly colour name.
+ * @param {(color:string)=>void} [onColorChange]  Live-update callback.
+ */
+function wireAccentPicker(container, colorInput, nameEl, onColorChange) {
+  const swatchButtons = Array.from(container.querySelectorAll(".sombo-swatch[data-color]"));
+
+  function apply(color) {
+    const value = String(color || DEFAULT_BOT_PROFILE.accentColor).toLowerCase();
+    if (colorInput && colorInput.value.toLowerCase() !== value) colorInput.value = value;
+    swatchButtons.forEach(btn => btn.classList.toggle("is-active", btn.dataset.color.toLowerCase() === value));
+    if (nameEl) nameEl.textContent = getAccentLabel(value);
+    if (onColorChange) onColorChange(value);
+  }
+
+  swatchButtons.forEach(btn => btn.addEventListener("click", () => apply(btn.dataset.color)));
+
+  // The rainbow "custom" button opens the browser's native colour picker.
+  const customBtn = container.querySelector(".sombo-swatch-custom");
+  if (customBtn && colorInput) customBtn.addEventListener("click", () => colorInput.click());
+
+  if (colorInput) colorInput.addEventListener("input", () => apply(colorInput.value));
+
+  apply(colorInput ? colorInput.value : DEFAULT_BOT_PROFILE.accentColor);
+  return apply;
+}
 
 // ─── SVG markup (unchanged from original, accent-color-reactive via CSS var) ──
 function getSomboSVGMarkup(size = "full") {
@@ -171,6 +246,7 @@ class SomboAssistantWidget {
         role="dialog"
         aria-labelledby="sombo-panel-title"
         aria-modal="false"
+        aria-hidden="true"
       >
         <!-- Header -->
         <header class="sombo-chat-header">
@@ -211,7 +287,7 @@ class SomboAssistantWidget {
               id="sombo-input-field"
               class="sombo-input-field"
               type="text"
-              placeholder="Ask about your finances in MMK..."
+              placeholder="Ask or command in chat (e.g. add expense 5000 for lunch)..."
               maxlength="500"
               autocomplete="off"
               aria-label="Type your financial question"
@@ -266,13 +342,13 @@ class SomboAssistantWidget {
           </svg>
         </div>
         <h6>Hi! I'm ${name} 👋</h6>
-        <p>Your friendly Smore financial companion. Ask me about your spending, budgets, or savings goals!</p>
+        <p>Your Smore financial companion. Ask questions or tell me to add, update, and delete your transactions, budgets, and goals from chat.</p>
         <div class="sombo-prompts-title">Try asking me:</div>
         <div class="sombo-prompts-list">
-          <button type="button" class="sombo-prompt-btn" data-prompt="What is my available balance?">💰 What is my available balance?</button>
           <button type="button" class="sombo-prompt-btn" data-prompt="How much did I spend this month?">📊 How much did I spend this month?</button>
-          <button type="button" class="sombo-prompt-btn" data-prompt="What are my active budgets?">🎯 What are my active budgets?</button>
-          <button type="button" class="sombo-prompt-btn" data-prompt="How are my savings goals progressing?">🌱 How are my savings goals doing?</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="Add expense 5000 for lunch in category Food">➕ Add expense 5000 for lunch</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="Create budget Food 120000 with rollover">🎯 Create budget Food 120000</button>
+          <button type="button" class="sombo-prompt-btn" data-prompt="Create goal Laptop target 1000000 saved 250000 by 2026-12-31">🌱 Create goal Laptop</button>
         </div>
       </div>
     `;
@@ -292,11 +368,14 @@ class SomboAssistantWidget {
     root.style.setProperty("--sombo-accent-glow", this.profile.accentColor + "66");
     root.style.setProperty("--sombo-accent-light", this.profile.accentColor + "20");
 
+    if (window?.syncBotAccentTheme) {
+      window.syncBotAccentTheme(this.profile);
+    }
+
     // Style preset
     root.setAttribute("data-bot-style", this.profile.style);
 
     // Bot name in all text targets
-    const name = this.escapeHTML(this.profile.name);
     if (this.badgeEl)      this.badgeEl.textContent      = this.profile.name;
     if (this.panelTitleEl) this.panelTitleEl.textContent  = this.profile.name;
     if (this.avatarBtnEl)  this.avatarBtnEl.setAttribute("aria-label", `Open Smore Assistant Chat with ${this.profile.name}`);
@@ -503,14 +582,17 @@ class SomboAssistantWidget {
   // ── Sidebar "Customize my bot" link ───────────────────────────────────────
   _bindSidebarCustomizeLink() {
     // Runs after mount so DOM is ready.
-    // Bind any existing #customizeBotNavBtn on the page.
-    const link = document.getElementById("customizeBotNavBtn");
-    if (link) {
+    // Bind the customization action inside the More menu.
+    const links = [
+      document.getElementById("customizeBotNavBtn"),
+      document.getElementById("desktopCustomizeBotNavBtn")
+    ].filter(Boolean);
+    links.forEach((link) => {
       link.addEventListener("click", (e) => {
         e.preventDefault();
         this.openCustomizeModal();
       });
-    }
+    });
   }
 
   // ── Profile session cache (eliminates FOUC on page navigation) ────────────
@@ -564,12 +646,11 @@ class SomboAssistantWidget {
         </div>
 
         <div class="sombo-onboard-form-group">
-          <label class="sombo-onboard-label" for="onboard-accent-color">Accent color</label>
-          <div class="sombo-color-row">
-            <input type="color" class="sombo-color-input" id="onboard-accent-color"
-                   value="${DEFAULT_BOT_PROFILE.accentColor}"/>
-            <span class="sombo-color-preview" id="onboard-color-preview">${DEFAULT_BOT_PROFILE.accentColor}</span>
+          <div class="sombo-label-row">
+            <label class="sombo-onboard-label">Accent color</label>
+            <span class="sombo-color-name" id="onboard-color-name">${getAccentLabel(DEFAULT_BOT_PROFILE.accentColor)}</span>
           </div>
+          ${buildAccentPicker(DEFAULT_BOT_PROFILE.accentColor, "onboard-accent-color")}
         </div>
 
         <div class="sombo-onboard-actions">
@@ -594,12 +675,10 @@ class SomboAssistantWidget {
       });
     });
 
-    // Color preview
+    // Accent color picker (preset swatches + custom) — no raw hex shown
     const colorInput = overlay.querySelector("#onboard-accent-color");
-    const colorPreview = overlay.querySelector("#onboard-color-preview");
-    colorInput.addEventListener("input", () => {
-      colorPreview.textContent = colorInput.value;
-    });
+    const colorName  = overlay.querySelector("#onboard-color-name");
+    wireAccentPicker(overlay.querySelector(".sombo-swatches"), colorInput, colorName);
 
     // Create bot
     overlay.querySelector("#onboard-create-btn").addEventListener("click", async () => {
@@ -692,12 +771,11 @@ class SomboAssistantWidget {
         </div>
 
         <div class="sombo-onboard-form-group">
-          <label class="sombo-onboard-label" for="customize-accent-color">Accent color</label>
-          <div class="sombo-color-row">
-            <input type="color" class="sombo-color-input" id="customize-accent-color"
-                   value="${currentColor}"/>
-            <span class="sombo-color-preview" id="customize-color-preview">${currentColor}</span>
+          <div class="sombo-label-row">
+            <label class="sombo-onboard-label">Accent color</label>
+            <span class="sombo-color-name" id="customize-color-name">${getAccentLabel(currentColor)}</span>
           </div>
+          ${buildAccentPicker(currentColor, "customize-accent-color")}
         </div>
 
         <div class="sombo-customize-actions">
@@ -720,24 +798,24 @@ class SomboAssistantWidget {
 
     // Style selection + preview label (only updates the preview, NOT the live widget)
     const previewStyleLabel = overlay.querySelector("#preview-style-label");
+    const preview = overlay.querySelector("#customize-preview");
     overlay.querySelectorAll(".sombo-style-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         overlay.querySelectorAll(".sombo-style-btn").forEach(b => b.classList.remove("is-active"));
         btn.classList.add("is-active");
         selectedStyle = btn.dataset.style;
         previewStyleLabel.textContent = STYLE_PRESETS.find(p => p.id === selectedStyle)?.label || selectedStyle;
-        overlay.querySelector("#customize-preview").setAttribute("data-bot-style", selectedStyle);
-        // Do NOT call applyProfile here — only update the preview panel, not the live bot
+        preview.setAttribute("data-bot-style", selectedStyle);
       });
     });
 
-    // Color preview
-    const colorInput   = overlay.querySelector("#customize-accent-color");
-    const colorPreview = overlay.querySelector("#customize-color-preview");
-    const previewDot   = overlay.querySelector("#preview-dot");
-    colorInput.addEventListener("input", () => {
-      colorPreview.textContent = colorInput.value;
-      previewDot.style.background = colorInput.value;
+    // Accent color picker (preset swatches + custom) — updates the live preview
+    const colorInput = overlay.querySelector("#customize-accent-color");
+    const colorName  = overlay.querySelector("#customize-color-name");
+    const previewDot = overlay.querySelector("#preview-dot");
+    wireAccentPicker(overlay.querySelector(".sombo-swatches"), colorInput, colorName, (color) => {
+      previewDot.style.background = color;
+      preview.style.setProperty("--sombo-accent", color);
     });
 
     // Close
@@ -778,8 +856,8 @@ class SomboAssistantWidget {
     if (!this.currentUser) return false;
     try {
       await saveBotProfile(this.currentUser.uid, data);
-      this.applyProfile(data);
       this._cacheProfile(data);
+      this.applyProfile(data);
       return true;
     } catch (err) {
       console.warn("[SomboWidget] Could not save profile:", err.code || err.message, err.message);
@@ -800,6 +878,7 @@ class SomboAssistantWidget {
     this.isOpen = true;
     this._positionPanel();
     this.panelEl.classList.add("is-open");
+    this.panelEl.setAttribute("aria-hidden", "false");
     this.avatarBtnEl.setAttribute("aria-expanded", "true");
     this.avatarBtnEl.classList.add("is-leaning", "is-waving");
     setTimeout(() => this.avatarBtnEl.classList.remove("is-waving"), 1200);
@@ -810,8 +889,10 @@ class SomboAssistantWidget {
   closePanel() {
     this.isOpen = false;
     this.panelEl.classList.remove("is-open");
+    this.panelEl.setAttribute("aria-hidden", "true");
     this.avatarBtnEl.setAttribute("aria-expanded", "false");
     this.avatarBtnEl.classList.remove("is-leaning");
+    this.avatarBtnEl.focus();
   }
 
   // ── Auth state ────────────────────────────────────────────────────────────
@@ -835,8 +916,22 @@ class SomboAssistantWidget {
       return;
     }
 
-    this.appendUserMessage(questionText);
     this.inputEl.value = "";
+    await this.sendMessage(questionText);
+  }
+
+  // Send a message to the gateway and render the reply. Used both for typed
+  // questions and for the quick-reply Confirm/Cancel buttons.
+  async sendMessage(text) {
+    const message = String(text || "").trim();
+    if (!message || this.isThinking) return;
+
+    if (!this.currentUser) {
+      this.renderUnauthenticatedState();
+      return;
+    }
+
+    this.appendUserMessage(message);
     this.setThinkingState(true);
 
     try {
@@ -847,13 +942,17 @@ class SomboAssistantWidget {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ question: questionText }),
+        body: JSON.stringify({ question: message }),
       });
 
       const data = await res.json();
 
       if (res.ok && data.answer) {
         this.appendBotMessage(data.answer);
+        // If the gateway staged a data change, offer explicit Confirm/Cancel.
+        if (data.confirmation && data.confirmation.token) {
+          this.renderConfirmButtons(data.confirmation);
+        }
         this.triggerHappyAnimation();
       } else {
         const errorCode = data?.error?.code;
@@ -872,6 +971,35 @@ class SomboAssistantWidget {
     } finally {
       this.setThinkingState(false);
     }
+  }
+
+  // ── Quick replies (Confirm a staged data change) ───────────────────────────
+  renderConfirmButtons(confirmation) {
+    const wrap = document.createElement("div");
+    wrap.className = "sombo-quick-replies";
+
+    const confirmBtn = document.createElement("button");
+    confirmBtn.type = "button";
+    confirmBtn.className = "sombo-quick-btn is-confirm";
+    confirmBtn.textContent = "✓ Confirm";
+    confirmBtn.addEventListener("click", () => {
+      wrap.remove();
+      this.sendMessage(`confirm ${confirmation.token}`);
+    });
+
+    const cancelBtn = document.createElement("button");
+    cancelBtn.type = "button";
+    cancelBtn.className = "sombo-quick-btn is-cancel";
+    cancelBtn.textContent = "Cancel";
+    cancelBtn.addEventListener("click", () => {
+      wrap.remove();
+      this.appendBotMessage("OK, I've cancelled that — nothing was changed.");
+    });
+
+    wrap.appendChild(confirmBtn);
+    wrap.appendChild(cancelBtn);
+    this.chatBodyEl.appendChild(wrap);
+    this.scrollToBottom();
   }
 
   // ── Thinking state ────────────────────────────────────────────────────────
