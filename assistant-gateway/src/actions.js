@@ -214,6 +214,60 @@ class PendingActionStore {
 }
 
 /**
+ * Firestore-backed pending-action store for serverless hosts (e.g. Vercel),
+ * where a single Node process is NOT long-lived and an in-memory map would be
+ * lost between the "stage a change" request and the later "confirm" request.
+ *
+ * Mirrors the in-memory contract (per-uid token, one-shot consume, TTL) but
+ * persists each pending action as a Firestore document. It only ever writes
+ * under the verified `users/{uid}/assistantActions` path. The Admin SDK runs
+ * with full privileges and bypasses Firestore rules, so this is permitted
+ * regardless of the client-facing rules.
+ */
+class FirestorePendingActionStore {
+  constructor(firebaseGateway) {
+    this.fb = firebaseGateway;
+  }
+
+  _collection(uid) {
+    return this.fb
+      .store()
+      .collection("users")
+      .doc(String(uid))
+      .collection("assistantActions");
+  }
+
+  async create(uid, action) {
+    const token = randomBytes(3).toString("hex").toUpperCase();
+    await this._collection(uid).doc(token).set({
+      action,
+      expiresAt: this.fb.timestampFromDate(new Date(Date.now() + ACTION_TTL_MS)),
+    });
+    return token;
+  }
+
+  async consume(uid, token) {
+    const normalized = String(token || "").trim().toUpperCase();
+    if (!normalized) return null;
+    const ref = this._collection(uid).doc(normalized);
+    const snap = await ref.get().catch(() => null);
+    if (!snap || !snap.exists) return null;
+    const data = snap.data();
+    const expiresAt = data && data.expiresAt;
+    const expired =
+      expiresAt &&
+      typeof expiresAt.toDate === "function" &&
+      expiresAt.toDate().getTime() <= Date.now();
+    if (expired) {
+      await ref.delete().catch(() => {});
+      return null;
+    }
+    await ref.delete().catch(() => {});
+    return data.action;
+  }
+}
+
+/**
  * Validate and normalise a proposed action (whatever shape the model emitted)
  * into a strict, safe shape. Returns { ok, action } or { ok:false, reason }.
  */
@@ -372,6 +426,7 @@ function _done(p) {
 
 module.exports = {
   PendingActionStore,
+  FirestorePendingActionStore,
   ACTION_TYPES,
   sanitizeAction,
   parseConfirmation,

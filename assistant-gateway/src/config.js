@@ -71,7 +71,12 @@ function loadConfig() {
     allowedOrigins: parseAllowedOrigins(env.ALLOWED_ORIGINS),
 
     // Firebase Admin
+    // Two ways to supply the service-account credential:
+    //   - GOOGLE_APPLICATION_CREDENTIALS       = a FILE PATH on the host (VPS guide)
+    //   - GOOGLE_APPLICATION_CREDENTIALS_JSON  = the full JSON string inline (Railway /
+    //                                            PaaS, where you can't place files)
     googleApplicationCredentials: env.GOOGLE_APPLICATION_CREDENTIALS || null,
+    googleApplicationCredentialsJson: env.GOOGLE_APPLICATION_CREDENTIALS_JSON || null,
     firebaseProjectId: env.FIREBASE_PROJECT_ID || "smore-6464b",
 
     // Gemini

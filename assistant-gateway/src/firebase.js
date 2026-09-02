@@ -468,6 +468,11 @@ function createFirebaseGateway({ app = null } = {}) {
     deleteGoal,
     updateGoal,
     updateGoalSavedAmount,
+    // Lower-level Firestore access so a serverless-compatible durable store
+    // (e.g. FirestorePendingActionStore) can persist state across invocations.
+    store,
+    timestampNow,
+    timestampFromDate,
   };
 }
 
@@ -481,7 +486,16 @@ function _adminInitOptions() {
   const cfg = loadConfig();
   const { cert, applicationDefault } = loadFirebaseApp();
 
+  if (cfg.googleApplicationCredentialsJson) {
+    // PaaS / Railway: the whole service-account JSON is supplied as one env var.
+    return {
+      credential: cert(JSON.parse(cfg.googleApplicationCredentialsJson)),
+      projectId: cfg.firebaseProjectId,
+    };
+  }
+
   if (cfg.googleApplicationCredentials) {
+    // VPS: a file path to the service-account JSON lives outside the repo.
     return {
       credential: cert(cfg.googleApplicationCredentials),
       projectId: cfg.firebaseProjectId,

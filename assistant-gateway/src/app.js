@@ -37,10 +37,13 @@ const {
  * @param {object} [deps.firebase]  e.g. a stub with { verifyIdToken, readUserFinance }.
  * @param {object} [deps.gemini]    e.g. a stub with { generate }.
  * @param {object} [deps.config]    pre-built config (defaults to loadConfig()).
+ * @param {object} [deps.pendingActions]  pending-action store (defaults to the
+ *   in-memory PendingActionStore). Supply a FirestorePendingActionStore on
+ *   serverless hosts so the confirm/execute flow survives ephemeral lambdas.
  */
-function createApp({ firebase, gemini, config: cfg } = {}) {
+function createApp({ firebase, gemini, config: cfg, pendingActions: pendingActionsOverride } = {}) {
   const config = cfg || loadConfig();
-  const pendingActions = new PendingActionStore();
+  const pendingActions = pendingActionsOverride || new PendingActionStore();
 
   // Ensure at least the real (or injected) implementations are present. If the
   // caller supplied stubs, they win — otherwise build the real ones lazily.
@@ -122,7 +125,7 @@ function createApp({ firebase, gemini, config: cfg } = {}) {
       //      model), so a model can never silently confirm a data change.
       const parsedAction = parseConfirmation(qv.question);
       if (parsedAction.kind === "confirm") {
-        const action = pendingActions.consume(decoded.uid, parsedAction.token);
+        const action = await pendingActions.consume(decoded.uid, parsedAction.token);
         if (!action) {
           return res.status(400).json({
             error: {
@@ -179,7 +182,7 @@ function createApp({ firebase, gemini, config: cfg } = {}) {
             user: { uid: decoded.uid },
           });
         }
-        const token = pendingActions.create(decoded.uid, sanitized.action);
+        const token = await pendingActions.create(decoded.uid, sanitized.action);
         const description = describeAction(sanitized.action);
         return res.status(200).json({
           answer: [
