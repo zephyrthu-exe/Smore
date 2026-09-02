@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "outputDirectory": "src",
-  "installCommand": "npm install --prefix assistant-gateway --omit=dev",
+  "installCommand": "npm install --omit=dev",
   "functions": {
     "api/assistant.js": {
       "maxDuration": 60,
