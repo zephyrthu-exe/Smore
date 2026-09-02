@@ -24,17 +24,13 @@ import {
 // PROD_GATEWAY_URL is where your DEPLOYED assistant gateway lives (see
 // assistant-gateway/README.md). Fill this in with its public HTTPS URL, e.g.
 //   "https://your-gateway-host.com/api/assistant"
-// Leave it empty to keep the old behaviour (same-origin "/api/assistant" in
-// production, which is exactly what fails on Vercel static hosting until you
-// deploy the gateway somewhere reachable).
+// The gateway is deployed as a Vercel Function in this same project. Keep this
+// empty unless you intentionally use a separate gateway deployment.
 const PROD_GATEWAY_URL = "";
 
-const GATEWAY_URL =
-  window.SMORE_GATEWAY_URL ||
-  PROD_GATEWAY_URL ||
-  (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-    ? "http://localhost:8080/api/assistant"
-    : "/api/assistant");
+// Use the same-origin function in local preview and production. The previous
+// localhost:8080 fallback pointed at a server that is not started by this site.
+const GATEWAY_URL = window.SMORE_GATEWAY_URL || PROD_GATEWAY_URL || "/api/assistant";
 
 // ─── Style preset metadata ────────────────────────────────────────────────────
 const STYLE_PRESETS = [
@@ -336,7 +332,7 @@ class SomboAssistantWidget {
     this._bindBackdropClose();
   }
 
-  // ── Welcome card ───────────────────────────────────────────────────────────
+  // ── Welcome card ────────────────────────────��──────────────────────────────
   _buildWelcomeCard() {
     const name = this.escapeHTML(this.profile.name);
     this.chatBodyEl.innerHTML = `
