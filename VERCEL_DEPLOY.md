@@ -13,7 +13,9 @@ no separate domain, and **no need to set `PROD_GATEWAY_URL`**.
 - `vercel.json` tells Vercel to:
   - serve static files from `src/`,
   - install the gateway's own deps (`npm install --prefix assistant-gateway --omit=dev`),
-  - build the two functions on Node 20.
+  - build the two functions (the Node version is set by `engines` in the root
+    `package.json` — do **not** add a `runtime` field; Vercel rejects bare Node
+    versions there).
 - Vercel Functions are **stateless/ephemeral**, so the confirmation-token store is
   now **Firestore-backed** (`FirestorePendingActionStore`) to survive the
   "stage a change" → "confirm ABC123" two-request flow. The in-memory store is
@@ -77,6 +79,10 @@ vercel --prod
   be slower, and the first call after a redeploy pays a warm-up cost.
 - **Rate limiting is best-effort** on serverless (per-instance memory). It still
   exists but isn't as strict as the single-process VPS gateway.
+- **Runtime error on deploy:** `Function Runtimes must have a valid version` means
+  `vercel.json` had a `runtime` field like `nodejs20.x`. For Node functions you must
+  NOT set `runtime` there — remove it and set the Node version via
+  `"engines": { "node": "20.x" }` in the root `package.json` (already done in this repo).
 - If Vercel rejects the `maxDuration` value for your plan, lower it in
   `vercel.json` (e.g. `"maxDuration": 10`) and redeploy.
 - The VPS path (`assistant-gateway/VPS_DEPLOY.md`) is unchanged and still works;

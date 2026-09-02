@@ -4,12 +4,10 @@
   "installCommand": "npm install --prefix assistant-gateway --omit=dev",
   "functions": {
     "api/assistant.js": {
-      "runtime": "nodejs20.x",
       "maxDuration": 60,
       "memory": 1024
     },
     "api/health.js": {
-      "runtime": "nodejs20.x",
       "maxDuration": 10,
       "memory": 1024
     }
