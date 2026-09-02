@@ -9,7 +9,7 @@ no separate domain, and **no need to set `PROD_GATEWAY_URL`**.
 - The static site still comes from `src/` (unchanged).
 - New Vercel serverless functions handle the backend:
   - `api/assistant.js` → `POST https://<your-app>.vercel.app/api/assistant`
-  - `api/health.js`     → `GET  https://<your-app>.vercel.app/health`
+  - `api/health.js` → `GET  https://<your-app>.vercel.app/health`
 - `vercel.json` tells Vercel to:
   - serve static files from `src/`,
   - install the gateway's own deps (`npm install --prefix assistant-gateway --omit=dev`),
@@ -25,18 +25,18 @@ no separate domain, and **no need to set `PROD_GATEWAY_URL`**.
 
 Project → Settings → **Environment Variables**. Add:
 
-| Name | Value |
-| --- | --- |
-| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | The **entire contents** of your Firebase service-account JSON (paste the JSON text, do not use a path) |
-| `FIREBASE_PROJECT_ID` | `smore-6464b` |
-| `GEMINI_API_KEY` | your real Gemini API key |
-| `GEMINI_MODEL` | `gemini-2.5-flash` (optional) |
-| `GEMINI_MAX_OUTPUT_TOKENS` | `800` (optional) |
-| `ALLOWED_ORIGINS` | `https://<your-app>.vercel.app` (optional — auto-derived from `VERCEL_URL` if omitted; **required** if you use a custom domain) |
-| `NODE_ENV` | `production` |
+| Name                                  | Value                                                                                                                           |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `GOOGLE_APPLICATION_CREDENTIALS_JSON` | The **entire contents** of your Firebase service-account JSON (paste the JSON text, do not use a path)                          |
+| `FIREBASE_PROJECT_ID`                 | `smore-6464b`                                                                                                                   |
+| `GEMINI_API_KEY`                      | your real Gemini API key                                                                                                        |
+| `GEMINI_MODEL`                        | `gemini-2.5-flash` (optional)                                                                                                   |
+| `GEMINI_MAX_OUTPUT_TOKENS`            | `800` (optional)                                                                                                                |
+| `ALLOWED_ORIGINS`                     | `https://<your-app>.vercel.app` (optional — auto-derived from `VERCEL_URL` if omitted; **required** if you use a custom domain) |
+| `NODE_ENV`                            | `production`                                                                                                                    |
 
 > **Where to get the service-account JSON:** Firebase Console → Project settings →
-> Service accounts → *Generate new private key* → copy the JSON → paste it into the
+> Service accounts → _Generate new private key_ → copy the JSON → paste it into the
 > `GOOGLE_APPLICATION_CREDENTIALS_JSON` env var. It must be for the **same project**
 > (`smore-6464b`) the frontend uses, and the service account needs Firestore access.
 >
@@ -82,7 +82,10 @@ vercel --prod
 - **Runtime error on deploy:** `Function Runtimes must have a valid version` means
   `vercel.json` had a `runtime` field like `nodejs20.x`. For Node functions you must
   NOT set `runtime` there — remove it and set the Node version via
-  `"engines": { "node": "20.x" }` in the root `package.json` (already done in this repo).
+  `"engines": { "node": "24.x" }` in the root `package.json` (already done in this repo).
+  Do **not** pin `20.x`: Node 20 is deprecated on Vercel and deployments created on
+  or after **2026-10-01** will fail to build. Using `24.x` matches Vercel's default
+  runtime and removes the "engines" override warning.
 - If Vercel rejects the `maxDuration` value for your plan, lower it in
   `vercel.json` (e.g. `"maxDuration": 10`) and redeploy.
 - The VPS path (`assistant-gateway/VPS_DEPLOY.md`) is unchanged and still works;
