@@ -549,9 +549,9 @@
   }
 }
 
-/* Keep the assistant helpful and visually subordinate to financial work. */
-.sombo-widget-container { z-index: 1020; }
-.sombo-avatar-btn { width: 68px; height: 78px; }
+  /* Keep the assistant above the mobile navigation rail so it remains reachable. */
+  .sombo-widget-container { z-index: 1060; }
+  .sombo-avatar-btn { width: 68px; height: 78px; }
 .sombo-badge { background: var(--smore-primary, #c45b3c); box-shadow: 0 4px 10px rgba(33, 60, 59, 0.18); }
 .sombo-chat-panel { border-radius: 0.75rem; border-color: var(--smore-border, #dfd7cc); box-shadow: 0 18px 42px rgba(33, 60, 59, 0.2); }
 .sombo-chat-header { background: var(--smore-rail, #214542); }
