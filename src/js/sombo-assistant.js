@@ -912,6 +912,28 @@ class SomboAssistantWidget {
   }
 
   // ── Submit question ────────────────────────────────────────────────────────
+  waitForAuthenticatedUser(timeoutMs = 5000) {
+    if (auth.currentUser) return Promise.resolve(auth.currentUser);
+
+    return new Promise((resolve) => {
+      let settled = false;
+      let timer;
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        unsubscribe();
+        resolve(user || null);
+      });
+      timer = window.setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        unsubscribe();
+        resolve(auth.currentUser || null);
+      }, timeoutMs);
+    });
+  }
+
   async handleUserSubmit() {
     const questionText = this.inputEl.value.trim();
     if (!questionText || this.isThinking) return;
@@ -933,10 +955,10 @@ class SomboAssistantWidget {
     const message = String(text || "").trim();
     if (!message || this.isThinking) return;
 
-    // Always use Firebase Auth's canonical user. The widget can outlive an
-    // auth refresh (or a page's auth callback), so preferring this.currentUser
-    // can send a token from a stale user object to the gateway.
-    const user = auth.currentUser || this.currentUser;
+    // Firebase restores a persisted session asynchronously. The widget can be
+    // clicked during that short window, so wait for the auth observer instead
+    // of treating a temporarily-null auth.currentUser as a real logout.
+    const user = await this.waitForAuthenticatedUser();
     if (!user) {
       this.renderUnauthenticatedState();
       return;
