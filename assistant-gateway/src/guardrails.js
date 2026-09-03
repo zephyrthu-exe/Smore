@@ -303,9 +303,14 @@ function parseAssistantResponse(text) {
   const fallback = { reply: String(text || ""), action: null };
   if (!text || typeof text !== "string") return fallback;
 
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  }
+
   let parsed;
   try {
-    parsed = JSON.parse(text);
+    parsed = JSON.parse(cleaned);
   } catch {
     return fallback;
   }
