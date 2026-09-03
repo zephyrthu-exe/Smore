@@ -495,9 +495,28 @@ function _adminInitOptions() {
   }
 
   if (cfg.googleApplicationCredentials) {
+    // Vercel commonly stores this variable as the full JSON value, while the
+    // VPS setup uses it as a file path. Support both formats so the deployed
+    // function does not try to open a JSON string as a filesystem path.
+    const rawCredential = cfg.googleApplicationCredentials.trim();
+    if (rawCredential.startsWith("{")) {
+      let serviceAccount;
+      try {
+        serviceAccount = JSON.parse(rawCredential);
+      } catch (error) {
+        const err = new Error("GOOGLE_APPLICATION_CREDENTIALS contains invalid JSON.");
+        err.cause = error;
+        throw err;
+      }
+      return {
+        credential: cert(serviceAccount),
+        projectId: cfg.firebaseProjectId,
+      };
+    }
+
     // VPS: a file path to the service-account JSON lives outside the repo.
     return {
-      credential: cert(cfg.googleApplicationCredentials),
+      credential: cert(rawCredential),
       projectId: cfg.firebaseProjectId,
     };
   }
