@@ -916,10 +916,12 @@ class SomboAssistantWidget {
     const questionText = this.inputEl.value.trim();
     if (!questionText || this.isThinking) return;
 
-    if (!this.currentUser) {
+    const user = this.currentUser || auth.currentUser;
+    if (!user) {
       this.renderUnauthenticatedState();
       return;
     }
+    this.currentUser = user;
 
     this.inputEl.value = "";
     await this.sendMessage(questionText);
@@ -931,16 +933,18 @@ class SomboAssistantWidget {
     const message = String(text || "").trim();
     if (!message || this.isThinking) return;
 
-    if (!this.currentUser) {
+    const user = this.currentUser || auth.currentUser;
+    if (!user) {
       this.renderUnauthenticatedState();
       return;
     }
+    this.currentUser = user;
 
     this.appendUserMessage(message);
     this.setThinkingState(true);
 
     try {
-      const token = await this.currentUser.getIdToken(true);
+      const token = await user.getIdToken(true);
       const res = await fetch(GATEWAY_URL, {
         method: "POST",
         headers: {
