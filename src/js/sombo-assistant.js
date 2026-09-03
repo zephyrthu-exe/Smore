@@ -933,7 +933,10 @@ class SomboAssistantWidget {
     const message = String(text || "").trim();
     if (!message || this.isThinking) return;
 
-    const user = this.currentUser || auth.currentUser;
+    // Always use Firebase Auth's canonical user. The widget can outlive an
+    // auth refresh (or a page's auth callback), so preferring this.currentUser
+    // can send a token from a stale user object to the gateway.
+    const user = auth.currentUser || this.currentUser;
     if (!user) {
       this.renderUnauthenticatedState();
       return;
@@ -944,17 +947,30 @@ class SomboAssistantWidget {
     this.setThinkingState(true);
 
     try {
-      const token = await user.getIdToken(true);
-      const res = await fetch(GATEWAY_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ question: message }),
-      });
+      let res;
+      let data;
+      let token = await user.getIdToken();
 
-      const data = await res.json();
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        res = await fetch(GATEWAY_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ question: message }),
+        });
+        data = await res.json().catch(() => ({}));
+
+        if (res.status !== 401 || attempt === 1) break;
+
+        // A 401 can be caused by a token rotating between the auth callback and
+        // this request. Re-read the canonical user and force one clean refresh.
+        const refreshedUser = auth.currentUser;
+        if (!refreshedUser) break;
+        this.currentUser = refreshedUser;
+        token = await refreshedUser.getIdToken(true);
+      }
 
       if (res.ok && data.answer) {
         this.appendBotMessage(data.answer);
