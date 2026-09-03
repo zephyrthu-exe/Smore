@@ -1007,6 +1007,7 @@ class SomboAssistantWidget {
         if (res.status === 422 && errorCode === "out_of_scope") {
           this.renderBlockedTopicState(errorMsg || "I can only help with your personal finance data on Smore.");
         } else if (res.status === 401) {
+          console.warn("[Sombo Auth Gateway 401]", data);
           this.renderUnauthenticatedState();
         } else {
           this.renderErrorState(errorMsg || "Could not fetch advice from Smore Assistant. Please try again.");

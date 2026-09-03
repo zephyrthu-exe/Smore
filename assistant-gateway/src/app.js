@@ -230,7 +230,12 @@ function handleError(err, res) {
 
   if (kind === "auth") {
     return res.status(status || 401).json({
-      error: { code: "unauthorized", message: err.message || "Authentication failed." },
+      error: {
+        code: "unauthorized",
+        message: err.message || "Authentication failed.",
+        causeCode: err.cause?.code || err.code || null,
+        causeMessage: err.cause?.message || null,
+      },
     });
   }
 
