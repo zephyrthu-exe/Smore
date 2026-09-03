@@ -42,13 +42,12 @@ function renderBudgetsView() {
   const statSpent = document.getElementById("statSpentSoFar");
   const statRemaining = document.getElementById("statRemainingBudget");
   const warningBanner = document.getElementById("budgetWarningBanner");
-  const warningText = document.getElementById("warningBannerText");
 
   if (!grid) return;
 
   let totalAllocated = 0;
   let totalSpentSoFar = 0;
-  let highestUsageWarning = null;
+  const budgetWarnings = [];
 
   // Calculate per-category spending from this month's transactions.
   const categorySpentMap = {};
@@ -74,7 +73,10 @@ function renderBudgetsView() {
     if (statTotal) statTotal.textContent = "0 MMK";
     if (statSpent) statSpent.textContent = "0 MMK";
     if (statRemaining) statRemaining.textContent = "0 MMK";
-    warningBanner?.classList.add("d-none");
+    if (warningBanner) {
+      warningBanner.innerHTML = "";
+      warningBanner.classList.add("d-none");
+    }
     return;
   }
 
@@ -92,15 +94,21 @@ function renderBudgetsView() {
     const rollover = bud.rollover === true ? Math.max(0, limit - previousSpent) : 0;
     const effectiveLimit = limit + rollover;
     const pct = effectiveLimit > 0 ? Math.round((spent / effectiveLimit) * 100) : 0;
+    const displayPct = Math.min(100, pct);
+    const overBudgetPercentage = effectiveLimit > 0 && spent > effectiveLimit
+      ? Math.round(((spent - effectiveLimit) / effectiveLimit) * 100)
+      : 0;
     const remaining = Math.max(0, effectiveLimit - spent);
 
     totalAllocated += effectiveLimit;
     totalSpentSoFar += spent;
 
-    if (pct >= 80) {
-      if (!highestUsageWarning || pct > highestUsageWarning.pct) {
-        highestUsageWarning = { category: bud.category, pct };
-      }
+    if (pct >= 100) {
+      budgetWarnings.push(
+        overBudgetPercentage > 0
+          ? `${escapeHtml(bud.category)} budget is at 100% and ${overBudgetPercentage}% exceeded — consider reducing spending.`
+          : `${escapeHtml(bud.category)} budget is at 100% — budget limit reached.`
+      );
     }
 
     let progressColor = "bg-dark";
@@ -113,7 +121,7 @@ function renderBudgetsView() {
           <div>
             <div class="d-flex justify-content-between align-items-center mb-2">
               <h2 class="h6 fw-bold mb-0">${escapeHtml(bud.category)}</h2>
-              <span class="badge ${pct >= 100 ? 'bg-danger' : (pct >= 80 ? 'bg-warning text-dark' : 'bg-light text-dark border')}">${pct}%</span>
+              <span class="badge ${pct >= 100 ? 'bg-danger' : (pct >= 80 ? 'bg-warning text-dark' : 'bg-light text-dark border')}">${displayPct}%</span>
             </div>
             <div class="small text-muted mb-2">
               Spent <strong class="text-dark">${spent.toLocaleString()} MMK</strong> of ${effectiveLimit.toLocaleString()} MMK
@@ -123,8 +131,9 @@ function renderBudgetsView() {
               <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${Math.min(100, pct)}%"></div>
             </div>
             <div class="d-flex justify-content-between small text-muted">
-              <span>Remaining:</span>
-              <strong class="${spent > limit ? 'text-danger' : 'text-dark'}">${remaining.toLocaleString()} MMK</strong>
+              ${overBudgetPercentage > 0
+                ? `<span class="text-danger">${overBudgetPercentage}% over budget</span>`
+                : `<span>Remaining:</span><strong class="text-dark">${remaining.toLocaleString()} MMK</strong>`}
             </div>
           </div>
           <div class="pt-3 mt-3 border-top d-flex justify-content-end">
@@ -142,13 +151,14 @@ function renderBudgetsView() {
   if (statSpent) statSpent.textContent = `${totalSpentSoFar.toLocaleString()} MMK`;
   if (statRemaining) statRemaining.textContent = `${Math.max(0, totalAllocated - totalSpentSoFar).toLocaleString()} MMK`;
 
-  if (highestUsageWarning) {
-    warningBanner?.classList.remove("d-none");
-    if (warningText) {
-      warningText.textContent = `${highestUsageWarning.category} budget is at ${highestUsageWarning.pct}% — consider reducing spending`;
-    }
-  } else {
-    warningBanner?.classList.add("d-none");
+  if (warningBanner) {
+    warningBanner.innerHTML = budgetWarnings.map((message) => `
+      <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center gap-2 py-2 mb-2">
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+        <span class="small">${message}</span>
+      </div>
+    `).join("");
+    warningBanner.classList.toggle("d-none", budgetWarnings.length === 0);
   }
 }
 

@@ -2876,6 +2876,8 @@ body:not(.auth-page) .summary-bento > [class*="col-"] > .card.card-dark-balance 
 .card-dark-balance { color: var(--smore-rail-ink); }
 .card-dark-balance .text-white-50 { color: rgba(243, 230, 211, 0.72) !important; }
 .card-dark-balance .text-white { color: #fff !important; }
+[data-theme="dark"] .card-dark-balance #statRemainingBudget { color: #fff !important; }
+html:not([data-theme="dark"]) .card-dark-balance .safe-to-spend { color: #000 !important; }
 
 .stat-tile .value { color: var(--smore-ink) !important; }
 .user-pill {
