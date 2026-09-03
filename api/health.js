@@ -12,10 +12,12 @@ function isGeminiKeyPlaceholder(apiKey) {
 // Keep health completely dependency-free: it must still work when the nested
 // gateway package cannot be loaded by the platform.
 module.exports = (_req, res) => {
+  const creds = (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON || process.env.GOOGLE_APPLICATION_CREDENTIALS || "").trim();
   res.status(200).json({
     status: "ok",
     service: "smore-assistant-gateway",
     time: new Date().toISOString(),
     geminiConfigured: !isGeminiKeyPlaceholder(process.env.GEMINI_API_KEY),
+    firebaseAdminConfigured: creds.length > 0,
   });
 };

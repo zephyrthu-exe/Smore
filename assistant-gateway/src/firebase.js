@@ -477,6 +477,25 @@ function createFirebaseGateway({ app = null } = {}) {
 }
 
 /**
+function _parseServiceAccountJson(jsonString) {
+  if (!jsonString || typeof jsonString !== "string") return null;
+  let raw = jsonString.trim();
+  if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+    raw = raw.slice(1, -1);
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed.private_key === "string") {
+      parsed.private_key = parsed.private_key.replace(/\\n/g, "\n");
+    }
+    return parsed;
+  } catch (error) {
+    console.error("[gateway] Failed to parse service account JSON from environment variable:", error.message);
+    return null;
+  }
+}
+
+/**
  * Admin initialisation options. Tries the explicit service-account file from
  * GOOGLE_APPLICATION_CREDENTIALS first (the VPS path), then falls back to
  * application-default credentials.
@@ -487,31 +506,25 @@ function _adminInitOptions() {
   const { cert, applicationDefault } = loadFirebaseApp();
 
   if (cfg.googleApplicationCredentialsJson) {
-    // PaaS / Railway: the whole service-account JSON is supplied as one env var.
-    return {
-      credential: cert(JSON.parse(cfg.googleApplicationCredentialsJson)),
-      projectId: cfg.firebaseProjectId,
-    };
+    const sa = _parseServiceAccountJson(cfg.googleApplicationCredentialsJson);
+    if (sa) {
+      return {
+        credential: cert(sa),
+        projectId: sa.project_id || cfg.firebaseProjectId,
+      };
+    }
   }
 
   if (cfg.googleApplicationCredentials) {
-    // Vercel commonly stores this variable as the full JSON value, while the
-    // VPS setup uses it as a file path. Support both formats so the deployed
-    // function does not try to open a JSON string as a filesystem path.
     const rawCredential = cfg.googleApplicationCredentials.trim();
     if (rawCredential.startsWith("{")) {
-      let serviceAccount;
-      try {
-        serviceAccount = JSON.parse(rawCredential);
-      } catch (error) {
-        const err = new Error("GOOGLE_APPLICATION_CREDENTIALS contains invalid JSON.");
-        err.cause = error;
-        throw err;
+      const sa = _parseServiceAccountJson(rawCredential);
+      if (sa) {
+        return {
+          credential: cert(sa),
+          projectId: sa.project_id || cfg.firebaseProjectId,
+        };
       }
-      return {
-        credential: cert(serviceAccount),
-        projectId: cfg.firebaseProjectId,
-      };
     }
 
     // VPS: a file path to the service-account JSON lives outside the repo.
