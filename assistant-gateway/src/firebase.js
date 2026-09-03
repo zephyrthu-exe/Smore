@@ -474,6 +474,9 @@ function createFirebaseGateway({ app = null } = {}) {
 }
 
 /**
+ * Safely parses a service account JSON string from environment variables.
+ * Automatically unescapes literal \n sequences in private_key.
+ */
 function _parseServiceAccountJson(jsonString) {
   if (!jsonString || typeof jsonString !== "string") return null;
   let raw = jsonString.trim();
