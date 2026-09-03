@@ -39,5 +39,8 @@
     "testMatch": [
       "**/test/**/*.test.js"
     ]
+  },
+  "overrides": {
+    "jose": "^4.15.5"
   }
 }
