@@ -100,11 +100,8 @@
       </div>
     </div>
 
-    <!-- Dynamic Warning Alert Banner (Shows if any category >= 80%) -->
-    <div id="budgetWarningBanner" class="d-none alert alert-warning border-0 shadow-sm d-flex align-items-center gap-2 py-2 mb-4">
-      <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
-      <span class="small" id="warningBannerText">Budget warning</span>
-    </div>
+    <!-- Dynamic warning alert banners for budgets at or over their limits -->
+    <div id="budgetWarningBanner" class="d-none mb-4"></div>
 
     <!-- Top Summary Stats Row -->
     <div class="row g-3 mb-4 summary-bento">
@@ -127,8 +124,8 @@
       <div class="col-12 col-md-4">
         <div class="card card-dark-balance p-3 h-100 border-0 shadow-sm">
           <div class="text-white-50 small mb-1">Remaining</div>
-          <div class="h3 fw-bold mb-0 text-white" id="statRemainingBudget">0 MMK</div>
-          <div class="text-white-50 style-small" style="font-size: 0.75rem;">Safe to spend</div>
+          <div class="h3 fw-bold mb-0 text-dark" id="statRemainingBudget">0 MMK</div>
+          <div class="text-white-50 safe-to-spend style-small" style="font-size: 0.75rem;">Safe to spend</div>
         </div>
       </div>
     </div>

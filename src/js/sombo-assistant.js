@@ -742,7 +742,7 @@ class SomboAssistantWidget {
     const currentColor = this.profile.accentColor;
 
     overlay.innerHTML = `
-      <div class="sombo-customize-modal">
+      <form class="sombo-customize-modal" id="sombo-customize-form">
         <div class="sombo-customize-header">
           <h5 id="sombo-customize-title">Customize My Bot</h5>
           <button type="button" class="sombo-customize-close" id="customize-close-btn"
@@ -784,10 +784,10 @@ class SomboAssistantWidget {
         </div>
 
         <div class="sombo-customize-actions">
-          <button type="button" class="sombo-btn-primary" id="customize-save-btn">Save Changes</button>
+          <button type="submit" class="sombo-btn-primary" id="customize-save-btn">Save Changes</button>
           <button type="button" class="sombo-btn-secondary" id="customize-reset-btn">Reset to Sombo</button>
         </div>
-      </div>
+      </form>
     `;
 
     document.body.appendChild(overlay);
@@ -831,13 +831,42 @@ class SomboAssistantWidget {
     overlay.querySelector("#customize-close-btn").addEventListener("click", closeWithoutSaving);
     overlay.addEventListener("click", (e) => { if (e.target === overlay) closeWithoutSaving(); });
 
-    // Save
-    overlay.querySelector("#customize-save-btn").addEventListener("click", async () => {
+    const customizeForm = overlay.querySelector("#sombo-customize-form");
+    let isSaving = false;
+    const saveChanges = async () => {
+      if (isSaving) return;
+      isSaving = true;
+      const saveButton = overlay.querySelector("#customize-save-btn");
+      if (saveButton) saveButton.disabled = true;
       const name  = nameInput.value.trim() || DEFAULT_BOT_PROFILE.name;
       const color = colorInput.value || DEFAULT_BOT_PROFILE.accentColor;
       const saved = await this._saveAndApplyProfile({ name, style: selectedStyle, accentColor: color });
       if (saved) overlay.remove();
-      else this.applyProfile(originalProfile);
+      else {
+        this.applyProfile(originalProfile);
+        isSaving = false;
+        if (saveButton) saveButton.disabled = false;
+      }
+    };
+
+    // Support both native form submission and Enter in every customization input.
+    customizeForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      saveChanges();
+    });
+    customizeForm.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+        event.preventDefault();
+        saveChanges();
+      }
+    });
+    customizeForm.querySelectorAll(".sombo-style-btn, .sombo-swatch[data-color]").forEach((control) => {
+      control.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        control.click();
+        saveChanges();
+      });
     });
 
     // Reset
