@@ -8,6 +8,7 @@ import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timesta
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 import { calculateSafeToSpend, formatMMK, getUpcomingSchedules, isSameMonth, transactionDate } from "./finance-utils.js";
+import { showConfirmationModal } from "./confirmation-modal.js";
 
 let spendingChartInstance = null;
 let dashboardTransactions = [];
@@ -129,9 +130,12 @@ function renderNotifications() {
       e.stopPropagation();
       const id = db.getAttribute('data-id');
       if (!id) return;
-      if (confirm('Delete this notification?')) {
-        deleteNotification(id);
-      }
+      showConfirmationModal({
+        title: "Delete this notification?",
+        message: "This notification will be removed from your notification list.",
+      }).then((confirmed) => {
+        if (confirmed) deleteNotification(id);
+      });
     });
   });
 }
@@ -508,4 +512,3 @@ function setupGoalForm(userId) {
     }
   });
 }
-

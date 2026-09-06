@@ -6,6 +6,7 @@ import { collection, onSnapshot, addDoc, deleteDoc, doc, Timestamp } from "https
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 import { isPreviousMonth, isSameMonth, transactionDate } from "./finance-utils.js";
+import { showConfirmationModal } from "./confirmation-modal.js";
 
 // Live data for the current user, fed by the Firestore listeners below.
 let currentBudgets = [];
@@ -166,7 +167,11 @@ function renderBudgetsView() {
 window.deleteBudgetRecord = async (budId) => {
   const user = auth.currentUser;
   if (!user) return;
-  if (confirm("Are you sure you want to delete this budget limit?")) {
+  const confirmed = await showConfirmationModal({
+    title: "Delete this budget?",
+    message: "This budget limit will be removed from your budget list.",
+  });
+  if (confirmed) {
     try {
       await deleteDoc(doc(db, "users", user.uid, "budgets", budId));
     } catch (err) {

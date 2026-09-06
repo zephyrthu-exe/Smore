@@ -6,6 +6,7 @@
 import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
+import { showConfirmationModal } from "./confirmation-modal.js";
 
 let allTransactions = [];
 let transactionHashListenerBound = false;
@@ -296,7 +297,11 @@ function renderFilteredTable(userId) {
 window.deleteTxRecord = async (txId) => {
   const user = auth.currentUser;
   if (!user) return;
-  if (confirm("Are you sure you want to delete this transaction?")) {
+  const confirmed = await showConfirmationModal({
+    title: "Delete this transaction?",
+    message: "This transaction will be permanently removed.",
+  });
+  if (confirmed) {
     try {
       await deleteDoc(doc(db, "users", user.uid, "transactions", txId));
     } catch (err) {
@@ -469,6 +474,5 @@ function openTransactionModalFromHash() {
     console.warn('initTransactionUi error', e);
   }
 })();
-
 
 

@@ -6,6 +6,7 @@
 import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
+import { showConfirmationModal } from "./confirmation-modal.js";
 
 // All goals for the current user, kept up to date by the Firestore listener.
 let currentGoals = [];
@@ -108,7 +109,11 @@ function renderGoalsView() {
 window.deleteGoalRecord = async (goalId) => {
   const user = auth.currentUser;
   if (!user) return;
-  if (confirm("Are you sure you want to delete this savings goal?")) {
+  const confirmed = await showConfirmationModal({
+    title: "Delete this savings goal?",
+    message: "This savings goal will be removed from your goals list.",
+  });
+  if (confirmed) {
     try {
       await deleteDoc(doc(db, "users", user.uid, "goals", goalId));
     } catch (err) {

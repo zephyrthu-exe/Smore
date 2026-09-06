@@ -2885,6 +2885,138 @@ html:not([data-theme="dark"]) .card-dark-balance .safe-to-spend { color: #000 !i
   border: 1px solid var(--smore-border) !important;
   color: var(--smore-muted) !important;
 }
+
+.notification-delete-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(33, 24, 16, 0.48);
+  animation: notification-modal-fade-in 180ms ease-out both;
+}
+
+.notification-delete-dialog {
+  width: min(100%, 420px);
+  padding: 1.5rem;
+  border: 1px solid var(--smore-border);
+  border-radius: 14px;
+  background: var(--smore-surface);
+  color: var(--smore-ink);
+  box-shadow: 0 20px 55px rgba(59, 36, 24, 0.24);
+  animation: notification-modal-scale-in 180ms ease-out both;
+}
+
+.notification-delete-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.notification-delete-heading h2 {
+  margin: 0;
+  color: var(--smore-ink);
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.notification-delete-icon {
+  display: inline-grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--smore-primary-soft);
+  color: var(--smore-primary);
+}
+
+.notification-delete-copy {
+  margin: 1rem 0 1.35rem 2.95rem;
+  color: var(--smore-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.notification-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.65rem;
+}
+
+.notification-delete-actions button {
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--smore-radius-sm);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.notification-delete-cancel {
+  border-color: var(--smore-border) !important;
+  background: var(--smore-surface-alt);
+  color: var(--smore-ink);
+}
+
+.notification-delete-cancel:hover,
+.notification-delete-cancel:focus-visible {
+  background: var(--smore-surface-2);
+}
+
+.notification-delete-confirm {
+  background: var(--smore-danger);
+  color: #fff;
+}
+
+.notification-delete-confirm:hover,
+.notification-delete-confirm:focus-visible {
+  background: var(--smore-danger-soft);
+  color: var(--smore-danger);
+  border-color: var(--smore-danger);
+}
+
+.notification-delete-actions button:active {
+  transform: scale(0.97);
+}
+
+.notification-delete-modal.is-closing {
+  animation: notification-modal-fade-out 160ms ease-in both;
+}
+
+.notification-delete-modal.is-closing .notification-delete-dialog {
+  animation: notification-modal-scale-out 160ms ease-in both;
+}
+
+@keyframes notification-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes notification-modal-fade-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes notification-modal-scale-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes notification-modal-scale-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.96); }
+}
+
+@media (max-width: 480px) {
+  .notification-delete-dialog { padding: 1.25rem; }
+  .notification-delete-copy { margin-left: 0; }
+  .notification-delete-actions { justify-content: stretch; }
+  .notification-delete-actions button { flex: 1; }
+}
 .user-pill strong { color: var(--smore-ink) !important; }
 
 body:not(.auth-page) .summary-bento > [class*="col-"] > .card::after,
