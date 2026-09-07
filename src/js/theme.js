@@ -114,6 +114,7 @@ function syncToggleUI(theme) {
   const isDark = theme === DARK;
   document.querySelectorAll("[data-theme-toggle]").forEach((el) => {
     el.setAttribute("aria-pressed", String(isDark));
+    el.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
     const icon = el.querySelector("[data-theme-icon]");
     const label = el.querySelector("[data-theme-label]");
     if (icon) icon.className = isDark ? "bi bi-sun-fill" : "bi bi-moon-stars";

@@ -3291,10 +3291,11 @@ body.auth-page {
   top: 1rem;
   right: 1rem;
   z-index: 1040;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.9rem;
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0;
   border: 1px solid color-mix(in srgb, var(--smore-primary) 55%, var(--smore-surface));
   border-radius: 999px;
   background: var(--smore-surface);
@@ -3303,6 +3304,7 @@ body.auth-page {
   box-shadow: var(--smore-shadow);
   cursor: pointer;
 }
+.theme-float .bi { font-size: 1.1rem; line-height: 1; }
 .theme-float:hover, .theme-float:focus-visible { border-color: var(--smore-primary); color: var(--smore-primary); }
 
 /* Login/register visual refresh — intentionally scoped to the auth page. */
