@@ -604,18 +604,25 @@ class SomboAssistantWidget {
   _cacheProfile(profile) {
     try {
       sessionStorage.setItem("smore_bot_profile_cache", JSON.stringify(profile));
+      localStorage.setItem("smore_bot_profile", JSON.stringify(profile));
+      if (profile?.accentColor) {
+        localStorage.setItem("smore_bot_accent_color", profile.accentColor);
+      }
     } catch (_) {}
   }
 
   _getCachedProfile() {
     try {
-      const raw = sessionStorage.getItem("smore_bot_profile_cache");
+      const raw = sessionStorage.getItem("smore_bot_profile_cache") || localStorage.getItem("smore_bot_profile");
       return raw ? JSON.parse(raw) : null;
     } catch (_) { return null; }
   }
 
   // ── Onboarding modal ───────────────────────────────────────────────────────
   showOnboardingModal() {
+    // Mark as onboarded immediately so navigating page-to-page never prompts again
+    this._markOnboarded();
+
     // Remove any stale overlay
     document.getElementById("sombo-onboard-overlay")?.remove();
 
@@ -628,6 +635,7 @@ class SomboAssistantWidget {
 
     overlay.innerHTML = `
       <div class="sombo-onboard-modal">
+        <button type="button" class="sombo-onboard-close" id="onboard-close-btn" aria-label="Close setup panel">✕</button>
         <div class="sombo-onboard-header">
           <div class="sombo-onboard-avatar">${getSomboSVGMarkup("small")}</div>
           <h5 id="sombo-onboard-title">Meet Your Personal Finance Bot!</h5>
@@ -685,26 +693,38 @@ class SomboAssistantWidget {
     const colorName  = overlay.querySelector("#onboard-color-name");
     wireAccentPicker(overlay.querySelector(".sombo-swatches"), colorInput, colorName);
 
+    const dismissModal = async () => {
+      this._markOnboarded();
+      overlay.remove();
+      try {
+        await this._saveAndApplyProfile(DEFAULT_BOT_PROFILE);
+      } catch (_) {}
+    };
+
+    // Close button & backdrop click
+    overlay.querySelector("#onboard-close-btn")?.addEventListener("click", dismissModal);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) dismissModal();
+    });
+
     // Create bot
     overlay.querySelector("#onboard-create-btn").addEventListener("click", async () => {
+      this._markOnboarded();
       const name  = overlay.querySelector("#onboard-bot-name").value.trim() || DEFAULT_BOT_PROFILE.name;
       const color = colorInput.value || DEFAULT_BOT_PROFILE.accentColor;
       await this._saveAndApplyProfile({ name, style: selectedStyle, accentColor: color });
-      this._markOnboarded();
       overlay.remove();
     });
 
     // Use default
     overlay.querySelector("#onboard-default-btn").addEventListener("click", async () => {
-      await this._saveAndApplyProfile(DEFAULT_BOT_PROFILE);
       this._markOnboarded();
+      await this._saveAndApplyProfile(DEFAULT_BOT_PROFILE);
       overlay.remove();
     });
 
-    // Remind later — just dismiss without saving
-    overlay.querySelector("#onboard-later-btn").addEventListener("click", () => {
-      overlay.remove();
-    });
+    // Remind later — dismiss and apply default profile so user is not prompted again on page changes
+    overlay.querySelector("#onboard-later-btn").addEventListener("click", dismissModal);
 
     // Focus first input
     setTimeout(() => overlay.querySelector("#onboard-bot-name")?.focus(), 100);

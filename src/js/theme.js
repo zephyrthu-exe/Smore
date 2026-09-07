@@ -57,16 +57,19 @@ function darkenColor(hex, amount = 0.18) {
 
 export function syncBotAccentTheme(profileOverride = null) {
   try {
-    const profile = profileOverride || JSON.parse(sessionStorage.getItem("smore_bot_profile_cache") || "null");
+    let profile = profileOverride;
     if (!profile) {
+      const cached = sessionStorage.getItem("smore_bot_profile_cache") || localStorage.getItem("smore_bot_profile");
+      profile = cached ? JSON.parse(cached) : null;
+    }
+    const color = normalizeHexColor(profile?.accentColor || localStorage.getItem("smore_bot_accent_color"));
+    if (!color) {
       document.documentElement.style.removeProperty("--smore-primary");
       document.documentElement.style.removeProperty("--smore-primary-dark");
       document.documentElement.style.removeProperty("--smore-primary-soft");
       document.documentElement.style.removeProperty("--smore-glow");
       return;
     }
-    const color = normalizeHexColor(profile?.accentColor || "#ff6b35");
-    if (!color) return;
 
     const darkened = darkenColor(color, 0.18);
     const soft = adjustColor(color, 0.82);
@@ -161,3 +164,13 @@ document.addEventListener("click", (event) => {
     toggleTheme();
   }
 });
+
+// React to bot profile / accent color updates across tabs or pages
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (event) => {
+    if (event.key === "smore_bot_accent_color" || event.key === "smore_bot_profile" || event.key === STORAGE_KEY) {
+      syncBotAccentTheme();
+    }
+  });
+}
+
