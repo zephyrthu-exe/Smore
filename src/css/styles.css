@@ -3280,6 +3280,10 @@ body.auth-page {
 .auth-divider { color: var(--smore-muted); }
 .auth-divider::before, .auth-divider::after { background: var(--smore-border); }
 .field-hint { color: var(--smore-muted); }
+[data-theme="dark"] .auth-page .auth-submit,
+[data-theme="dark"] .auth-page .auth-switch button {
+  color: #fff !important;
+}
 
 /* 17 ── Floating theme toggle (auth page) ──────────────────────────────── */
 .theme-float {
