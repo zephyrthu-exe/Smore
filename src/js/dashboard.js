@@ -1,19 +1,17 @@
 // dashboard.js
 // Dashboard page: welcome summary with current balance, monthly income and
-// expense, a spending doughnut chart, recent transactions, budgets, savings
-// goals and a planning summary for recurring schedules. It also powers the
-// in-app notification centre (persisted in localStorage).
+// expense, a spending doughnut chart, recent transactions, budgets and savings
+// goals. It also powers the in-app notification centre (persisted in localStorage).
 
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, addDoc, doc, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
-import { calculateSafeToSpend, formatMMK, getUpcomingSchedules, isSameMonth, transactionDate } from "./finance-utils.js";
+import { isSameMonth, transactionDate } from "./finance-utils.js";
 import { showConfirmationModal } from "./confirmation-modal.js";
 
 let spendingChartInstance = null;
 let dashboardTransactions = [];
 let dashboardBudgets = [];
-let dashboardSchedules = [];
 
 // ─── In-app notification store (persisted in localStorage) ────────────────
 
@@ -180,7 +178,6 @@ window.addEventListener('DOMContentLoaded', () => {
 startAuthenticatedPage((user) => {
   listenToTransactions(user.uid);
   listenToBudgets(user.uid);
-  listenToRecurringSchedules(user.uid);
   listenToGoals(user.uid);
   setupBudgetForm(user.uid);
   setupGoalForm(user.uid);
@@ -313,62 +310,6 @@ function listenToBudgets(userId) {
     renderDashboardBudgets();
   });
 }
-
-function listenToRecurringSchedules(userId) {
-  const schedulesRef = collection(db, "users", userId, "recurringSchedules");
-
-  onSnapshot(query(schedulesRef, orderBy("startDate", "asc")), (snapshot) => {
-    dashboardSchedules = snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
-    renderPlanningSummary();
-  }, (error) => {
-    console.error("Recurring schedules snapshot error:", error);
-    renderPlanningSummary();
-  });
-}
-
-function renderPlanningSummary() {
-  const balanceText = document.getElementById("totalBalanceText")?.textContent || "0";
-  const balance = Number(balanceText.replace(/[^0-9-]/g, "")) || 0;
-  const projection = calculateSafeToSpend(balance, dashboardSchedules);
-  const safeToSpendText = document.getElementById("safeToSpendText");
-  const commitmentTotal = document.getElementById("upcomingCommitmentTotal");
-  const hint = document.getElementById("safeToSpendHint");
-  const container = document.getElementById("upcomingSchedulesContainer");
-
-  if (safeToSpendText) {
-    safeToSpendText.textContent = formatMMK(projection.safeToSpend);
-    safeToSpendText.classList.toggle("text-danger", projection.safeToSpend < 0);
-  }
-  if (commitmentTotal) commitmentTotal.textContent = formatMMK(projection.upcomingExpenses);
-  if (hint) hint.textContent = projection.safeToSpend < 0 ? "Scheduled expenses exceed your current balance" : "After scheduled expenses";
-  if (!container) return;
-
-  const upcoming = getUpcomingSchedules(dashboardSchedules);
-  if (upcoming.length === 0) {
-    container.innerHTML = `<div class="text-muted small">No recurring items due in the next 30 days.</div>`;
-    return;
-  }
-
-  container.innerHTML = upcoming.slice(0, 5).map((schedule) => `
-    <div class="d-flex align-items-center justify-content-between gap-2 border rounded-3 px-2 py-2">
-      <div class="min-w-0">
-        <div class="fw-semibold small text-truncate">${escapeHtml(schedule.description)}</div>
-        <div class="text-muted" style="font-size: 0.75rem;">${escapeHtml(schedule.occurrence.toLocaleDateString("en-US", { month: "short", day: "numeric" }))} · ${escapeHtml(schedule.frequency)}</div>
-      </div>
-      <span class="fw-bold small ${schedule.type === "income" ? "text-success" : "text-danger"}">${schedule.type === "income" ? "+" : "-"}${formatMMK(schedule.amount)}</span>
-      <button class="btn btn-sm btn-outline-danger border-0" type="button" aria-label="Delete ${escapeHtml(schedule.description)}" onclick="deleteRecurringSchedule('${schedule.id}')"><i class="bi bi-trash" aria-hidden="true"></i></button>
-    </div>`).join("");
-}
-
-window.deleteRecurringSchedule = async (scheduleId) => {
-  const user = auth.currentUser;
-  if (!user || !scheduleId || !confirm("Delete this recurring item?")) return;
-  try {
-    await deleteDoc(doc(db, "users", user.uid, "recurringSchedules", scheduleId));
-  } catch (error) {
-    alert("Failed to delete recurring item: " + error.message);
-  }
-};
 
 function renderDashboardBudgets() {
   const container = document.getElementById("budgetsContainer");
