@@ -447,10 +447,34 @@ function setupSearchAndFilters() {
 function openTransactionModalFromHash() {
   if (window.location.hash !== "#addTxModal") return;
   const modal = document.getElementById("addTxModal");
-  if (modal && window.bootstrap?.Modal) {
-    window.bootstrap.Modal.getOrCreateInstance(modal).show();
-    history.replaceState(null, "", window.location.pathname + window.location.search);
+  if (!modal) return;
+
+  const tryShow = () => {
+    if (window.bootstrap?.Modal) {
+      window.bootstrap.Modal.getOrCreateInstance(modal).show();
+      history.replaceState(null, "", window.location.pathname + window.location.search);
+      return true;
+    }
+    return false;
+  };
+
+  if (!tryShow()) {
+    const interval = setInterval(() => {
+      if (tryShow()) clearInterval(interval);
+    }, 50);
+    setTimeout(() => clearInterval(interval), 3000);
   }
+}
+
+// Immediate hash detection and listener
+if (!window._txHashListenerAttached) {
+  window.addEventListener("hashchange", openTransactionModalFromHash);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", openTransactionModalFromHash);
+  } else {
+    openTransactionModalFromHash();
+  }
+  window._txHashListenerAttached = true;
 }
 
 // Safety initialization: ensure the txType change handler and initial population run

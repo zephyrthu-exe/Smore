@@ -2147,6 +2147,12 @@ body:not(.auth-page) .btn-danger { background: var(--workspace-coral); border-co
   body:not(.auth-page) .mobile-more-menu {
     display: none !important;
   }
+  body:not(.auth-page) .desktop-only-link {
+    display: flex !important;
+  }
+  body:not(.auth-page) hr.desktop-only-link {
+    display: block !important;
+  }
 }
 
 .mobile-more-menu a {
@@ -2318,11 +2324,14 @@ body.auth-page .auth-submit { background: var(--workspace-coral); border-color: 
 
   body:not(.auth-page) .app-sidebar > div:first-child { display: block; width: 100%; }
   body:not(.auth-page) .brand-logo,
+  body:not(.auth-page) .desktop-only-link,
+  body:not(.auth-page) .desktop-customize-link,
+  body:not(.auth-page) .sidebar-theme-toggle,
   body:not(.auth-page) .app-sidebar nav hr { display: none !important; }
 
   body:not(.auth-page) .app-sidebar nav {
     display: grid !important;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0.15rem !important;
     width: 100%;
   }
@@ -2405,10 +2414,12 @@ body.auth-page .auth-submit { background: var(--workspace-coral); border-color: 
   }
 
   body:not(.auth-page) #customizeBotNavBtn {
-    color: rgba(255, 255, 255, 0.86) !important;
+    color: var(--smore-ink) !important;
   }
 
-  body:not(.auth-page) #customizeBotNavBtn i { color: #f0b27b; }
+  body:not(.auth-page) #customizeBotNavBtn i {
+    color: var(--smore-primary) !important;
+  }
 
   body:not(.auth-page) .profile-wrap {
     position: fixed;
@@ -3585,3 +3596,359 @@ body:not(.auth-page) main .bg-white p,
 body:not(.auth-page) main .bg-white .small {
   color: var(--smore-muted) !important;
 }
+
+/* 24 ── Transactions mobile controls & Dark-mode transaction cards ─────── */
+.tx-filter-cat { width: 140px; }
+.tx-filter-date { width: 160px; }
+#customDateInputs input { width: 140px; }
+
+@media (max-width: 767.98px) {
+  .tx-header-controls {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+  }
+  .tx-header-controls .tx-filter-select {
+    flex: 1 1 calc(50% - 0.25rem) !important;
+    width: calc(50% - 0.25rem) !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  .tx-header-controls .tx-add-btn {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    justify-content: center !important;
+  }
+  .tx-header-controls #customDateInputs {
+    width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+  .tx-header-controls #customDateInputs input {
+    flex: 1 1 calc(50% - 0.25rem) !important;
+    width: calc(50% - 0.25rem) !important;
+    min-width: 0 !important;
+  }
+  .tx-header-controls #customDateInputs button {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+}
+
+/* Dark mode transaction cardbox styling under History */
+[data-theme="dark"] body:not(.auth-page) .table tbody tr {
+  background: var(--smore-surface-alt) !important;
+  border-color: var(--smore-border) !important;
+}
+
+[data-theme="dark"] body:not(.auth-page) .table tbody td::before {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] body:not(.auth-page) .table tbody td:not(.text-success):not(.text-danger),
+[data-theme="dark"] body:not(.auth-page) .table tbody .txn-date,
+[data-theme="dark"] body:not(.auth-page) .table tbody .txn-desc {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] body:not(.auth-page) .table tbody tr .badge {
+  background-color: var(--smore-surface-2) !important;
+  color: #ffffff !important;
+  border-color: var(--smore-border) !important;
+}
+
+[data-theme="dark"] body:not(.auth-page) #tableColumn h2 {
+  color: #ffffff !important;
+}
+
+/* 25 ── Modern Segmented Pill Mobile Tab Bar ────────────────────────────── */
+@media (max-width: 767.98px) {
+  body:not(.auth-page) .app-sidebar {
+    position: fixed !important;
+    inset: auto 0.85rem 0.85rem !important;
+    z-index: 1030 !important;
+    display: flex !important;
+    align-items: center !important;
+    width: auto !important;
+    height: calc(64px + env(safe-area-inset-bottom)) !important;
+    min-height: 0 !important;
+    padding: 0.35rem 0.45rem env(safe-area-inset-bottom) !important;
+    border-radius: 999px !important;
+    overflow: visible !important;
+    backdrop-filter: blur(20px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(140%) !important;
+    transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease !important;
+  }
+
+  /* Light mode tab bar container */
+  html:not([data-theme="dark"]) body:not(.auth-page) .app-sidebar {
+    background: #eef2f5 !important;
+    border: 1px solid rgba(0, 0, 0, 0.07) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  /* Dark mode tab bar container */
+  [data-theme="dark"] body:not(.auth-page) .app-sidebar {
+    background: rgba(22, 28, 27, 0.94) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    box-shadow: 0 14px 38px rgba(0, 0, 0, 0.5) !important;
+  }
+
+  body:not(.auth-page) .app-sidebar > div:first-child {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  body:not(.auth-page) .brand-logo,
+  body:not(.auth-page) .app-sidebar nav hr,
+  body:not(.auth-page) .app-sidebar > .sidebar-theme-toggle,
+  body:not(.auth-page) .app-sidebar nav .sidebar-theme-toggle,
+  body:not(.auth-page) .desktop-only-link,
+  body:not(.auth-page) .desktop-only-link.active,
+  body:not(.auth-page) .mobile-secondary-link,
+  body:not(.auth-page) .desktop-customize-link {
+    display: none !important;
+  }
+
+  /* 5 equal columns: 1. Dashboard, 2. Budgets, 3. (+) Plus, 4. Saving Goals, 5. More */
+  body:not(.auth-page) .app-sidebar nav {
+    display: grid !important;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    align-items: center !important;
+    gap: 0.25rem !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Inactive tab buttons - smooth transition */
+  body:not(.auth-page) .sidebar-link:not(.active):not(.desktop-only-link):not(.desktop-customize-link):not(.sidebar-theme-toggle),
+  body:not(.auth-page) .more-nav-button:not(.active) {
+    min-width: 0 !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    padding: 0.2rem 0.2rem !important;
+    gap: 0.15rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 999px !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: clamp(0.58rem, 2.3vw, 0.68rem) !important;
+    font-weight: 500 !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    cursor: pointer !important;
+    transition: background-color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  body:not(.auth-page) .sidebar-link:active,
+  body:not(.auth-page) .more-nav-button:active {
+    transform: scale(0.92) !important;
+  }
+
+  /* Inactive icons */
+  body:not(.auth-page) .sidebar-link:not(.active) i,
+  body:not(.auth-page) .more-nav-button:not(.active) i {
+    width: auto !important;
+    font-size: 1.15rem !important;
+    line-height: 1 !important;
+    margin-bottom: 2px !important;
+    transition: color 0.28s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s ease !important;
+  }
+
+  /* Inactive colors - light mode */
+  html:not([data-theme="dark"]) body:not(.auth-page) .sidebar-link:not(.active),
+  html:not([data-theme="dark"]) body:not(.auth-page) .more-nav-button:not(.active) {
+    color: #55697d !important;
+  }
+  html:not([data-theme="dark"]) body:not(.auth-page) .sidebar-link:not(.active) i,
+  html:not([data-theme="dark"]) body:not(.auth-page) .more-nav-button:not(.active) i {
+    color: #55697d !important;
+  }
+
+  /* Inactive colors - dark mode */
+  [data-theme="dark"] body:not(.auth-page) .sidebar-link:not(.active),
+  [data-theme="dark"] body:not(.auth-page) .more-nav-button:not(.active) {
+    color: rgba(255, 255, 255, 0.62) !important;
+  }
+  [data-theme="dark"] body:not(.auth-page) .sidebar-link:not(.active) i,
+  [data-theme="dark"] body:not(.auth-page) .more-nav-button:not(.active) i {
+    color: rgba(255, 255, 255, 0.62) !important;
+  }
+
+  /* Active tab button - Modern Elevated Pill style like Image 1 */
+  body:not(.auth-page) .sidebar-link.active:not(.desktop-only-link):not(.desktop-customize-link),
+  body:not(.auth-page) .more-nav-button.active {
+    min-width: 0 !important;
+    min-height: 48px !important;
+    height: 48px !important;
+    padding: 0.2rem 0.2rem !important;
+    gap: 0.15rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 999px !important;
+    border: 0 !important;
+    font-size: clamp(0.58rem, 2.3vw, 0.68rem) !important;
+    font-weight: 700 !important;
+    line-height: 1.1 !important;
+    text-align: center !important;
+    white-space: normal !important;
+    transition: background-color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  /* Active colors - Light mode (pure white pill like Image 1) */
+  html:not([data-theme="dark"]) body:not(.auth-page) .sidebar-link.active,
+  html:not([data-theme="dark"]) body:not(.auth-page) .more-nav-button.active {
+    background: #ffffff !important;
+    color: #111827 !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1) !important;
+  }
+  html:not([data-theme="dark"]) body:not(.auth-page) .sidebar-link.active i,
+  html:not([data-theme="dark"]) body:not(.auth-page) .more-nav-button.active i {
+    color: #111827 !important;
+    font-size: 1.15rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* Active colors - Dark mode */
+  [data-theme="dark"] body:not(.auth-page) .sidebar-link.active,
+  [data-theme="dark"] body:not(.auth-page) .more-nav-button.active {
+    background: #2a3734 !important;
+    color: #ffffff !important;
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4) !important;
+  }
+  [data-theme="dark"] body:not(.auth-page) .sidebar-link.active i,
+  [data-theme="dark"] body:not(.auth-page) .more-nav-button.active i {
+    color: #ffffff !important;
+    font-size: 1.15rem !important;
+    margin-bottom: 2px !important;
+  }
+
+  /* Big Plus button centered in Column 3 */
+  body:not(.auth-page) .mobile-add-action {
+    grid-column: 3 !important;
+    display: flex !important;
+    width: 44px !important;
+    height: 44px !important;
+    align-self: center !important;
+    justify-self: center !important;
+    border-radius: 50% !important;
+    color: #214542 !important;
+    background: #f0b27b !important;
+    box-shadow: 0 4px 14px rgba(240, 178, 123, 0.38) !important;
+    font-size: 1.25rem !important;
+    text-decoration: none !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                background-color 0.25s ease,
+                box-shadow 0.25s ease !important;
+  }
+
+  body:not(.auth-page) .mobile-add-action:hover {
+    background: #f6c28f !important;
+    transform: scale(1.06) !important;
+    box-shadow: 0 6px 18px rgba(240, 178, 123, 0.48) !important;
+  }
+
+  body:not(.auth-page) .mobile-add-action:active {
+    transform: scale(0.9) !important;
+  }
+
+  /* More menu button active state */
+  body:not(.auth-page) .more-nav-button[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.14) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  /* Mobile More Menu */
+  body:not(.auth-page) .mobile-more-menu {
+    position: fixed !important;
+    left: auto !important;
+    right: 0.85rem !important;
+    bottom: calc(var(--mobile-rail-height) + env(safe-area-inset-bottom) + 0.7rem) !important;
+    width: min(230px, calc(100vw - 1.7rem)) !important;
+    display: grid !important;
+    gap: 0.3rem !important;
+    padding: 0.6rem !important;
+    border-radius: 1.1rem !important;
+    border: 1px solid var(--smore-border) !important;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(18px) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    z-index: 1040 !important;
+  }
+
+  body:not(.auth-page) .mobile-more-menu[hidden] {
+    display: none !important;
+  }
+
+  body:not(.auth-page) .mobile-more-menu a,
+  body:not(.auth-page) .mobile-more-menu button {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.6rem !important;
+    width: 100% !important;
+    min-height: 42px !important;
+    padding: 0.55rem 0.75rem !important;
+    border: 0 !important;
+    border-radius: 0.75rem !important;
+    background: transparent !important;
+    color: var(--smore-ink) !important;
+    font: inherit !important;
+    font-size: 0.84rem !important;
+    font-weight: 500 !important;
+    text-align: left !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease, color 0.2s ease !important;
+  }
+
+  body:not(.auth-page) .mobile-more-menu a:hover,
+  body:not(.auth-page) .mobile-more-menu a:focus-visible,
+  body:not(.auth-page) .mobile-more-menu a.is-current,
+  body:not(.auth-page) .mobile-more-menu button:hover,
+  body:not(.auth-page) .mobile-more-menu button:focus-visible {
+    background: var(--smore-surface-alt) !important;
+    color: var(--smore-ink) !important;
+  }
+
+  body:not(.auth-page) .mobile-more-menu i,
+  body:not(.auth-page) .mobile-more-menu a i,
+  body:not(.auth-page) .mobile-more-menu button i {
+    color: var(--smore-primary) !important;
+    font-size: 1.15rem !important;
+    transition: color 0.2s ease !important;
+  }
+
+  /* Strictly enforce desktop-only nav items are completely removed from flow on mobile */
+  body:not(.auth-page) .app-sidebar nav .desktop-only-link,
+  body:not(.auth-page) .app-sidebar nav .desktop-customize-link,
+  body:not(.auth-page) .app-sidebar nav hr,
+  body:not(.auth-page) .app-sidebar .sidebar-theme-toggle,
+  body:not(.auth-page) .desktop-only-link,
+  body:not(.auth-page) .desktop-customize-link {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: 0 !important;
+    pointer-events: none !important;
+  }
+}
+
+

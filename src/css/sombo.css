@@ -1,7 +1,3 @@
-/* ==========================================================================
-   Sombo Companion & Smore Assistant Styles
-   ========================================================================== */
-
 :root {
   --sombo-navy-dark:    #0f172a;
   --sombo-navy-main:    #1e293b;
@@ -18,7 +14,6 @@
   --sombo-panel-border: #e2e8f0;
 }
 
-/* ── Floating Container ─────────────────────────────────────────────────── */
 .sombo-widget-container {
   position: fixed;
   bottom: 18px;
@@ -327,15 +322,21 @@
   font-size: 1.05rem;
   font-weight: 700;
   line-height: 1.2;
-  color: var(--sombo-cream-main);
+  color: var(--sombo-accent, var(--smore-primary, #c98a3e)) !important;
+  transition: color 0.25s ease;
 }
 
 .sombo-header-status {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--smore-ink, #475569);
+  opacity: 0.85;
   display: flex;
   align-items: center;
   gap: 5px;
+}
+
+[data-theme="dark"] .sombo-header-status {
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .sombo-status-dot {
@@ -358,9 +359,9 @@
 }
 
 .sombo-close-btn {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.08);
   border: none;
-  color: #ffffff;
+  color: var(--smore-ink, #1e293b);
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -368,10 +369,15 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
   font-size: 1.1rem;
   line-height: 1;
   flex: 0 0 32px;
+}
+
+[data-theme="dark"] .sombo-close-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
 }
 
 .sombo-close-btn:focus-visible,
@@ -383,8 +389,12 @@
 }
 
 .sombo-close-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.15);
   transform: scale(1.08);
+}
+
+[data-theme="dark"] .sombo-close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* Chat Messages Area */

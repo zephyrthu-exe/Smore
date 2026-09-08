@@ -39,19 +39,21 @@
 
       <nav class="nav flex-column gap-1">
         <a href="dashboard.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-grid"></i> Dashboard</a>
-        <a href="transaction.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
-        <a href="transaction.html#addTxModal" class="mobile-add-action d-flex align-items-center justify-content-center" aria-label="Add transaction"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
         <a href="budget.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-wallet2"></i> Budgets</a>
-        <a href="goals.html" class="sidebar-link mobile-secondary-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
-        <a href="analytics.html" class="sidebar-link mobile-secondary-link active d-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-bar-chart"></i> Analytics</a>
-        <hr style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
-        <a href="#" class="sidebar-link desktop-customize-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="desktopCustomizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
-        <button type="button" class="sidebar-link more-nav-button d-flex align-items-center gap-2 text-white-50 rounded" id="mobileMoreBtn" aria-label="More options" aria-expanded="false"><i class="bi bi-three-dots"></i> More</button>
-        <button type="button" class="sidebar-link sidebar-theme-toggle d-flex align-items-center gap-2 px-3 py-2 rounded" data-theme-toggle aria-pressed="false" aria-label="Toggle theme"><i data-theme-icon class="bi bi-moon-stars"></i><span data-theme-label>Dark mode</span></button>
+        <a href="transaction.html#addTxModal" class="mobile-add-action d-flex align-items-center justify-content-center" aria-label="Add transaction"><i class="bi bi-plus-lg" aria-hidden="true"></i></a>
+        <a href="goals.html" class="sidebar-link d-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
+        <a href="transaction.html" class="sidebar-link desktop-only-link d-none d-md-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" style="text-decoration: none;"><i class="bi bi-list-task"></i> Transactions</a>
+        <a href="analytics.html" class="sidebar-link desktop-only-link active d-none d-md-flex align-items-center gap-2 px-3 py-2 text-white rounded" style="background-color: rgba(255,255,255,0.1); text-decoration: none;"><i class="bi bi-bar-chart"></i> Financial Analysis</a>
+        <hr class="desktop-only-link d-none d-md-block" style="border-color: rgba(255,255,255,0.12); margin: 6px 0;">
+        <a href="#" class="sidebar-link desktop-only-link desktop-customize-link d-none d-md-flex align-items-center gap-2 px-3 py-2 text-white-50 rounded" id="desktopCustomizeBotNavBtn" style="text-decoration: none;"><i class="bi bi-sliders"></i> Customize my bot</a>
+        <button type="button" class="sidebar-link more-nav-button active d-flex align-items-center gap-2 text-white rounded" id="mobileMoreBtn" aria-label="More options" aria-expanded="false"><i class="bi bi-three-dots"></i> More</button>
       </nav>
+      <button type="button" class="sidebar-link sidebar-theme-toggle d-none d-md-flex align-items-center gap-2 px-3 py-2 rounded" data-theme-toggle aria-pressed="false" aria-label="Toggle theme"><i data-theme-icon class="bi bi-moon-stars"></i><span data-theme-label>Dark mode</span></button>
       <div class="mobile-more-menu" id="mobileMoreMenu" aria-label="More navigation" hidden>
-        <a href="goals.html"><i class="bi bi-piggy-bank"></i> Savings Goals</a>
-        <a href="analytics.html" class="is-current"><i class="bi bi-bar-chart"></i> Analytics</a>
+        <button type="button" data-theme-toggle aria-pressed="false" aria-label="Toggle theme"><i data-theme-icon class="bi bi-moon-stars"></i><span data-theme-label>Dark mode</span></button>
+        <a href="transaction.html"><i class="bi bi-list-task"></i> Transactions</a>
+        <a href="analytics.html" class="is-current"><i class="bi bi-bar-chart"></i> Financial Analysis</a>
+        <button type="button" id="customizeBotNavBtn"><i class="bi bi-sliders"></i> Customize my bot</button>
         <button type="button" id="accountSettingsBtn"><i class="bi bi-person-gear"></i> Account settings</button>
       </div>
     </div>
