@@ -6,7 +6,7 @@
 import { collection, onSnapshot, query, orderBy, addDoc, doc, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
-import { isSameMonth, transactionDate } from "./finance-utils.js";
+import { isSameMonth, toDate, transactionDate } from "./finance-utils.js";
 import { showConfirmationModal } from "./confirmation-modal.js";
 
 let spendingChartInstance = null;
@@ -391,6 +391,21 @@ function listenToGoals(userId) {
       try {
         const g80 = `goal-${id}-80`;
         const g100 = `goal-${id}-100`;
+        const deadline = toDate(item.deadline);
+        const remainingAmount = Math.max(0, target - saved);
+        if (deadline && saved < target) {
+          const daysUntilDeadline = Math.ceil((deadline.getTime() - Date.now()) / 86400000);
+          if (daysUntilDeadline <= 3) {
+            const reminderBucket = Math.floor(Date.now() / (3 * 86400000));
+            addNotification({
+              id: `goal-${id}-deadline-${reminderBucket}`,
+              type: "goal-deadline-warning",
+              title: "Savings goal deadline is near",
+              message: `${item.title || item.name || "Goal"} is due in ${Math.max(0, daysUntilDeadline)} days with ${remainingAmount.toLocaleString()} MMK still needed.`,
+              link: "goals.html"
+            });
+          }
+        }
         if (pct >= 75 && pct < 100) {
           addNotification({ id: g80, type: 'goal-warning', title: 'Goal nearing target', message: `${item.title || item.name || 'Goal'} is ${pct}% complete.`, link: 'goals.html' });
         }
