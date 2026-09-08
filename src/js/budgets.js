@@ -96,9 +96,7 @@ function renderBudgetsView() {
     const effectiveLimit = limit + rollover;
     const pct = effectiveLimit > 0 ? Math.round((spent / effectiveLimit) * 100) : 0;
     const displayPct = Math.min(100, pct);
-    const overBudgetPercentage = effectiveLimit > 0 && spent > effectiveLimit
-      ? Math.round(((spent - effectiveLimit) / effectiveLimit) * 100)
-      : 0;
+    const overBudgetAmount = Math.max(0, spent - effectiveLimit);
     const remaining = Math.max(0, effectiveLimit - spent);
 
     totalAllocated += effectiveLimit;
@@ -106,8 +104,8 @@ function renderBudgetsView() {
 
     if (pct >= 100) {
       budgetWarnings.push(
-        overBudgetPercentage > 0
-          ? `${escapeHtml(bud.category)} budget is at 100% and ${overBudgetPercentage}% exceeded — consider reducing spending.`
+        overBudgetAmount > 0
+          ? `${escapeHtml(bud.category)} budget is at 100% and ${overBudgetAmount.toLocaleString()} MMK overused — consider reducing spending.`
           : `${escapeHtml(bud.category)} budget is at 100% — budget limit reached.`
       );
     }
@@ -132,8 +130,8 @@ function renderBudgetsView() {
               <div class="progress-bar ${progressColor}" role="progressbar" style="width: ${displayPct}%"></div>
             </div>
             <div class="d-flex justify-content-between small text-muted">
-              ${overBudgetPercentage > 0
-                ? `<span class="text-danger">${overBudgetPercentage}% over budget</span>`
+              ${overBudgetAmount > 0
+                ? `<span class="text-danger">${overBudgetAmount.toLocaleString()} MMK over budget</span>`
                 : `<span>Remaining:</span><strong class="text-dark">${remaining.toLocaleString()} MMK</strong>`}
             </div>
           </div>
