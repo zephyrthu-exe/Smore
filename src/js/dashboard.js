@@ -64,6 +64,22 @@ function addNotification(notif) {
   renderNotifications();
 }
 
+function getNotificationLink(notification) {
+  if (notification?.link) return notification.link;
+  if (notification?.type?.startsWith("goal-")) return "goals.html";
+  if (notification?.type?.startsWith("budget-")) return "budget.html";
+  if (notification?.type?.startsWith("transaction-")) return "transaction.html";
+  return "";
+}
+
+function markNotificationRead(id) {
+  if (!id) return;
+  const notifs = loadNotifications().map((notification) => (
+    notification.id === id ? { ...notification, read: true } : notification
+  ));
+  saveNotifications(notifs);
+}
+
 function markAllNotificationsRead() {
   const notifs = loadNotifications().map(n => ({ ...n, read: true }));
   saveNotifications(notifs);
@@ -113,7 +129,8 @@ function renderNotifications() {
       // mark read
       markNotificationRead(id);
       // navigate if link present
-      if (n.link) window.location.href = n.link;
+      const link = getNotificationLink(n);
+      if (link) window.location.href = link;
     });
     // keyboard accessibility: enter key
     el.addEventListener('keydown', (e) => {
