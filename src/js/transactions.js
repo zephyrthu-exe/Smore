@@ -3,7 +3,7 @@
 // table and lets the user add or delete transactions. Savings transactions
 // also increase the saved amount of the chosen goal.
 
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, updateDoc, increment, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 import { showConfirmationModal } from "./confirmation-modal.js";
@@ -303,7 +303,16 @@ window.deleteTxRecord = async (txId) => {
   });
   if (confirmed) {
     try {
-      await deleteDoc(doc(db, "users", user.uid, "transactions", txId));
+      const transaction = allTransactions.find((item) => item.id === txId);
+      const batch = writeBatch(db);
+      batch.delete(doc(db, "users", user.uid, "transactions", txId));
+      if (transaction?.type === "savings" && transaction.goalId) {
+        batch.update(
+          doc(db, "users", user.uid, "goals", transaction.goalId),
+          { savedAmount: increment(-(parseFloat(transaction.amount) || 0)) }
+        );
+      }
+      await batch.commit();
     } catch (err) {
       alert("Failed to delete transaction: " + err.message);
     }
@@ -498,5 +507,4 @@ if (!window._txHashListenerAttached) {
     console.warn('initTransactionUi error', e);
   }
 })();
-
 

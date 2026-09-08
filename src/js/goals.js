@@ -3,7 +3,7 @@
 // the user add or delete goals. Goals are stored in Firestore under the
 // current user's "goals" collection.
 
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, deleteDoc, doc, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 import { showConfirmationModal } from "./confirmation-modal.js";
@@ -134,8 +134,8 @@ function setupAddGoalForm(userId) {
     if (saveBtn) saveBtn.disabled = true;
 
     const title = document.getElementById("goalTitle").value.trim();
-    const targetAmount = parseFloat(document.getElementById("goalAmount").value) || 0;
-    const initialSaved = parseFloat(document.getElementById("goalInitial")?.value) || 0;
+    const targetAmount = parseFloat(document.getElementById("goalAmount").value.replace(/,/g, "")) || 0;
+    const initialSaved = parseFloat((document.getElementById("goalInitial")?.value || "").replace(/,/g, "")) || 0;
     const dateVal = document.getElementById("goalDate").value;
 
     if (!title || targetAmount <= 0 || !dateVal) {
@@ -146,13 +146,29 @@ function setupAddGoalForm(userId) {
     const [year, month, day] = dateVal.split("-").map(Number);
 
     try {
-      await addDoc(collection(db, "users", userId, "goals"), {
+      const createdAt = Timestamp.now();
+      const goalRef = doc(collection(db, "users", userId, "goals"));
+      const batch = writeBatch(db);
+      batch.set(goalRef, {
         title,
         targetAmount,
         savedAmount: initialSaved,
         deadline: Timestamp.fromDate(new Date(year, month - 1, day)),
-        createdAt: Timestamp.now()
+        createdAt
       });
+      if (initialSaved > 0) {
+        const transactionRef = doc(collection(db, "users", userId, "transactions"));
+        batch.set(transactionRef, {
+          type: "savings",
+          amount: initialSaved,
+          goalId: goalRef.id,
+          category: title,
+          description: "Initial savings",
+          date: createdAt,
+          createdAt
+        });
+      }
+      await batch.commit();
 
       form.reset();
       closeModal("addGoalModal");

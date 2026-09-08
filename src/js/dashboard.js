@@ -4,7 +4,7 @@
 // goals and a planning summary for recurring schedules. It also powers the
 // in-app notification centre (persisted in localStorage).
 
-import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
+import { collection, onSnapshot, query, orderBy, addDoc, deleteDoc, doc, Timestamp, writeBatch } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-firestore.js";
 import { auth, db } from "./firebase-config.js";
 import { startAuthenticatedPage, escapeHtml, closeModal } from "./app-shell.js";
 import { calculateSafeToSpend, formatMMK, getUpcomingSchedules, isSameMonth, transactionDate } from "./finance-utils.js";
@@ -509,19 +509,35 @@ function setupGoalForm(userId) {
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
     const title = document.getElementById("goalName").value.trim();
-    const targetAmount = parseFloat(document.getElementById("targetAmount").value) || 0;
-    const savedAmount = parseFloat(document.getElementById("currentAmount").value) || 0;
+    const targetAmount = parseFloat(document.getElementById("targetAmount").value.replace(/,/g, "")) || 0;
+    const savedAmount = parseFloat(document.getElementById("currentAmount").value.replace(/,/g, "")) || 0;
 
     if (!title || targetAmount <= 0) return;
 
     try {
-      await addDoc(collection(db, "users", userId, "goals"), {
+      const createdAt = Timestamp.now();
+      const goalRef = doc(collection(db, "users", userId, "goals"));
+      const batch = writeBatch(db);
+      batch.set(goalRef, {
         title,
         targetAmount,
         savedAmount,
         deadline: Timestamp.now(),
-        createdAt: Timestamp.now()
+        createdAt
       });
+      if (savedAmount > 0) {
+        const transactionRef = doc(collection(db, "users", userId, "transactions"));
+        batch.set(transactionRef, {
+          type: "savings",
+          amount: savedAmount,
+          goalId: goalRef.id,
+          category: title,
+          description: "Initial savings",
+          date: createdAt,
+          createdAt
+        });
+      }
+      await batch.commit();
       closeModal("addGoalModal");
       form.reset();
     } catch (err) {
