@@ -9,6 +9,7 @@ import {
   getRedirectResult
 } from "https://www.gstatic.com/firebasejs/12.16.0/firebase-auth.js";
 import { auth } from "./firebase-config.js";
+import { STRONG_PASSWORD_REGEX, checkPasswordStrength, bindPasswordRulesUI } from "./password-rules.js";
 
 const loginForm = document.getElementById("login-form");
 const registerForm = document.getElementById("register-form");
@@ -26,6 +27,11 @@ const registerName = document.getElementById("register-name");
 const registerEmail = document.getElementById("register-email");
 const registerPassword = document.getElementById("register-password");
 const registerConfirm = document.getElementById("register-confirm");
+const suggestRegisterPassword = document.getElementById("suggest-register-password");
+const toggleRegisterPassword = document.getElementById("toggle-register-password");
+const toggleRegisterConfirm = document.getElementById("toggle-register-confirm");
+const registerPasswordChecklist = document.getElementById("registerPasswordChecklist");
+const registerSuggestToast = document.getElementById("register-suggest-toast");
 
 const loginSubmit = document.getElementById("login-submit");
 const registerSubmit = document.getElementById("register-submit");
@@ -50,7 +56,7 @@ function getFriendlyAuthError(error) {
     "auth/wrong-password": "Incorrect email or password. Please try again.",
     "auth/user-not-found": "No account found with that email. Please register first.",
     "auth/user-disabled": "This account has been disabled. Contact support if you need help.",
-    "auth/weak-password": "Password is too weak. Use at least 6 characters.",
+    "auth/weak-password": "Password is too weak. Please choose a stronger password with symbols, numbers, and mixed case.",
     "auth/too-many-requests": "Too many attempts. Please wait a moment and try again.",
     "auth/network-request-failed": "Network error. Check your connection and try again.",
     "auth/operation-not-allowed": "Google sign-in is not enabled for this project. Enable it in the Firebase Console.",
@@ -275,8 +281,15 @@ function validateRegister() {
   if (!password) {
     setFieldError(registerPassword, "Password is required.");
     valid = false;
-  } else if (password.length < 6) {
-    setFieldError(registerPassword, "Use at least 6 characters.");
+  } else if (!STRONG_PASSWORD_REGEX.test(password)) {
+    const { results } = checkPasswordStrength(password);
+    const missing = [];
+    if (!results.length) missing.push("at least 8 characters");
+    if (!results.upper) missing.push("an uppercase letter");
+    if (!results.lower) missing.push("a lowercase letter");
+    if (!results.number) missing.push("a number");
+    if (!results.special) missing.push("a special character / symbol (!@#$...)");
+    setFieldError(registerPassword, `Password requires ${missing.join(", ")}.`);
     valid = false;
   }
 
@@ -289,6 +302,28 @@ function validateRegister() {
   }
 
   return valid;
+}
+
+// Bind password strength UI, suggestion generator, and visibility toggles
+bindPasswordRulesUI({
+  input: registerPassword,
+  confirmInput: registerConfirm,
+  checklist: registerPasswordChecklist,
+  suggestBtn: suggestRegisterPassword,
+  toggleBtn: toggleRegisterPassword,
+  toastEl: registerSuggestToast,
+});
+
+if (toggleRegisterConfirm) {
+  toggleRegisterConfirm.addEventListener("click", (e) => {
+    e.preventDefault();
+    const isPassword = registerConfirm.type === "password";
+    registerConfirm.type = isPassword ? "text" : "password";
+    const icon = toggleRegisterConfirm.querySelector("i");
+    if (icon) {
+      icon.className = isPassword ? "bi bi-eye-slash" : "bi bi-eye";
+    }
+  });
 }
 
 loginTab.addEventListener("click", () => switchMode("login"));

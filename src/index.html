@@ -118,15 +118,53 @@
             </div>
 
             <div class="auth-field">
-              <label class="form-label" for="register-password">Password</label>
-              <input class="form-control" type="password" id="register-password" name="password" autocomplete="new-password" required minlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+              <div class="password-field-header">
+                <label class="form-label mb-0" for="register-password">Password</label>
+                <button type="button" class="password-suggest-btn" id="suggest-register-password" title="Generate and fill a strong password">
+                  <i class="bi bi-shield-lock-fill"></i> Suggest strong password
+                </button>
+              </div>
+              <div class="password-input-group">
+                <input class="form-control" type="password" id="register-password" name="password" autocomplete="new-password" required minlength="8" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+                <button type="button" class="password-toggle-btn" id="toggle-register-password" aria-label="Toggle password visibility">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
               <div class="invalid-feedback" data-error-for="register-password"></div>
-              <p class="field-hint">Firebase requires at least 6 characters.</p>
+              <div id="register-suggest-toast" class="password-suggest-pill d-none">
+                <i class="bi bi-check-circle-fill"></i> Strong password generated &amp; filled!
+              </div>
+
+              <div class="password-checklist mt-2" id="registerPasswordChecklist" aria-live="polite">
+                <div class="password-checklist-title">Password must contain:</div>
+                <ul class="password-checklist-items list-unstyled m-0">
+                  <li class="password-req-item" data-req="length">
+                    <i class="bi bi-circle"></i> <span>At least 8 characters</span>
+                  </li>
+                  <li class="password-req-item" data-req="upper">
+                    <i class="bi bi-circle"></i> <span>Uppercase letter (A-Z)</span>
+                  </li>
+                  <li class="password-req-item" data-req="lower">
+                    <i class="bi bi-circle"></i> <span>Lowercase letter (a-z)</span>
+                  </li>
+                  <li class="password-req-item" data-req="number">
+                    <i class="bi bi-circle"></i> <span>At least 1 number (0-9)</span>
+                  </li>
+                  <li class="password-req-item" data-req="special">
+                    <i class="bi bi-circle"></i> <span>Special character / symbol (!@#$...)</span>
+                  </li>
+                </ul>
+              </div>
             </div>
 
             <div class="auth-field">
               <label class="form-label" for="register-confirm">Confirm Password</label>
-              <input class="form-control" type="password" id="register-confirm" name="confirm" autocomplete="new-password" required minlength="6" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+              <div class="password-input-group">
+                <input class="form-control" type="password" id="register-confirm" name="confirm" autocomplete="new-password" required minlength="8" placeholder="&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;&#8226;" />
+                <button type="button" class="password-toggle-btn" id="toggle-register-confirm" aria-label="Toggle confirm password visibility">
+                  <i class="bi bi-eye"></i>
+                </button>
+              </div>
               <div class="invalid-feedback" data-error-for="register-confirm"></div>
             </div>
 

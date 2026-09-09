@@ -64,7 +64,7 @@ function renderGoalsView() {
           <div>
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h2 class="h6 fw-bold mb-0 text-truncate">${escapeHtml(goal.title || goal.name || "Goal")}</h2>
-              <span class="badge ${isAchieved ? 'bg-success text-white' : 'bg-dark text-white'} px-2 py-1">
+              <span class="badge ${isAchieved ? 'bg-success text-white' : 'bg-dark goal-badge-ongoing'} px-2 py-1">
                 ${isAchieved ? 'Achieved' : 'Ongoing'}
               </span>
             </div>

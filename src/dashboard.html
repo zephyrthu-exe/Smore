@@ -318,10 +318,63 @@
   <div class="modal-dialog modal-dialog-centered"><div class="modal-content border-0 shadow">
     <div class="modal-header"><h2 class="modal-title fs-5" id="changePasswordTitle">Change password</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button></div>
     <form id="changePasswordForm"><div class="modal-body">
-      <div class="mb-3"><label class="form-label" for="currentPasswordInput">Current password</label><input type="password" class="form-control" id="currentPasswordInput" autocomplete="current-password" required></div>
-      <div class="mb-3"><label class="form-label" for="newPasswordInput">New password</label><input type="password" class="form-control" id="newPasswordInput" minlength="6" autocomplete="new-password" required></div>
-      <div><label class="form-label" for="confirmPasswordInput">Confirm new password</label><input type="password" class="form-control" id="confirmPasswordInput" minlength="6" autocomplete="new-password" required></div>
-    </div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-dark">Change password</button></div></form>
+      <div id="changePasswordStatus" class="alert alert-danger d-none py-2 px-3 small mb-3" role="alert"></div>
+      <div class="mb-3">
+        <label class="form-label" for="currentPasswordInput">Current password</label>
+        <div class="password-input-group">
+          <input type="password" class="form-control" id="currentPasswordInput" autocomplete="current-password" required>
+          <button type="button" class="password-toggle-btn" id="toggleCurrentPassword" aria-label="Toggle current password visibility">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+      </div>
+      <div class="mb-3">
+        <div class="password-field-header">
+          <label class="form-label mb-0" for="newPasswordInput">New password</label>
+          <button type="button" class="password-suggest-btn" id="suggestChangePassword" title="Generate and fill a strong password">
+            <i class="bi bi-shield-lock-fill"></i> Suggest strong password
+          </button>
+        </div>
+        <div class="password-input-group">
+          <input type="password" class="form-control" id="newPasswordInput" minlength="8" autocomplete="new-password" required>
+          <button type="button" class="password-toggle-btn" id="toggleNewPassword" aria-label="Toggle new password visibility">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+        <div id="changePasswordSuggestToast" class="password-suggest-pill d-none">
+          <i class="bi bi-check-circle-fill"></i> Strong password generated &amp; filled!
+        </div>
+        <div class="password-checklist mt-2" id="changePasswordChecklist" aria-live="polite">
+          <div class="password-checklist-title">Password must contain:</div>
+          <ul class="password-checklist-items list-unstyled m-0">
+            <li class="password-req-item" data-req="length">
+              <i class="bi bi-circle"></i> <span>At least 8 characters</span>
+            </li>
+            <li class="password-req-item" data-req="upper">
+              <i class="bi bi-circle"></i> <span>Uppercase letter (A-Z)</span>
+            </li>
+            <li class="password-req-item" data-req="lower">
+              <i class="bi bi-circle"></i> <span>Lowercase letter (a-z)</span>
+            </li>
+            <li class="password-req-item" data-req="number">
+              <i class="bi bi-circle"></i> <span>At least 1 number (0-9)</span>
+            </li>
+            <li class="password-req-item" data-req="special">
+              <i class="bi bi-circle"></i> <span>Special character / symbol (!@#$...)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="mb-2">
+        <label class="form-label" for="confirmPasswordInput">Confirm new password</label>
+        <div class="password-input-group">
+          <input type="password" class="form-control" id="confirmPasswordInput" minlength="8" autocomplete="new-password" required>
+          <button type="button" class="password-toggle-btn" id="toggleConfirmPassword" aria-label="Toggle confirm password visibility">
+            <i class="bi bi-eye"></i>
+          </button>
+        </div>
+      </div>
+    </div><div class="modal-footer"><button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button><button type="submit" id="changePasswordSubmitBtn" class="btn btn-dark">Change password</button></div></form>
   </div></div>
 </div>
 

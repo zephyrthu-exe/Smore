@@ -3165,6 +3165,14 @@ body:not(.auth-page) .summary-bento > [class*="col-"]:nth-child(3) > .card {
 /* 9 ── Badges & alerts ──────────────────────────────────────────────────── */
 .badge { font-weight: 600; border-radius: 0.4rem; }
 .badge.bg-dark { background-color: var(--smore-rail) !important; }
+.goal-badge-ongoing,
+html:not([data-theme="dark"]) .goal-badge-ongoing,
+[data-theme="light"] .goal-badge-ongoing {
+  color: #000000 !important;
+}
+[data-theme="dark"] .goal-badge-ongoing {
+  color: #ffffff !important;
+}
 .badge.bg-success { background-color: var(--smore-success) !important; }
 .badge.bg-warning { background-color: var(--smore-warning) !important; color: #2b1810 !important; }
 .badge.bg-danger { background-color: var(--smore-danger) !important; }
@@ -3951,4 +3959,158 @@ body:not(.auth-page) main .bg-white .small {
   }
 }
 
+/* --- Password Strength & Suggestion Styles --- */
+.invalid-feedback:not(:empty) {
+  display: block;
+}
 
+.password-field-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.password-suggest-btn {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--smore-primary) !important;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.password-suggest-btn:hover {
+  opacity: 0.85;
+  text-decoration: underline !important;
+}
+
+.password-suggest-btn:active {
+  transform: scale(0.97);
+}
+
+.password-input-group {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.password-input-group .form-control {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.password-input-group .password-toggle-btn {
+  border: 1px solid #ced4da;
+  border-left: none;
+  background-color: #f8fafc;
+  color: var(--smore-muted);
+  padding: 0.5rem 0.75rem;
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.password-input-group .password-toggle-btn:hover {
+  background-color: #e2e8f0;
+  color: var(--smore-ink);
+}
+
+[data-theme="dark"] .password-input-group .password-toggle-btn {
+  border-color: rgba(255, 255, 255, 0.15);
+  background-color: #1e293b;
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .password-input-group .password-toggle-btn:hover {
+  background-color: #334155;
+  color: #f8fafc;
+}
+
+.password-checklist {
+  background: rgba(0, 0, 0, 0.02);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 0.5rem;
+  padding: 0.6rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+[data-theme="dark"] .password-checklist {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.password-checklist-title {
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  color: var(--smore-ink);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+[data-theme="dark"] .password-checklist-title {
+  color: #e2e8f0;
+}
+
+.password-checklist-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.25rem 0.5rem;
+}
+
+.password-req-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #64748b;
+  transition: color 0.2s ease;
+  line-height: 1.3;
+}
+
+[data-theme="dark"] .password-req-item {
+  color: #94a3b8;
+}
+
+.password-req-item i {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.password-req-item.is-met {
+  color: var(--smore-success, #198754) !important;
+  font-weight: 500;
+}
+
+.password-req-item.is-met i {
+  color: var(--smore-success, #198754) !important;
+  transform: scale(1.08);
+}
+
+.password-suggest-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 9999px;
+  background-color: #d1fae5;
+  color: #065f46;
+  margin-top: 0.35rem;
+  animation: fadeIn 0.2s ease;
+}
+
+[data-theme="dark"] .password-suggest-pill {
+  background-color: rgba(16, 185, 129, 0.2);
+  color: #6ee7b7;
+}
